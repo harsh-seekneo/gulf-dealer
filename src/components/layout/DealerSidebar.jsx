@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import {
   LayoutGrid,
   Car,
@@ -11,7 +11,9 @@ import {
   LogOut,
 } from "lucide-react";
 
-import { authApi } from "../../modules/auth/api/authApi";
+import { logoutUserApi } from "../../modules/auth/api/authApi";
+import { redirectToUserLogin } from "../../utils/authRedirect";
+import { removeAccessToken } from "../../utils/tokenStorage";
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutGrid },
@@ -35,8 +37,6 @@ const badgeCounts = {
 };
 
 export default function DealerSidebar({ isOpen, onClose }) {
-  const navigate = useNavigate();
-
   const dealerName = "Al-Rashid Motors";
   const tier = "Gold Dealer";
 
@@ -47,27 +47,12 @@ export default function DealerSidebar({ isOpen, onClose }) {
 
   const handleLogout = async () => {
     try {
-      // Call backend logout API if available
-      if (authApi?.logoutDealer) {
-        await authApi.logoutDealer();
-      }
-
-      // Remove stored auth data
-      localStorage.removeItem("dealerAccessToken");
-      localStorage.removeItem("dealer");
-      sessionStorage.clear();
-
-      // Redirect to login
-      navigate("/login");
+      await logoutUserApi();
     } catch (error) {
       console.error("Logout failed:", error);
-
-      // Still clear local data
-      localStorage.removeItem("dealerAccessToken");
-      localStorage.removeItem("dealer");
-      sessionStorage.clear();
-
-      navigate("/login");
+    } finally {
+      removeAccessToken();
+      redirectToUserLogin();
     }
   };
 

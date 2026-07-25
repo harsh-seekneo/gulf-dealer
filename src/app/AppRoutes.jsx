@@ -1,9 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import DealerLayout from "../layouts/DealerLayout";
 import ProtectedRoute from "../routes/ProtectedRoute";
-import PublicRoute from "../routes/PublicRoute";
 
-import LoginPage from "../modules/auth/pages/LoginPage";
 import DashboardPage from "../modules/dashboard/pages/DashboardPage";
 import ListingsPage from "../modules/listings/pages/ListingsPage";
 import LeadsPage from "../modules/leads/pages/LeadsPage";
@@ -16,9 +14,7 @@ import NotificationsPage from "../modules/notifications/pages/NotificationsPage"
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route element={<PublicRoute />}>
-        <Route path="/login" element={<LoginPage />} />
-      </Route>
+      <Route path="/login" element={<Navigate to="/dashboard" replace />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<DealerLayout />}>
