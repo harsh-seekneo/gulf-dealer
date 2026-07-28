@@ -3,70 +3,122 @@ import CurrentPlanBanner from "../components/CurrentPlanBanner";
 import PlanCard from "../components/PlanCard";
 import ComparePlansTable from "../components/ComparePlansTable";
 import { subscriptionApi } from "../api/subscriptionApi";
+import { getDealerStatusApi } from "../../dealer/api/dealerApi";
 
 export default function SubscriptionPage() {
   const [currentPlan, setCurrentPlan] = useState(null);
   const [plans, setPlans] = useState([]);
-  const [compareRows, setCompareRows] = useState([]);
-  const [compareColumns, setCompareColumns] = useState([]);
+  const [dealerId, setDealerId] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const [current, available] = await Promise.all([
-          subscriptionApi.getCurrentPlan(),
-          subscriptionApi.getAvailablePlans(),
-        ]);
-        setCurrentPlan(current.plan || null);
-        setPlans(available.plans || []);
-        setCompareRows(available.compareRows || []);
-        setCompareColumns(available.compareColumns || []);
-      } catch (err) {
-        console.error("Failed to load subscription data:", err);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    loadData();
   }, []);
 
-  const handleSelectPlan = async (plan) => {
-    if (!window.confirm(`Switch to ${plan.name}?`)) return;
-    await subscriptionApi.choosePlan(plan._id);
-    const current = await subscriptionApi.getCurrentPlan();
-    setCurrentPlan(current.plan);
+  const loadData = async () => {
+    try {
+      const [current, available, status] = await Promise.all([
+        subscriptionApi.getCurrentPlan(),
+        subscriptionApi.getAvailablePlans(),
+        getDealerStatusApi(),
+      ]);
+
+      setCurrentPlan(current || null);
+      setPlans(available?.plans || []);
+      setDealerId(status?.dealer?._id || null);
+    } catch (err) {
+      console.error("Failed to load subscription:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (loading) return <p className="text-sm text-slate-400">Loading subscription...</p>;
+  const handleSelectPlan = async (plan) => {
+    if (!window.confirm(`Switch to ${plan.planName}?`)) return;
+
+    if (!dealerId) {
+      console.error("Dealer ID not found.");
+      return;
+    }
+
+    const durationDays = plan.pricingTiers?.[0]?.durationDays;
+
+    if (!durationDays) {
+      console.error("No pricing tier found.");
+      return;
+    }
+
+    try {
+      await subscriptionApi.choosePlan({
+        dealerId,
+        planId: plan._id,
+        durationDays,
+      });
+
+      await loadData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-base text-slate-500">
+          Loading subscription...
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-2 pb-10">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Subscription Management</h1>
-          <p className="text-sm text-slate-500">Manage your dealer plan and billing</p>
+          <h1 className="text-4xl font-bold text-slate-900">
+            Subscription Management
+          </h1>
+
+          <p className="mt-2 text-lg text-slate-500">
+            Manage your dealer plan and billing
+          </p>
         </div>
-        <button className="text-sm font-semibold text-blue-600 hover:underline">
+
+        <button className="text-lg font-semibold text-slate-900 hover:text-blue-600">
           View Billing History
         </button>
       </div>
 
       <CurrentPlanBanner plan={currentPlan} />
 
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-        {plans.map((plan) => (
-          <PlanCard
-            key={plan._id}
-            plan={plan}
-            isCurrent={currentPlan?._id === plan._id}
-            isPremium={plan.tier === "premium"}
-            onSelect={handleSelectPlan}
-          />
-        ))}
+      <div className="grid gap-8 lg:grid-cols-3">
+        {plans.map((plan) => {
+          const currentPlanId =
+            currentPlan?.plan?._id ||
+            currentPlan?.planId ||
+            currentPlan?.plan ||
+            "";
+
+          const isCurrent = currentPlanId === plan._id;
+
+          const isPremium =
+            plan.planName?.toLowerCase().includes("premium") ||
+            plan.planName?.toLowerCase().includes("prestige");
+
+          return (
+            <PlanCard
+              key={plan._id}
+              plan={plan}
+              isCurrent={isCurrent}
+              isPremium={isPremium}
+              onSelect={handleSelectPlan}
+            />
+          );
+        })}
       </div>
 
-      {compareRows.length > 0 && (
-        <ComparePlansTable rows={compareRows} columns={compareColumns} />
+      {plans.length > 0 && (
+        <ComparePlansTable plans={plans} />
       )}
     </div>
   );

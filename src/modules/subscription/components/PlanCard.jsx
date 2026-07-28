@@ -1,4 +1,11 @@
-export default function PlanCard({ plan, isCurrent, isPremium, onSelect }) {
+export default function PlanCard({
+  plan,
+  isCurrent,
+  isPremium,
+  onSelect,
+}) {
+  const tier = plan.pricingTiers?.[0];
+
   return (
     <div
       className={`flex flex-col rounded-2xl p-6 ${
@@ -7,26 +14,130 @@ export default function PlanCard({ plan, isCurrent, isPremium, onSelect }) {
           : "border border-slate-200 bg-white"
       }`}
     >
+      {/* Plan Name */}
       <span
         className={`mb-4 inline-block w-fit rounded-full px-3 py-1 text-xs font-semibold ${
-          isPremium ? "bg-amber-500 text-white" : "border border-slate-300"
+          isPremium
+            ? "bg-amber-500 text-white"
+            : "border border-slate-300"
         }`}
       >
-        {plan.name}
+        {plan.planName}
       </span>
 
-      <p className={`text-3xl font-bold ${isPremium ? "text-amber-400" : "text-blue-600"}`}>
-        BHD {plan.price}
+      {/* Price */}
+      <p
+        className={`text-3xl font-bold ${
+          isPremium ? "text-amber-400" : "text-blue-600"
+        }`}
+      >
+        BHD {tier?.price ?? 0}
       </p>
 
+      {/* Duration */}
+      <p
+        className={`mt-1 text-sm ${
+          isPremium
+            ? "text-slate-300"
+            : "text-slate-500"
+        }`}
+      >
+        {tier?.durationDays} Days
+      </p>
+
+      {/* Features */}
       <ul className="mt-5 flex-1 space-y-2 text-sm">
-        {plan.features.map((f) => (
-          <li key={f} className={isPremium ? "text-slate-300" : "text-slate-600"}>
-            • {f}
+        <li
+          className={
+            isPremium
+              ? "text-slate-300"
+              : "text-slate-600"
+          }
+        >
+          • {plan.activeListingCount ?? 0} Active Listings
+        </li>
+
+        <li
+          className={
+            isPremium
+              ? "text-slate-300"
+              : "text-slate-600"
+          }
+        >
+          • {plan.maxPhotos ?? 0} Photos
+        </li>
+
+        <li
+          className={
+            isPremium
+              ? "text-slate-300"
+              : "text-slate-600"
+          }
+        >
+          • {plan.maxVideos ?? 0} Videos
+        </li>
+
+        <li
+          className={
+            isPremium
+              ? "text-slate-300"
+              : "text-slate-600"
+          }
+        >
+          • Visibility: {plan.visibility}
+        </li>
+
+        {plan.hasFeaturedListing && (
+          <li
+            className={
+              isPremium
+                ? "text-slate-300"
+                : "text-slate-600"
+            }
+          >
+            • Featured Listing
+          </li>
+        )}
+
+        {plan.hasAutomaticListingRefresh && (
+          <li
+            className={
+              isPremium
+                ? "text-slate-300"
+                : "text-slate-600"
+            }
+          >
+            • Auto Refresh
+          </li>
+        )}
+
+        {plan.hasVehicleVideo && (
+          <li
+            className={
+              isPremium
+                ? "text-slate-300"
+                : "text-slate-600"
+            }
+          >
+            • Vehicle Video
+          </li>
+        )}
+
+        {plan.features?.map((feature) => (
+          <li
+            key={feature}
+            className={
+              isPremium
+                ? "text-slate-300"
+                : "text-slate-600"
+            }
+          >
+            • {feature}
           </li>
         ))}
       </ul>
 
+      {/* Button */}
       <button
         onClick={() => onSelect(plan)}
         disabled={isCurrent}
@@ -38,7 +149,11 @@ export default function PlanCard({ plan, isCurrent, isPremium, onSelect }) {
             : "bg-blue-50 text-blue-700 hover:bg-blue-100"
         }`}
       >
-        {isCurrent ? "Current Plan" : isPremium ? "Upgrade" : "Choose Plan"}
+        {isCurrent
+          ? "Current Plan"
+          : isPremium
+          ? "Upgrade Plan"
+          : "Choose Plan"}
       </button>
     </div>
   );

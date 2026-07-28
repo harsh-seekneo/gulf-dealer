@@ -1,9 +1,38 @@
+// [ADMIN] /Users/personal/Desktop/gulf-dealer/src/components/layout/DealerTopbar.jsx
 import { Search, Bell, HelpCircle, ChevronDown, Menu } from "lucide-react";
+import useAuth from "../../modules/auth/hooks/useAuth";
+
+// Turns "Ahmed Al-Rashid" -> "AA", "Ahmed" -> "A", falls back to "?" if nothing usable
+function getInitials(name) {
+  if (!name || typeof name !== "string") return "?";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 export default function DealerTopbar({ onMenuClick }) {
-  const dealerUser = "Ahmed Al-Rashid";
-  const dealerTier = "Gold Dealer";
-  const unreadCount = 3;
+  const { user, dealerStatus, isLoading } = useAuth();
+
+  // TODO: confirm exact field names against the real /auth/me and
+  // dealer/status payloads, then drop the unused fallbacks below.
+  const dealerName =
+    user?.name ||
+    user?.fullName ||
+    user?.dealerName ||
+    user?.businessName ||
+    "";
+
+  const dealerTier =
+    dealerStatus?.tier ||
+    dealerStatus?.plan ||
+    dealerStatus?.dealer?.tier ||
+    dealerStatus?.dealer?.plan ||
+    dealerStatus?.status ||
+    "";
+
+  const unreadCount = user?.unreadNotifications ?? 0;
+  const initials = getInitials(dealerName);
 
   return (
     <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
@@ -41,13 +70,29 @@ export default function DealerTopbar({ onMenuClick }) {
         </button>
 
         <div className="flex items-center gap-2 border-l border-slate-200 pl-2 sm:pl-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-            AL
-          </div>
-          <div className="hidden text-sm sm:block">
-            <p className="font-semibold leading-none">{dealerUser}</p>
-            <p className="text-xs text-slate-400">{dealerTier}</p>
-          </div>
+          {isLoading ? (
+            <>
+              <div className="h-8 w-8 animate-pulse rounded-full bg-slate-200" />
+              <div className="hidden space-y-1 sm:block">
+                <div className="h-3 w-24 animate-pulse rounded bg-slate-200" />
+                <div className="h-2.5 w-16 animate-pulse rounded bg-slate-200" />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                {initials}
+              </div>
+              <div className="hidden text-sm sm:block">
+                <p className="font-semibold leading-none">
+                  {dealerName || "Dealer"}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {dealerTier || "—"}
+                </p>
+              </div>
+            </>
+          )}
           <ChevronDown size={16} className="hidden text-slate-400 sm:block" />
         </div>
       </div>

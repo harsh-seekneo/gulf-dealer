@@ -1,16 +1,29 @@
 import apiClient from "../../../services/apiClient";
 
 export const listingsApi = {
-  getAll: async (params) => {
-    const res = await apiClient.get("/dealer/vehicles", { params });
+  getAll: async (params = {}) => {
+    const res = await apiClient.get("/vehicle-listings", {
+      params,
+    });
+
     return res.data.data;
   },
+
+  createVehicle: async (data) => {
+    const res = await apiClient.post("/vehicle-listings", data);
+    return res.data.data;
+  },
+
   deleteVehicle: async (id) => {
-    const res = await apiClient.delete(`/dealer/vehicles/${id}`);
+    const res = await apiClient.delete(`/vehicle-listings/${id}`);
     return res.data.data;
   },
-  toggleFeatured: async (id) => {
-    const res = await apiClient.patch(`/dealer/vehicles/${id}/featured`);
+
+  toggleActive: async (id) => {
+    const res = await apiClient.patch(
+      `/vehicle-listings/${id}/toggle-active`
+    );
+
     return res.data.data;
   },
-};
+}; 

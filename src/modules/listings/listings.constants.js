@@ -1,9 +1,29 @@
 export const LISTING_TABS = [
-  { key: "all", label: "All" },
-  { key: "active", label: "Active" },
-  { key: "pending", label: "Pending" },
-  { key: "rejected", label: "Rejected" },
-  { key: "sold", label: "Sold" },
+  {
+    key: "all",
+    label: "All",
+    status: undefined,
+  },
+  {
+    key: "active",
+    label: "Active",
+    status: "PUBLISHED",
+  },
+  {
+    key: "pending",
+    label: "Pending",
+    status: "PENDING_REVIEW",
+  },
+  {
+    key: "rejected",
+    label: "Rejected",
+    status: "REJECTED",
+  },
+  {
+    key: "expired",
+    label: "Expired",
+    status: "EXPIRED",
+  },
 ];
 
 export const formatPrice = (price) =>

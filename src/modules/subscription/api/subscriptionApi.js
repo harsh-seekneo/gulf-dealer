@@ -1,16 +1,42 @@
 import apiClient from "../../../services/apiClient";
 
 export const subscriptionApi = {
-  getCurrentPlan: async () => {
-    const res = await apiClient.get("/dealer/subscription/current");
-    return res.data.data;
+  /**
+   * Get current dealer subscription
+   * GET /api/v1/dealer/subscription
+   */
+  async getCurrentPlan() {
+    const { data } = await apiClient.get("/dealer/subscription");
+    return data.data;
   },
-  getAvailablePlans: async () => {
-    const res = await apiClient.get("/dealer/subscription/plans");
-    return res.data.data;
+
+  /**
+   * Get available business page plans
+   * GET /api/v1/dealer/plans
+   */
+  async getAvailablePlans() {
+    const { data } = await apiClient.get("/dealer/plans");
+
+    return {
+      plans: data.data || [],
+      compareRows: [],
+      compareColumns: [],
+    };
   },
-  choosePlan: async (planId) => {
-    const res = await apiClient.post("/dealer/subscription/choose", { planId });
-    return res.data.data;
+
+  /**
+   * Select subscription plan
+   * POST /api/v1/dealer/submit
+   */
+  async choosePlan({ dealerId, planId, durationDays }) {
+    const { data } = await apiClient.post("/dealer/submit", {
+      dealerId,
+      planId,
+      durationDays,
+    });
+
+    return data.data;
   },
 };
+
+export default subscriptionApi;

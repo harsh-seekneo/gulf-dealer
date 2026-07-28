@@ -1,3 +1,4 @@
+// [ADMIN] /Users/personal/Desktop/gulf-dealer/src/components/layout/DealerSidebar.jsx
 import { NavLink } from "react-router-dom";
 import {
   LayoutGrid,
@@ -14,7 +15,9 @@ import {
 import { logoutUserApi } from "../../modules/auth/api/authApi";
 import { redirectToUserLogin } from "../../utils/authRedirect";
 import { removeAccessToken } from "../../utils/tokenStorage";
-
+import useAuth from "../../modules/auth/hooks/useAuth";
+import { useEffect, useState } from "react";
+import { subscriptionApi } from "../../modules/subscription/api/subscriptionApi";
 const navItems = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutGrid },
   { label: "Vehicles", path: "/vehicles", icon: Car, badgeKey: "vehicles" },
@@ -30,20 +33,67 @@ const navItems = [
   },
 ];
 
-const badgeCounts = {
-  vehicles: 6,
-  leads: 8,
-  notifications: 3,
-};
-
 export default function DealerSidebar({ isOpen, onClose }) {
-  const dealerName = "Al-Rashid Motors";
-  const tier = "Gold Dealer";
+  const { user, dealerStatus, isLoading } = useAuth();
+  console.log("AUTH USER:", user);
+   console.log("DEALER STATUS:", dealerStatus);
 
-  const listingsUsed = 24;
-  const listingsLimit = 50;
+  // TODO: confirm exact field names against the real dealer/status and
+  // /auth/me payloads, then drop the unused fallbacks below.
+  const dealerName = user?.name || user?.fullName || "";
+const [subscription, setSubscription] = useState(null);
+// [DEALER] src/components/layout/DealerSidebar.jsx (relevant snippet)
 
-  const usagePct = Math.round((listingsUsed / listingsLimit) * 100);
+useEffect(() => {
+  const loadSubscription = async () => {
+    try {
+      const data = await subscriptionApi.getCurrentPlan();
+      setSubscription(data);
+    } catch (err) {
+      console.error("Failed to load subscription:", err);
+    }
+  };
+
+  loadSubscription();
+}, []);
+
+  const businessName =
+    user?.businessName ||
+    dealerStatus?.dealer?.businessName ||
+    dealerStatus?.businessName ||
+    dealerStatus?.dealer?.name ||
+    "";
+
+  const tier =
+  subscription?.planNameSnapshot ||
+  dealerStatus?.tier ||
+  dealerStatus?.plan ||
+  dealerStatus?.status ||
+  "";
+
+  const badgeCounts = {
+    vehicles: dealerStatus?.counts?.vehicles ?? user?.counts?.vehicles ?? 0,
+    leads: dealerStatus?.counts?.leads ?? user?.counts?.leads ?? 0,
+    notifications:
+      dealerStatus?.counts?.notifications ??
+      user?.unreadNotifications ??
+      0,
+  };
+
+  const listingsUsed =
+    dealerStatus?.listingsUsed ?? dealerStatus?.usage?.listingsUsed ?? 0;
+  const listingsLimit =
+    dealerStatus?.listingsLimit ?? dealerStatus?.usage?.listingsLimit ?? 0;
+
+  const usagePct =
+    listingsLimit > 0 ? Math.round((listingsUsed / listingsLimit) * 100) : 0;
+
+  const planLabel =
+    dealerStatus?.planName ||
+    dealerStatus?.plan ||
+    dealerStatus?.tier ||
+    tier ||
+    "";
 
   const handleLogout = async () => {
     try {
@@ -100,14 +150,30 @@ export default function DealerSidebar({ isOpen, onClose }) {
             🚗
           </div>
 
-          <div>
-            <p className="text-sm font-semibold">{dealerName}</p>
+          {isLoading ? (
+            <div className="space-y-1.5">
+              <div className="h-3 w-28 animate-pulse rounded bg-white/10" />
+              <div className="h-2.5 w-24 animate-pulse rounded bg-white/10" />
+              <div className="h-2.5 w-16 animate-pulse rounded bg-white/10" />
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm font-semibold leading-tight">
+                {dealerName || "Dealer"}
+              </p>
 
-            <p className="flex items-center gap-1 text-xs text-emerald-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              {tier}
-            </p>
-          </div>
+              {businessName && (
+                <p className="text-xs leading-tight text-slate-400">
+                  {businessName}
+                </p>
+              )}
+
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-emerald-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                {tier || "—"}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Navigation */}
@@ -135,7 +201,7 @@ export default function DealerSidebar({ isOpen, onClose }) {
                   {item.label}
                 </span>
 
-                {badge != null && (
+                {badge != null && badge > 0 && (
                   <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-semibold">
                     {badge}
                   </span>
@@ -146,24 +212,60 @@ export default function DealerSidebar({ isOpen, onClose }) {
         </nav>
 
         {/* Subscription */}
-        <div className="border-t border-white/10 p-4">
-          <div className="rounded-xl bg-white/5 p-3">
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-amber-400">
-              🏅 Gold Plan
-            </p>
+  {/* Subscription */}
+<div className="border-t border-white/10 p-4">
+  {subscription ? (() => {
+    const startDate = new Date(subscription.startDate);
+    const endDate = new Date(subscription.endDate);
+    const today = new Date();
 
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-amber-500"
-                style={{ width: `${usagePct}%` }}
-              />
-            </div>
+    const totalDays = Math.max(
+      1,
+      Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))
+    );
 
-            <p className="mt-1.5 text-xs text-slate-400">
-              {listingsUsed}/{listingsLimit} listings used
-            </p>
-          </div>
+    const daysUsed = Math.min(
+      totalDays,
+      Math.max(
+        0,
+        Math.ceil((today - startDate) / (1000 * 60 * 60 * 24))
+      )
+    );
+
+
+    const daysRemaining = Math.max(totalDays - daysUsed, 0);
+
+    const usagePct = Math.min(
+      100,
+      Math.round((daysUsed / totalDays) * 100)
+    );
+
+    return (
+      <div className="rounded-xl bg-white/5 p-3">
+        <p className="flex items-center gap-1.5 text-sm font-semibold text-amber-400">
+          🏅 {subscription.planNameSnapshot}
+        </p>
+
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full rounded-full bg-amber-500 transition-all duration-500"
+            style={{ width: `${usagePct}%` }}
+          />
         </div>
+
+        <p className="mt-1.5 text-xs text-slate-400">
+          {daysRemaining} of {totalDays} days remaining
+        </p>
+      </div>
+    );
+  })() : (
+    <div className="rounded-xl bg-white/5 p-3">
+      <p className="text-sm text-slate-400">
+        No active subscription
+      </p>
+    </div>
+  )}
+</div>
 
         {/* Logout */}
         <div className="border-t border-white/10 p-3">

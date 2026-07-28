@@ -63,27 +63,40 @@ export default function ListingsTable({ tab, vehicles, onEdit, onDelete, onToggl
               <td className="px-2 py-4">
                 <div className="flex items-center gap-3">
                   <img
-                    src={v.thumbnailUrl}
-                    alt={v.title}
+src={
+  v.media?.featuredImage?.url ||
+  v.media?.images?.[0]?.url ||
+  "/images/placeholder-car.png"
+}                    alt={v.vehicleInfo?.title}
                     className="h-12 w-16 rounded-lg bg-slate-100 object-cover"
                   />
                   <div>
-                    <p className="font-semibold text-slate-900">{v.title}</p>
+                    <p className="font-semibold text-slate-900">{v.vehicleInfo?.title}</p>
                     <p className="text-xs text-slate-400">
-                      {v.year} • {v.mileage?.toLocaleString()} km • {v.fuelType}
+                    {v.vehicleInfo?.manufacturingYear} •{" "}
+{v.vehicleInfo?.mileage?.toLocaleString()} km •{" "}
+{v.vehicleInfo?.fuelType}
                     </p>
                   </div>
                 </div>
               </td>
 
-              <td className="px-2 py-4 font-semibold">{formatPrice(v.price)}</td>
+              <td className="px-2 py-4 font-semibold">{formatPrice(v.pricing?.price)}</td>
 
               {tab === "rejected" ? (
                 <td className="px-2 py-4 font-semibold">{v.rejectionReason || "—"}</td>
               ) : (
-                <td className="px-2 py-4 font-semibold text-red-500">
-                  {v.daysLabel || (v.daysRemaining != null ? `${v.daysRemaining} Days` : "Ended")}
-                </td>
+                <td
+  className={`px-2 py-4 font-semibold ${
+    v.daysRemaining > 7
+      ? "text-green-600"
+      : v.daysRemaining > 0
+      ? "text-orange-500"
+      : "text-red-600"
+  }`}
+>
+  {v.daysLabel}
+</td>
               )}
 
               {(tab === "all" || tab === "active" || tab === "sold") && (
@@ -123,7 +136,7 @@ export default function ListingsTable({ tab, vehicles, onEdit, onDelete, onToggl
 
               {tab === "all" && (
                 <td className="px-2 py-4">
-                  {v.status === "active" ? (
+                  {v.status === "PUBLISHED" ? (
                     <button
                       onClick={() => onToggleFeatured(v)}
                       className="text-sm font-semibold text-blue-600 hover:underline"
