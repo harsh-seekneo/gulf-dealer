@@ -39,4 +39,18 @@ export const subscriptionApi = {
   },
 };
 
+export const getUsableSubscriptionsApi = async (category) => {
+  const { data } = await apiClient.get("/user-subscriptions/me/usable", {
+    params: { category },
+  });
+  return data.data;
+};
+
+export const checkActiveSubscriptionApi = async (category) => {
+  const { data } = await apiClient.get("/user-subscriptions/me/active", {
+    params: { category },
+  });
+  return data.data;
+};
+
 export default subscriptionApi;

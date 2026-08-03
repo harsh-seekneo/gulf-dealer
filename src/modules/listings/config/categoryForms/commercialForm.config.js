@@ -1,0 +1,54 @@
+export const COMMERCIAL_COLOR_SWATCHES = [
+  "#ffffff", "#0f172a", "#64748b", "#94a3b8", "#1e3a8a",
+  "#2563eb", "#0891b2", "#dc2626", "#7c2d12", "#16a34a",
+  "#166534", "#ca8a04", "#facc15", "#ea580c", "#7c3aed",
+];
+
+export const commercialFormConfig = {
+  key: "COMMERCIAL",
+  label: "Commercial Vehicle",
+
+  vehicleInfoFields: [
+    { name: "title", label: "Vehicle Title", type: "text", required: true, span: 2, placeholder: "e.g. 2023 Mercedes-Benz Arocs 5460 Tipper Truck" },
+    { name: "brand", label: "Brand", type: "brandSelect", required: true },
+    { name: "catalogModel", label: "Model", type: "modelSelect", required: true },
+    { name: "variantTrim", label: "Variant / Trim", type: "text", placeholder: "e.g. Long Wheelbase, High Roof" },
+    { name: "vehicleType", label: "Vehicle Type", type: "select", required: true, options: ["Tipper Truck", "Cargo Van", "Pickup", "Mini Truck", "Bus", "Trailer"] },
+    { name: "manufacturingYear", label: "Manufacturing Year", type: "yearSelect", required: true },
+    { name: "bodyType", label: "Body Type", type: "select", required: true, options: ["Rigid Body", "Flatbed", "Box Body", "Tanker", "Refrigerated"] },
+    { name: "availability", label: "Availability", type: "select", options: ["Available", "Reserved"] },
+    { name: "mileage", label: "Mileage", type: "number", placeholder: "e.g. 42500" },
+    { name: "fuelType", label: "Fuel Type", type: "select", options: ["Diesel", "Petrol", "CNG", "Electric"] },
+    { name: "transmission", label: "Transmission", type: "select", options: ["Automatic", "Manual"] },
+    { name: "exteriorColor", label: "Exterior Color", type: "colorSwatch", swatches: COMMERCIAL_COLOR_SWATCHES, span: 2 },
+    { name: "vinNumber", label: "VIN Number", type: "vin", span: 2 },
+    { name: "registrationExpiry", label: "Registration Expiry", type: "date" },
+    { name: "registrationCountry", label: "Registration Country", type: "countrySelect" },
+    { name: "companyName", label: "Company Name", type: "text", placeholder: "e.g. Fleet Motors Bahrain", dealerOnly: true },
+    { name: "description", label: "Vehicle Description", type: "textarea", span: 2, placeholder: "Describe the vehicle's condition, usage history, and standout features..." },
+    { name: "hasLoanOption", label: "Available on Loan", description: "Buyer can apply for financing on this vehicle", type: "toggleSwitch", fullWidth: true },
+  ],
+
+  specsFields: [
+    { name: "driveConfiguration", label: "Drive Configuration", type: "select", options: ["4x2", "6x2", "6x4", "8x4"] },
+    { name: "enginePower", label: "Engine Power", type: "text", placeholder: "e.g. 510 HP" },
+    { name: "torque", label: "Torque", type: "text", placeholder: "e.g. 1800 Nm" },
+    { name: "emissionStandard", label: "Emission Standard", type: "select", options: ["Euro 3", "Euro 4", "Euro 5", "Euro 6"] },
+    { name: "payloadCapacity", label: "Payload Capacity", type: "text", placeholder: "e.g. 18,500 kg" },
+    { name: "grossVehicleWeight", label: "Gross Vehicle Weight", type: "text", placeholder: "e.g. 26,000 kg" },
+    { name: "fuelTankCapacity", label: "Fuel Tank Capacity", type: "text", placeholder: "e.g. 300 L" },
+    { name: "seatingCapacity", label: "Seating Capacity", type: "number" },
+    { name: "previousOwners", label: "Number of Owners", type: "select", options: ["single", "multiple"] },
+    { name: "warranty", label: "Warranty", type: "select", options: ["Manufacturer", "Dealer", "Extended", "None"] },
+    { name: "serviceHistory", label: "Service History", type: "select", options: ["Full", "Partial", "None"] },
+    { name: "accidentHistory", label: "Accident History", type: "select", options: ["No Accident", "Minor", "Major"] },
+    { name: "insuranceValid", label: "Insurance Valid", type: "yesNoSelect" },
+    { name: "numberOfKeys", label: "Number of Keys", type: "select", options: ["1", "2", "3+"] },
+  ],
+
+  featureGroups: [
+    { key: "comfort", label: "Commercial Comfort Features", options: ["Air Conditioning", "Air Suspension Seat", "Bluetooth", "Touchscreen Display", "USB Charging", "Cruise Control", "Power Steering", "Power Windows"] },
+    { key: "safety", label: "Commercial Safety Features", options: ["ABS", "Reverse Camera", "Parking Sensors", "Trailer Brake System", "Hill Start Assist", "Differential Lock", "Tyre Pressure Monitoring", "Lane Departure Warning"] },
+    { key: "commercial", label: "Commercial Features", options: ["Hydraulic Tipper", "PTO", "Cargo Tie Hooks", "LED Work Lights", "Trailer Hitch", "Walkthrough Cabin", "Digital Instrument Cluster", "Heavy Duty Suspension", "Remote Central Locking"] },
+  ],
+};

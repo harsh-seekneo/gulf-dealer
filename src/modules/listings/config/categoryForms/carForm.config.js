@@ -1,0 +1,63 @@
+export const CAR_COLOR_SWATCHES = [
+  "#ffffff", "#0f172a", "#64748b", "#94a3b8", "#1e3a8a",
+  "#2563eb", "#0891b2", "#dc2626", "#7c2d12", "#16a34a",
+  "#166534", "#ca8a04", "#facc15", "#ea580c", "#7c3aed",
+];
+
+export const carFormConfig = {
+  key: "CAR",
+  label: "Car",
+
+  vehicleInfoFields: [
+    { name: "title", label: "Vehicle Title", type: "text", required: true, span: 2, placeholder: "e.g. 2023 Toyota Land Cruiser GXR V8" },
+    { name: "brand", label: "Brand", type: "brandSelect", required: true },
+    { name: "catalogModel", label: "Model", type: "modelSelect", required: true },
+    { name: "variantTrim", label: "Variant / Trim", type: "text", placeholder: "e.g. GXR VE, Executive" },
+    { name: "manufacturingYear", label: "Manufacturing Year", type: "yearSelect", required: true },
+    { name: "bodyType", label: "Body Type", type: "select", required: true, options: ["Sedan", "SUV", "Hatchback", "Coupe"] },
+    { name: "availability", label: "Availability", type: "select", options: ["Available", "Reserved"] },
+    { name: "fuelType", label: "Fuel Type", type: "select", required: true, options: ["Petrol", "Diesel", "Hybrid", "Plug-in Hybrid", "Electric"] },
+    { name: "transmission", label: "Transmission", type: "select", required: true, options: ["Automatic", "Manual", "CVT", "DCT"] },
+    { name: "engineCapacity", label: "Engine Capacity", type: "text", placeholder: "e.g. 4600" },
+    { name: "mileage", label: "Mileage", type: "number", required: true, placeholder: "e.g. 12000" },
+    { name: "exteriorColor", label: "Exterior Color", type: "colorSwatch", swatches: CAR_COLOR_SWATCHES, span: 2 },
+    { name: "interiorColor", label: "Interior Color", type: "colorSwatch", swatches: CAR_COLOR_SWATCHES, span: 2 },
+    { name: "seatUpholstery", label: "Seat Upholstery", type: "select", options: ["Fabric", "Leather", "Premium Leather", "Alcantara"] },
+    { name: "vinNumber", label: "VIN Number", type: "vin", span: 2 },
+    { name: "registrationExpiry", label: "Registration Expiry", type: "date" },
+    { name: "registrationCountry", label: "Registration Country", type: "countrySelect" },
+    { name: "companyName", label: "Company Name", type: "text", placeholder: "e.g. Al Rashid Motors", dealerOnly: true },
+    { name: "description", label: "Vehicle Description", type: "textarea", span: 2, placeholder: "Describe the vehicle's condition, history, and standout features..." },
+    { name: "hasLoanOption", label: "Available on Loan", description: "Buyer can apply for financing on this vehicle", type: "toggleSwitch", fullWidth: true },
+  ],
+
+  specsFields: [
+    { name: "driveType", label: "Drive Type", type: "select", options: ["FWD", "RWD", "AWD", "4WD"] },
+    { name: "engineType", label: "Engine Type", type: "select", options: ["Inline-4", "V6", "V8", "V10", "V12", "Electric Motor"] },
+    { name: "horsepower", label: "Horsepower", type: "number", placeholder: "e.g. 304" },
+    { name: "numberOfCylinders", label: "Number of Cylinders", type: "select", options: ["2", "3", "4", "5", "6", "8", "10", "12", "16"] },
+    { name: "doors", label: "Doors", type: "select", options: ["2", "4"] },
+    { name: "seats", label: "Seating Capacity", type: "select", options: ["2", "3", "4", "5", "6", "7", "8"] },
+    { name: "steeringSide", label: "Steering Side", type: "toggle2", options: [
+      { value: "LEFT", label: "Left" },
+      { value: "RIGHT", label: "Right" },
+    ] },
+    { name: "vehicleClass", label: "Vehicle Class", type: "select", options: ["Economy", "Compact", "Mid-Size", "Full-Size", "Luxury", "Sports", "Supercar", "Muscle", "Classic"] },
+    { name: "registrationNumber", label: "Registration Number", type: "text", placeholder: "e.g. 12345 BAH" },
+    { name: "previousOwners", label: "Number of Previous Owners", type: "select", options: ["single", "multiple"] },
+    { name: "serviceHistory", label: "Service History", type: "select", options: ["Full", "Partial", "None"] },
+    { name: "accidentHistory", label: "Accident History", type: "select", options: ["No Accident", "Minor", "Major"] },
+    { name: "warranty", label: "Warranty", type: "select", options: ["Manufacturer", "Dealer", "Extended", "None"] },
+    { name: "numberOfKeys", label: "Number of Keys", type: "select", options: ["1", "2", "3+"] },
+    { name: "isGccSpecs", label: "GCC Specifications", description: "Vehicle manufactured for GCC market", type: "toggleSwitch", fullWidth: true },
+    { name: "isImported", label: "Imported Vehicle", description: "Vehicle imported from outside GCC", type: "toggleSwitch", fullWidth: true },
+    { name: "originalPaintCondition", label: "Original Paint", type: "select", options: ["Yes", "Partial", "No"] },
+  ],
+
+  featureGroups: [
+    { key: "comfort", label: "Comfort Features", options: ["Sunroof", "Panoramic Sunroof", "Heated Front Seats", "Ventilated Seats", "Power Seats", "Leather Seats", "Rear AC Vents", "Multi-zone Climate Control", "Auto-Dimming Mirror", "Power Trunk", "Heated Steering Wheel", "Wireless Charging"] },
+    { key: "safety", label: "Safety Features", options: ["Pre-Collision System", "Lane Departure Alert", "Blind Spot Monitor", "Rear Cross Traffic Alert", "Airbags", "ABS", "Electronic Brake Distribution", "Hill Descent Control", "ISOFIX", "Emergency Brake Assist", "Adaptive Cruise Control"] },
+    { key: "exterior", label: "Exterior Features", options: ["LED Headlamps", "LED Daytime Running Lights", "Alloy Wheels", "20\" Alloy Wheels", "Power Folding Mirrors", "Roof Rails", "Running Boards", "Side Steps", "Shark Fin Antenna", "Chrome Package", "Carbon Fibre Trim", "Panoramic Moonroof"] },
+    { key: "performance", label: "Performance Features", options: ["4WD System", "Crawl Control", "Multi-Terrain Select", "Active Height Control", "Kinetic Dynamic Suspension", "Launch Control", "Sport Mode", "Paddle Shifters", "Adaptive Suspension", "Active Exhaust", "Limited Slip Differential"] },
+  ],
+};

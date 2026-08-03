@@ -10,6 +10,7 @@ import AdDetailPage from "../modules/advertisements/pages/AdDetailPage";
 import SubscriptionPage from "../modules/subscription/pages/SubscriptionPage";
 import ProfilePage from "../modules/profile/pages/ProfilePage";
 import NotificationsPage from "../modules/notifications/pages/NotificationsPage";
+import AddVehiclePage from "../modules/listings/pages/AddVehiclePage";
 
 export default function AppRoutes() {
   return (
@@ -26,6 +27,7 @@ export default function AppRoutes() {
           <Route path="/subscription" element={<SubscriptionPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/listings/add-vehicle" element={<AddVehiclePage />} />
         </Route>
       </Route>
 
