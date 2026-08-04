@@ -4,9 +4,11 @@ import {
   useContext,
   useEffect,
   useState,
+  useRef,
 } from "react";
 import { useToast } from "../../../context/ToastContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { submitBulkSessionApi } from "../api/bulkListingApi";
 
 import {
   getListingByIdApi,
@@ -27,6 +29,7 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
+  const draftCreationPromiseRef = useRef(null);
 
   const subscriptionId = providedSubscriptionId || searchParams.get("subscriptionId") || "";
   const listingId = searchParams.get("listingId") || "";
@@ -50,7 +53,6 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
 
   useEffect(() => {
     let isMounted = true;
-    let draftCreationPromise = null;
 
     const initialize = async () => {
       try {
@@ -65,11 +67,14 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
           const existingListing = await getListingByIdApi(listingId);
           if (isMounted) setListing(existingListing);
         } else {
-          if (!draftCreationPromise) {
-            draftCreationPromise = createBulkDraftListingApi(subscriptionId);
+          // Guards against React Strict Mode's double effect
+          // invocation in development, which would otherwise
+          // create two separate draft listings.
+          if (!draftCreationPromiseRef.current) {
+            draftCreationPromiseRef.current = createBulkDraftListingApi(subscriptionId);
           }
 
-          const newDraft = await draftCreationPromise;
+          const newDraft = await draftCreationPromiseRef.current;
 
           if (isMounted) {
             setListing(newDraft);
@@ -109,16 +114,27 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
     [listing, updateUrl]
   );
 
-  const goNext = useCallback(() => {
+  const goNext = useCallback(async () => {
     const index = BULK_STEP_SEQUENCE.indexOf(currentStep);
 
     if (index === BULK_STEP_SEQUENCE.length - 1) {
+      try {
+        await submitBulkSessionApi(subscriptionId);
+        showToast("Vehicle submitted for admin review", "success");
+      } catch (error) {
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          "Listing saved as draft, but couldn't be submitted for review yet.";
+        showToast(message, "error");
+      }
+
       navigate(`/vehicles?subscriptionId=${subscriptionId}`);
       return;
     }
 
     goToStepIndex(index + 1);
-  }, [currentStep, goToStepIndex, navigate, subscriptionId]);
+  }, [currentStep, goToStepIndex, navigate, subscriptionId, showToast]);
 
   const goPrevious = useCallback(() => {
     const index = BULK_STEP_SEQUENCE.indexOf(currentStep);

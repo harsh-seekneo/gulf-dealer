@@ -16,6 +16,9 @@ export default function ListingsPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const [isCheckingPlan, setIsCheckingPlan] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [statusCounts, setStatusCounts] = useState({});
 
   const loadVehicles = async () => {
     setLoading(true);
@@ -57,11 +60,33 @@ export default function ListingsPage() {
     }
   };
 
+  const loadStatusCounts = async () => {
+    try {
+      const results = await Promise.all(
+        LISTING_TABS.map((tab) =>
+          listingsApi.getAll({ status: tab.status, limit: 1 }).then((data) => ({
+            key: tab.key,
+            count: data.pagination?.totalItems || 0,
+          }))
+        )
+      );
+
+      const counts = {};
+      results.forEach((result) => {
+        counts[result.key] = result.count;
+      });
+
+      setStatusCounts(counts);
+    } catch (err) {
+      console.error("Failed to load status counts:", err);
+    }
+  };
+
   useEffect(() => {
   loadVehicles();
+  loadStatusCounts();
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [activeTab]);
-
 
 useEffect(() => {
 
@@ -78,14 +103,24 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [search]);
 
-  const handleDelete = async (vehicle) => {
-    if (!window.confirm(`Delete "${vehicle.title}"?`)) return;
+  const handleDelete = (vehicle) => {
+    setDeleteTarget(vehicle);
+  };
+
+ const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+
+    setIsDeleting(true);
 
     try {
-      await listingsApi.deleteVehicle(vehicle._id);
+      await listingsApi.deleteVehicle(deleteTarget._id);
+      setDeleteTarget(null);
       loadVehicles();
+      loadStatusCounts();
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -154,7 +189,7 @@ useEffect(() => {
       <ListingsTabs
         activeTab={activeTab}
         onChange={setActiveTab}
-        totalCount={totalCount}
+        statusCounts={statusCounts}
       />
 
       <div className="flex gap-3">
@@ -194,6 +229,35 @@ useEffect(() => {
           onDelete={handleDelete}
           onToggleFeatured={handleToggleFeatured}
         />
+      )}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="text-base font-semibold text-slate-900">Delete this listing?</h3>
+            <p className="mt-2 text-sm text-slate-500">
+              &quot;{deleteTarget.title || "This listing"}&quot; will be permanently deleted. This action cannot be undone.
+            </p>
+
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={isDeleting}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
