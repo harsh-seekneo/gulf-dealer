@@ -169,7 +169,7 @@ useEffect(() => {
   };
 
   const handleEdit = (vehicle) => {
-    window.location.href = `/vehicles/${vehicle._id}/edit`;
+    navigate(`/vehicles/${vehicle._id}`);
   };
 
   return (

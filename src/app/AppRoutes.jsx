@@ -11,6 +11,7 @@ import SubscriptionPage from "../modules/subscription/pages/SubscriptionPage";
 import ProfilePage from "../modules/profile/pages/ProfilePage";
 import NotificationsPage from "../modules/notifications/pages/NotificationsPage";
 import AddVehiclePage from "../modules/listings/pages/AddVehiclePage";
+import ListingDetailPage from "../modules/listings/pages/ListingDetailPage";
 
 export default function AppRoutes() {
   return (
@@ -28,6 +29,7 @@ export default function AppRoutes() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/listings/add-vehicle" element={<AddVehiclePage />} />
+          <Route path="/vehicles/:listingId" element={<ListingDetailPage />} />
         </Route>
       </Route>
 
