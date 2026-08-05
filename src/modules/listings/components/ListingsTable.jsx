@@ -1,5 +1,5 @@
 import { Pencil, Trash2 } from "lucide-react";
-import { formatPrice } from "../listings.constants";
+import { formatPrice, getDaysColorClass } from "../listings.constants";
 
 export default function ListingsTable({
   tab,
@@ -7,6 +7,7 @@ export default function ListingsTable({
   onEdit,
   onDelete,
   onToggleFeatured,
+  onToggleSold,
 }) {
   if (!vehicles.length) {
     return (
@@ -16,6 +17,17 @@ export default function ListingsTable({
     );
   }
 
+  const showDays = tab === "all" || tab === "active" || tab === "sold";
+  const showViews = tab === "all" || tab === "active" || tab === "sold";
+  const showInteractions = tab === "sold";
+  const showLeads = tab === "all" || tab === "active" || tab === "sold";
+  const showStatus = tab === "pending" || tab === "rejected";
+  const showReason = tab === "rejected";
+  const showPrice = tab !== "rejected";
+  const showFeatured = tab === "all";
+  const showMarkAsSold = tab === "active";
+  const showSoldBadge = tab === "sold";
+
   return (
     <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
       <table className="w-full min-w-[800px] text-sm">
@@ -23,39 +35,21 @@ export default function ListingsTable({
           <tr>
             <th className="w-10 px-4 py-3"></th>
             <th className="px-2 py-3 font-semibold">Vehicle</th>
-            <th className="px-2 py-3 font-semibold">Price</th>
 
-            {tab === "rejected" ? (
-              <th className="px-2 py-3 font-semibold">Reason</th>
-            ) : (
-              <th className="px-2 py-3 font-semibold">Days</th>
-            )}
+            {showPrice && <th className="px-2 py-3 font-semibold">Price</th>}
 
-            {(tab === "all" || tab === "active" || tab === "sold") && (
-              <th className="px-2 py-3 font-semibold">Views</th>
-            )}
+            {showReason && <th className="px-2 py-3 font-semibold">Reason</th>}
+            {showDays && <th className="px-2 py-3 font-semibold">Days</th>}
 
-            {tab === "sold" && (
-              <th className="px-2 py-3 font-semibold">Interactions</th>
-            )}
-
-            {(tab === "all" || tab === "active" || tab === "sold") && (
-              <th className="px-2 py-3 font-semibold">Leads</th>
-            )}
-
-            {(tab === "pending" || tab === "rejected") && (
-              <th className="px-2 py-3 font-semibold">Status</th>
-            )}
+            {showViews && <th className="px-2 py-3 font-semibold">Views</th>}
+            {showInteractions && <th className="px-2 py-3 font-semibold">Interactions</th>}
+            {showLeads && <th className="px-2 py-3 font-semibold">Leads</th>}
+            {showStatus && <th className="px-2 py-3 font-semibold">Status</th>}
 
             <th className="px-2 py-3 font-semibold">Actions</th>
 
-            {tab === "all" && (
-              <th className="px-2 py-3 font-semibold">Featured Listing</th>
-            )}
-
-            {tab === "sold" && (
-              <th className="px-2 py-3 font-semibold">Status</th>
-            )}
+            {showFeatured && <th className="px-2 py-3 font-semibold">Featured Listing</th>}
+            {showSoldBadge && <th className="px-2 py-3 font-semibold">Status</th>}
           </tr>
         </thead>
 
@@ -63,10 +57,7 @@ export default function ListingsTable({
           {vehicles.map((v) => (
             <tr key={v._id}>
               <td className="px-4 py-4">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-slate-300"
-                />
+                <input type="checkbox" className="h-4 w-4 rounded border-slate-300" />
               </td>
 
               <td className="px-2 py-4">
@@ -81,57 +72,39 @@ export default function ListingsTable({
                     className="h-12 w-16 rounded-lg bg-slate-100 object-cover"
                   />
                   <div>
-                    <p className="font-semibold text-slate-900">
-                      {v.vehicleInfo?.title}
-                    </p>
+                    <p className="font-semibold text-slate-900">{v.vehicleInfo?.title}</p>
                     <p className="text-xs text-slate-400">
-                      {v.vehicleInfo?.manufacturingYear} •{" "}
-                      {v.vehicleInfo?.mileage?.toLocaleString()} km •{" "}
-                      {v.vehicleInfo?.fuelType}
+                      {v.vehicleInfo?.manufacturingYear} • {v.vehicleInfo?.mileage?.toLocaleString()} km • {v.vehicleInfo?.fuelType}
                     </p>
                   </div>
                 </div>
               </td>
 
-              <td className="px-2 py-4 font-semibold">
-                {formatPrice(v.pricing?.price)}
-              </td>
+              {showPrice && (
+                <td className="px-2 py-4 font-semibold">{formatPrice(v.pricing?.price)}</td>
+              )}
 
-              {tab === "rejected" ? (
-                <td className="px-2 py-4 font-semibold">
-                  {v.rejectionReason || "—"}
-                </td>
-              ) : (
-                <td
-                  className={`px-2 py-4 font-semibold ${
-                    v.daysRemaining > 7
-                      ? "text-green-600"
-                      : v.daysRemaining > 0
-                        ? "text-orange-500"
-                        : "text-red-600"
-                  }`}
-                >
+              {showReason && (
+                <td className="px-2 py-4 font-semibold">{v.rejectionReason || "—"}</td>
+              )}
+
+              {showDays && (
+                <td className={`px-2 py-4 font-semibold ${getDaysColorClass(v.daysRemaining)}`}>
                   {v.daysLabel}
                 </td>
               )}
 
-              {(tab === "all" || tab === "active" || tab === "sold") && (
-                <td className="px-2 py-4">{v.views?.toLocaleString() ?? 0}</td>
+              {showViews && <td className="px-2 py-4">{v.views?.toLocaleString() ?? 0}</td>}
+
+              {showInteractions && (
+                <td className="px-2 py-4">{v.interactions?.toLocaleString() ?? 0}</td>
               )}
 
-              {tab === "sold" && (
-                <td className="px-2 py-4">
-                  {v.interactions?.toLocaleString() ?? 0}
-                </td>
+              {showLeads && (
+                <td className="px-2 py-4 font-semibold text-blue-600">{v.leadsCount ?? 0}</td>
               )}
 
-              {(tab === "all" || tab === "active" || tab === "sold") && (
-                <td className="px-2 py-4 font-semibold text-blue-600">
-                  {v.leadsCount ?? 0}
-                </td>
-              )}
-
-              {(tab === "pending" || tab === "rejected") && (
+              {showStatus && (
                 <td className="px-2 py-4">
                   <span
                     className={`text-sm font-semibold ${
@@ -145,22 +118,25 @@ export default function ListingsTable({
 
               <td className="px-2 py-4">
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => onEdit(v)}
-                    className="text-slate-400 hover:text-slate-700"
-                  >
+                  <button onClick={() => onEdit(v)} className="text-slate-400 hover:text-slate-700">
                     <Pencil size={16} />
                   </button>
-                  <button
-                    onClick={() => onDelete(v)}
-                    className="text-red-400 hover:text-red-600"
-                  >
+                  <button onClick={() => onDelete(v)} className="text-red-400 hover:text-red-600">
                     <Trash2 size={16} />
                   </button>
+
+                  {showMarkAsSold && (
+                    <button
+                      onClick={() => onToggleSold(v)}
+                      className="ml-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                    >
+                      Mark as Sold
+                    </button>
+                  )}
                 </div>
               </td>
 
-              {tab === "all" && (
+              {showFeatured && (
                 <td className="px-2 py-4">
                   {v.status === "PUBLISHED" ? (
                     <button
@@ -170,16 +146,16 @@ export default function ListingsTable({
                       Add as Featured
                     </button>
                   ) : (
-                    <span className="text-sm text-slate-300">
-                      Add as Featured
-                    </span>
+                    <span className="text-sm text-slate-300">Add as Featured</span>
                   )}
                 </td>
               )}
 
-              {tab === "sold" && (
-                <td className="px-2 py-4 text-sm font-semibold text-slate-700">
-                  Marked as Sold
+              {showSoldBadge && (
+                <td className="px-2 py-4">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                    Sold
+                  </span>
                 </td>
               )}
             </tr>

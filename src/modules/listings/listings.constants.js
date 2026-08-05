@@ -20,11 +20,16 @@ export const LISTING_TABS = [
     status: "REJECTED",
   },
   {
-    key: "expired",
-    label: "Expired",
-    status: "EXPIRED",
+    key: "sold",
+    label: "Sold",
+    status: "SOLD",
   },
 ];
 
 export const formatPrice = (price) =>
   `BHD ${Number(price || 0).toLocaleString()}`;
+
+export const getDaysColorClass = (daysRemaining) => {
+  if (daysRemaining === undefined || daysRemaining === null) return "text-slate-600";
+  return daysRemaining < 10 ? "text-red-600" : "text-green-600";
+};

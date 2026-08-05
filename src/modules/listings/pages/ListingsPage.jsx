@@ -133,6 +133,16 @@ useEffect(() => {
     }
   };
 
+  const handleToggleSold = async (vehicle) => {
+    try {
+      await listingsApi.toggleSold(vehicle._id);
+      loadVehicles();
+      loadStatusCounts();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleAddNewVehicle = async () => {
     if (isCheckingPlan) return;
 
@@ -228,6 +238,7 @@ useEffect(() => {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onToggleFeatured={handleToggleFeatured}
+          onToggleSold={handleToggleSold}
         />
       )}
       {deleteTarget && (

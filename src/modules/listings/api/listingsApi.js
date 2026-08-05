@@ -26,4 +26,9 @@ export const listingsApi = {
 
     return res.data.data;
   },
+
+  toggleSold: async (id) => {
+    const res = await apiClient.patch(`/vehicle-listings/${id}/toggle-sold`);
+    return res.data.data;
+  },
 }; 
