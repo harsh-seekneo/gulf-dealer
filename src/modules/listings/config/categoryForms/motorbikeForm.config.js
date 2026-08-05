@@ -1,0 +1,53 @@
+export const MOTORBIKE_COLOR_SWATCHES = [
+  "#ffffff", "#0f172a", "#64748b", "#94a3b8", "#1e3a8a",
+  "#2563eb", "#0891b2", "#dc2626", "#7c2d12", "#16a34a",
+  "#166534", "#ca8a04", "#facc15", "#ea580c", "#7c3aed",
+];
+
+export const motorbikeFormConfig = {
+  key: "MOTORBIKE",
+  label: "Motorbike",
+
+  vehicleInfoFields: [
+    { name: "title", label: "Listing Title", type: "text", required: true, span: 2, placeholder: "e.g. 2023 Kawasaki Ninja ZX-10R" },
+    { name: "bikeCategory", label: "Bike Category", type: "select", required: true, options: ["Sport", "Cruiser", "Touring", "Standard", "Off-Road", "Scooter"] },
+    { name: "bikeType", label: "Bike Type", type: "select", required: true, options: ["Sport Bike", "Cruiser", "Touring", "Naked", "Adventure", "Scooter"] },
+    { name: "brand", label: "Brand", type: "brandSelect", required: true },
+    { name: "catalogModel", label: "Model", type: "modelSelect", required: true },
+    { name: "variantTrim", label: "Variant / Trim", type: "text", placeholder: "e.g. ABS, SE, Special Edition" },
+    { name: "manufacturingYear", label: "Manufacturing Year", type: "yearSelect", required: true },
+    { name: "mileage", label: "Mileage (km)", type: "number", placeholder: "e.g. 8500" },
+    { name: "exteriorColor", label: "Color", type: "colorSwatch", swatches: MOTORBIKE_COLOR_SWATCHES, span: 2 },
+    { name: "vinNumber", label: "VIN / Chassis Number", type: "vin", span: 2 },
+  ],
+
+  engineSectionTitle: "Engine, Performance / Specifications",
+  engineSectionDescription: "Add technical details specific to the motorbike.",
+  specsFields: [
+    { name: "engineCapacity", label: "Engine Capacity (CC)", type: "text", placeholder: "e.g. 998" },
+    { name: "engineType", label: "Engine Type", type: "select", options: ["Single Cylinder", "Twin Cylinder", "Inline-4", "V-Twin", "Electric Motor"] },
+    { name: "horsepower", label: "Horsepower (HP)", type: "number" },
+    { name: "torque", label: "Torque (Nm)", type: "text" },
+    { name: "topSpeed", label: "Top Speed (km/h)", type: "text" },
+    { name: "fuelType", label: "Fuel Type", type: "select", options: ["Petrol", "Electric"] },
+    { name: "coolingSystem", label: "Cooling System", type: "select", options: ["Air Cooled", "Liquid Cooled", "Oil Cooled"] },
+    { name: "transmission", label: "Transmission", type: "select", options: ["Manual", "Automatic", "Semi-Automatic"] },
+    { name: "driveType", label: "Drive Type", type: "select", options: ["Chain", "Belt", "Shaft"] },
+    { name: "seatHeight", label: "Seat Height (mm)", type: "text" },
+    { name: "fuelTankCapacity", label: "Fuel Tank Capacity", type: "text", placeholder: "e.g. 17 L" },
+    { name: "weight", label: "Weight (kg)", type: "number" },
+    { name: "registrationCountry", label: "Registration Country", type: "countrySelect" },
+    { name: "numberOfOwners", label: "Number of Owners", type: "number" },
+    { name: "registrationNumber", label: "Registration Number", type: "text" },
+    { name: "serviceHistory", label: "Service History", type: "select", options: ["Full", "Partial", "None"] },
+    { name: "accidentHistory", label: "Accident History", type: "select", options: ["No Accident", "Minor", "Major"] },
+    { name: "warranty", label: "Warranty", type: "select", options: ["Manufacturer", "Dealer", "Extended", "None"] },
+    { name: "numberOfKeys", label: "Number of Keys", type: "select", options: ["1", "2", "3+"] },
+  ],
+
+  featureGroups: [
+    { key: "comfort", label: "Comfort & Convenience", options: ["LED Headlight", "Heated Grips", "Bluetooth", "Digital Display", "USB Charging", "Cruise Control", "Riding Modes", "Quick Shifter", "Slipper Clutch", "Windscreen"] },
+    { key: "safety", label: "Safety Features", options: ["ABS", "Traction Control", "Cornering ABS", "Anti-Wheelie", "Rear Lift-off Protection", "Emergency Stop Signal", "Tyre Pressure Monitoring", "Reflective Strips"] },
+    { key: "performance", label: "Performance Features", options: ["Launch Control", "Wheelie Control", "Adjustable Suspension", "LED Indicators", "Exhaust System Upgrade", "Frame Sliders", "Digital Instrument Cluster", "Centre Stand", "Keyless Ignition"] },
+  ],
+};

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Search, Plus, Filter } from "lucide-react";
+import { getDealerStatusApi } from "../../dealer/api/dealerApi";
+import { useNavigate } from "react-router-dom";
 
 import ListingsTabs from "../components/ListingsTabs";
 import ListingsTable from "../components/ListingsTable";
@@ -14,7 +16,11 @@ export default function ListingsPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [deleteVehicle, setDeleteVehicle] = useState(null);
+  const navigate = useNavigate();
+  const [isCheckingPlan, setIsCheckingPlan] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [statusCounts, setStatusCounts] = useState({});
 
   const loadVehicles = async () => {
     setLoading(true);
@@ -56,11 +62,33 @@ export default function ListingsPage() {
     }
   };
 
+  const loadStatusCounts = async () => {
+    try {
+      const results = await Promise.all(
+        LISTING_TABS.map((tab) =>
+          listingsApi.getAll({ status: tab.status, limit: 1 }).then((data) => ({
+            key: tab.key,
+            count: data.pagination?.totalItems || 0,
+          }))
+        )
+      );
+
+      const counts = {};
+      results.forEach((result) => {
+        counts[result.key] = result.count;
+      });
+
+      setStatusCounts(counts);
+    } catch (err) {
+      console.error("Failed to load status counts:", err);
+    }
+  };
+
   useEffect(() => {
   loadVehicles();
+  loadStatusCounts();
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [activeTab]);
-
 
 useEffect(() => {
 
@@ -89,6 +117,7 @@ useEffect(() => {
       await listingsApi.deleteVehicle(deleteVehicle._id);
       setDeleteVehicle(null);
       loadVehicles();
+      loadStatusCounts();
     } catch (err) {
       console.error(err);
     } finally {
@@ -105,8 +134,43 @@ useEffect(() => {
     }
   };
 
+  const handleToggleSold = async (vehicle) => {
+    try {
+      await listingsApi.toggleSold(vehicle._id);
+      loadVehicles();
+      loadStatusCounts();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddNewVehicle = async () => {
+    if (isCheckingPlan) return;
+
+    setIsCheckingPlan(true);
+
+    try {
+      const { dealer } = await getDealerStatusApi();
+      const subscriptionId = dealer?.business?.businessSubscriptionRef?._id;
+
+      if (!subscriptionId) {
+        alert(
+          "No active business plan found. Please complete your dealer subscription to start listing vehicles."
+        );
+        return;
+      }
+
+      navigate(`/listings/add-vehicle?subscriptionId=${subscriptionId}`);
+    } catch (err) {
+      console.error("Failed to check dealer status:", err);
+      alert("Unable to verify your plan. Please try again.");
+    } finally {
+      setIsCheckingPlan(false);
+    }
+  };
+
   const handleEdit = (vehicle) => {
-    window.location.href = `/vehicles/${vehicle._id}/edit`;
+    navigate(`/vehicles/${vehicle._id}`);
   };
 
   return (
@@ -123,16 +187,20 @@ useEffect(() => {
           </a>
         </div>
 
-        <button className="flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">
+        <button
+          onClick={handleAddNewVehicle}
+          disabled={isCheckingPlan}
+          className="flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
+        >
           <Plus size={16} />
-          Add New Vehicle
+          {isCheckingPlan ? "Checking..." : "Add New Vehicle"}
         </button>
       </div>
 
       <ListingsTabs
         activeTab={activeTab}
         onChange={setActiveTab}
-        totalCount={totalCount}
+        statusCounts={statusCounts}
       />
 
       <div className="flex gap-3">
@@ -171,6 +239,7 @@ useEffect(() => {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onToggleFeatured={handleToggleFeatured}
+          onToggleSold={handleToggleSold}
         />
       )}
 

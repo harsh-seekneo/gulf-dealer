@@ -1,0 +1,83 @@
+import { useState } from "react";
+
+import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
+import { carFormConfig } from "../../config/categoryForms/carForm.config";
+import { commercialFormConfig } from "../../config/categoryForms/commercialForm.config";
+import { heavyEquipmentFormConfig } from "../../config/categoryForms/heavyEquipmentForm.config";
+import { motorbikeFormConfig } from "../../config/categoryForms/motorbikeForm.config";
+import CollapsibleFeatureGroup from "../CollapsibleFeatureGroup";
+import WizardFooterNav from "../WizardFooterNav";
+
+const configByFormType = {
+  CAR: carFormConfig,
+  COMMERCIAL: commercialFormConfig,
+  HEAVY_EQUIPMENT: heavyEquipmentFormConfig,
+  MOTORBIKE: motorbikeFormConfig,
+};
+
+const Step6Features = () => {
+  const { listing, isSaving, saveStep, goPrevious, saveDraft } = useBulkVehicleWizard();
+
+  const formType = listing?.category?.vehicleFormType || "CAR";
+  const config = configByFormType[formType] || carFormConfig;
+
+  const existingFeatures = listing?.features || {};
+
+  const buildInitialSelected = () => {
+    const initial = {};
+    config.featureGroups.forEach((group) => {
+      initial[group.key] = existingFeatures[group.key] || [];
+    });
+    return initial;
+  };
+
+  const [selected, setSelected] = useState(buildInitialSelected);
+
+  const toggleFeature = (groupKey, option) => {
+    setSelected((previous) => {
+      const current = previous[groupKey];
+      const next = current.includes(option)
+        ? current.filter((item) => item !== option)
+        : [...current, option];
+
+      return { ...previous, [groupKey]: next };
+    });
+  };
+
+  const handleNext = async () => {
+    try {
+      await saveStep(6, selected);
+    } catch {
+      // Error toast already shown by context.
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="text-lg font-bold text-slate-950">{config.label} Features</h2>
+      <p className="mt-1 text-sm text-slate-500">Select all features included with your vehicle.</p>
+
+      <div className="mt-5 space-y-3">
+        {config.featureGroups.map((group, index) => (
+          <CollapsibleFeatureGroup
+            key={group.key}
+            title={group.label}
+            options={group.options}
+            selectedValues={selected[group.key]}
+            onToggle={(option) => toggleFeature(group.key, option)}
+            defaultOpen={index === 0}
+          />
+        ))}
+      </div>
+
+      <WizardFooterNav
+        onPrevious={goPrevious}
+        onSaveDraft={saveDraft}
+        onNext={handleNext}
+        isSaving={isSaving}
+      />
+    </div>
+  );
+};
+
+export default Step6Features;
