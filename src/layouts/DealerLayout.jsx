@@ -7,9 +7,9 @@ export default function DealerLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen items-start bg-slate-50">
       <DealerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex flex-1 flex-col overflow-x-hidden">
+      <div className="flex min-h-screen flex-1 flex-col overflow-x-hidden">
         <DealerTopbar onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 p-4 sm:p-6">
           <Outlet />

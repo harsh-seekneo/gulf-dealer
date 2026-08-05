@@ -4,12 +4,15 @@ import PlanCard from "../components/PlanCard";
 import ComparePlansTable from "../components/ComparePlansTable";
 import { subscriptionApi } from "../api/subscriptionApi";
 import { getDealerStatusApi } from "../../dealer/api/dealerApi";
+import ConfirmModal from "../../../components/ui/ConfirmModal";
 
 export default function SubscriptionPage() {
   const [currentPlan, setCurrentPlan] = useState(null);
   const [plans, setPlans] = useState([]);
   const [dealerId, setDealerId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [isSwitchingPlan, setIsSwitchingPlan] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -33,15 +36,19 @@ export default function SubscriptionPage() {
     }
   };
 
-  const handleSelectPlan = async (plan) => {
-    if (!window.confirm(`Switch to ${plan.planName}?`)) return;
+  const handleSelectPlan = (plan) => {
+    setSelectedPlan(plan);
+  };
+
+  const confirmSelectPlan = async () => {
+    if (!selectedPlan) return;
 
     if (!dealerId) {
       console.error("Dealer ID not found.");
       return;
     }
 
-    const durationDays = plan.pricingTiers?.[0]?.durationDays;
+    const durationDays = selectedPlan.pricingTiers?.[0]?.durationDays;
 
     if (!durationDays) {
       console.error("No pricing tier found.");
@@ -49,15 +56,19 @@ export default function SubscriptionPage() {
     }
 
     try {
+      setIsSwitchingPlan(true);
       await subscriptionApi.choosePlan({
         dealerId,
-        planId: plan._id,
+        planId: selectedPlan._id,
         durationDays,
       });
 
+      setSelectedPlan(null);
       await loadData();
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsSwitchingPlan(false);
     }
   };
 
@@ -120,6 +131,19 @@ export default function SubscriptionPage() {
       {plans.length > 0 && (
         <ComparePlansTable plans={plans} />
       )}
+
+      <ConfirmModal
+        isOpen={Boolean(selectedPlan)}
+        title="Switch subscription plan"
+        message={`Switch to ${selectedPlan?.planName || "this plan"}? Your dealer subscription will be updated.`}
+        confirmText="Switch Plan"
+        variant="primary"
+        isLoading={isSwitchingPlan}
+        onClose={() => {
+          if (!isSwitchingPlan) setSelectedPlan(null);
+        }}
+        onConfirm={confirmSelectPlan}
+      />
     </div>
   );
 }

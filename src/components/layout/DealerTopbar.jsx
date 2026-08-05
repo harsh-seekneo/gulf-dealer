@@ -88,7 +88,7 @@ export default function DealerTopbar({ onMenuClick }) {
                   {dealerName || "Dealer"}
                 </p>
                 <p className="text-xs text-slate-400">
-                  {dealerTier || "—"}
+                  {dealerTier || "-"}
                 </p>
               </div>
             </>

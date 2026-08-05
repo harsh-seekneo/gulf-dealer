@@ -7,7 +7,6 @@ const readPayload = (response) => response.data?.data || response.data || {};
 export const getCurrentUserApi = async () => {
      const response = await apiClient.get(API_ENDPOINTS.AUTH.ME);
      const payload = readPayload(response);
-     console.log("USER PAYLOAD:", payload); // temp
      return payload.user || payload;
    };
 

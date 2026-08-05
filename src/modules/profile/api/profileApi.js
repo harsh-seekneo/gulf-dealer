@@ -36,11 +36,16 @@ uploadDocument: async (file, name = "Document") => {
 
   updateCoverBanner: async (file) => {
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("coverBanner", file);
 
     const res = await apiClient.patch(
       API_ENDPOINTS.DEALER.COVER_BANNER,
-      formData
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
     );
 
     return res.data.data;

@@ -10,11 +10,9 @@ import {
   Bell,
   X,
   LogOut,
+  Crown,
 } from "lucide-react";
 
-import { logoutUserApi } from "../../modules/auth/api/authApi";
-import { redirectToUserLogin } from "../../utils/authRedirect";
-import { removeAccessToken } from "../../utils/tokenStorage";
 import useAuth from "../../modules/auth/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { subscriptionApi } from "../../modules/subscription/api/subscriptionApi";
@@ -34,9 +32,7 @@ const navItems = [
 ];
 
 export default function DealerSidebar({ isOpen, onClose }) {
-  const { user, dealerStatus, isLoading } = useAuth();
-  console.log("AUTH USER:", user);
-   console.log("DEALER STATUS:", dealerStatus);
+  const { user, dealerStatus, isLoading, logout } = useAuth();
 
   // TODO: confirm exact field names against the real dealer/status and
   // /auth/me payloads, then drop the unused fallbacks below.
@@ -80,30 +76,8 @@ useEffect(() => {
       0,
   };
 
-  const listingsUsed =
-    dealerStatus?.listingsUsed ?? dealerStatus?.usage?.listingsUsed ?? 0;
-  const listingsLimit =
-    dealerStatus?.listingsLimit ?? dealerStatus?.usage?.listingsLimit ?? 0;
-
-  const usagePct =
-    listingsLimit > 0 ? Math.round((listingsUsed / listingsLimit) * 100) : 0;
-
-  const planLabel =
-    dealerStatus?.planName ||
-    dealerStatus?.plan ||
-    dealerStatus?.tier ||
-    tier ||
-    "";
-
   const handleLogout = async () => {
-    try {
-      await logoutUserApi();
-    } catch (error) {
-      console.error("Logout failed:", error);
-    } finally {
-      removeAccessToken();
-      redirectToUserLogin();
-    }
+    await logout();
   };
 
   return (
@@ -118,7 +92,7 @@ useEffect(() => {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-slate-950 text-white transition-transform duration-300 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 flex-col overflow-hidden bg-slate-950 text-white transition-transform duration-300 lg:sticky lg:top-0 lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -147,7 +121,7 @@ useEffect(() => {
         {/* Dealer */}
         <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-bold">
-            🚗
+            <Car size={18} />
           </div>
 
           {isLoading ? (
@@ -170,50 +144,52 @@ useEffect(() => {
 
               <p className="mt-0.5 flex items-center gap-1 text-xs text-emerald-400">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                {tier || "—"}
+                {tier || "-"}
               </p>
             </div>
           )}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const badge =
-              item.badgeKey != null ? badgeCounts[item.badgeKey] : null;
+        <div className="dealer-sidebar-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4">
+          <nav className="space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const badge =
+                item.badgeKey != null ? badgeCounts[item.badgeKey] : null;
 
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={onClose}
-                className={({ isActive }) =>
-                  `flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                    isActive
-                      ? "bg-blue-600 text-white"
-                      : "text-slate-300 hover:bg-white/10 hover:text-white"
-                  }`
-                }
-              >
-                <span className="flex items-center gap-3">
-                  <Icon size={18} />
-                  {item.label}
-                </span>
-
-                {badge != null && badge > 0 && (
-                  <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-semibold">
-                    {badge}
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                      isActive
+                        ? "bg-blue-600 text-white"
+                        : "text-slate-300 hover:bg-white/10 hover:text-white"
+                    }`
+                  }
+                >
+                  <span className="flex items-center gap-3">
+                    <Icon size={18} />
+                    {item.label}
                   </span>
-                )}
-              </NavLink>
-            );
-          })}
-        </nav>
+
+                  {badge != null && badge > 0 && (
+                    <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-semibold">
+                      {badge}
+                    </span>
+                  )}
+                </NavLink>
+              );
+            })}
+          </nav>
+        </div>
 
         {/* Subscription */}
   {/* Subscription */}
-<div className="border-t border-white/10 p-4">
+<div className="shrink-0 border-t border-white/10 p-4">
   {subscription ? (() => {
     const startDate = new Date(subscription.startDate);
     const endDate = new Date(subscription.endDate);
@@ -243,7 +219,7 @@ useEffect(() => {
     return (
       <div className="rounded-xl bg-white/5 p-3">
         <p className="flex items-center gap-1.5 text-sm font-semibold text-amber-400">
-          🏅 {subscription.planNameSnapshot}
+          <Crown size={15} /> {subscription.planNameSnapshot}
         </p>
 
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
@@ -268,7 +244,7 @@ useEffect(() => {
 </div>
 
         {/* Logout */}
-        <div className="border-t border-white/10 p-3">
+        <div className="shrink-0 border-t border-white/10 p-3">
           <button
             onClick={handleLogout}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-red-500/10 hover:text-red-400"

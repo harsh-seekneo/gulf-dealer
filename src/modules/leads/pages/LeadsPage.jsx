@@ -21,6 +21,20 @@ function initials(name = "") {
     .toUpperCase();
 }
 
+function StatusBadge({ status }) {
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black uppercase ${
+        status === "new"
+          ? "bg-emerald-50 text-emerald-600"
+          : "bg-slate-100 text-slate-500"
+      }`}
+    >
+      {status || "new"}
+    </span>
+  );
+}
+
 export default function LeadsPage() {
   const [leads, setLeads] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -140,7 +154,7 @@ export default function LeadsPage() {
             <thead className="bg-slate-50/90 text-slate-500">
               <tr>
                 <th className="w-[24%] px-4 py-4 font-bold">Customer</th>
-                <th className="w-[23%] px-4 py-4 font-bold">Vehicle</th>
+                <th className="w-[23%] px-4 py-4 font-bold">Enquiry</th>
                 <th className="w-[24%] px-4 py-4 font-bold">Message</th>
                 <th className="w-[14%] px-4 py-4 font-bold">Mobile</th>
                 <th className="w-[15%] px-4 py-4 font-bold">Email</th>
@@ -167,7 +181,15 @@ export default function LeadsPage() {
                       </div>
                     </td>
                     <td className="break-words px-4 py-4 align-top font-medium text-slate-600">
-                      {lead.vehicleTitle || "-"}
+                      <p>{lead.vehicleTitle || "-"}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <StatusBadge status={lead.status} />
+                        {lead.inquiryType === "seller_profile" ? (
+                          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-black uppercase text-blue-600">
+                            Seller Profile
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="break-words px-4 py-4 align-top font-medium text-slate-400">
                       {lead.message || "Is it available?"}

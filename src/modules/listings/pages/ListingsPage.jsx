@@ -5,6 +5,7 @@ import ListingsTabs from "../components/ListingsTabs";
 import ListingsTable from "../components/ListingsTable";
 import { listingsApi } from "../api/listingsApi";
 import { LISTING_TABS } from "../listings.constants";
+import ConfirmModal from "../../../components/ui/ConfirmModal";
 
 export default function ListingsPage() {
   const [activeTab, setActiveTab] = useState("all");
@@ -12,6 +13,8 @@ export default function ListingsPage() {
   const [vehicles, setVehicles] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [deleteVehicle, setDeleteVehicle] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadVehicles = async () => {
     setLoading(true);
@@ -74,14 +77,22 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [search]);
 
-  const handleDelete = async (vehicle) => {
-    if (!window.confirm(`Delete "${vehicle.title}"?`)) return;
+  const handleDelete = (vehicle) => {
+    setDeleteVehicle(vehicle);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteVehicle) return;
 
     try {
-      await listingsApi.deleteVehicle(vehicle._id);
+      setIsDeleting(true);
+      await listingsApi.deleteVehicle(deleteVehicle._id);
+      setDeleteVehicle(null);
       loadVehicles();
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -162,6 +173,18 @@ useEffect(() => {
           onToggleFeatured={handleToggleFeatured}
         />
       )}
+
+      <ConfirmModal
+        isOpen={Boolean(deleteVehicle)}
+        title="Delete listing"
+        message={`Delete "${deleteVehicle?.title || "this listing"}"? This action cannot be undone.`}
+        confirmText="Delete"
+        isLoading={isDeleting}
+        onClose={() => {
+          if (!isDeleting) setDeleteVehicle(null);
+        }}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }
