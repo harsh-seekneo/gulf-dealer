@@ -19,6 +19,7 @@ export const motorbikeFormConfig = {
     { name: "mileage", label: "Mileage (km)", type: "number", placeholder: "e.g. 8500" },
     { name: "exteriorColor", label: "Color", type: "colorSwatch", swatches: MOTORBIKE_COLOR_SWATCHES, span: 2 },
     { name: "vinNumber", label: "VIN / Chassis Number", type: "vin", span: 2 },
+    { name: "description", label: "Description", type: "textarea", span: 2, placeholder: "Describe the motorbike's condition, history, and standout features..." },
   ],
 
   engineSectionTitle: "Engine, Performance / Specifications",

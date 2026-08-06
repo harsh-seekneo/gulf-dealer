@@ -23,3 +23,8 @@ export const toggleBumpToTopApi = async (listingId, addOnSubscriptionId) => {
   });
   return data.data;
 };
+
+export const submitSingleBulkListingApi = async (listingId) => {
+  const { data } = await apiClient.post(`${BASE_URL}/${listingId}/submit-single`);
+  return data.data;
+};

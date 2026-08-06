@@ -17,6 +17,7 @@ import EditableFieldSection from "../components/detail/EditableFieldSection";
 import FeaturesDisplay from "../components/detail/FeaturesDisplay";
 import CustomerInquiries from "../components/detail/CustomerInquiries";
 import SellerInfoCard from "../components/detail/SellerInfoCard";
+import { submitSingleBulkListingApi } from "../api/bulkListingApi";
 
 const configByFormType = {
   CAR: carFormConfig,
@@ -41,6 +42,7 @@ const ListingDetailPage = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTogglingSold, setIsTogglingSold] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchListing = async () => {
     try {
@@ -79,6 +81,20 @@ const ListingDetailPage = () => {
       showToast(error.response?.data?.message || "Unable to update listing", "error");
     } finally {
       setIsTogglingSold(false);
+    }
+  };
+
+  const handleSubmitForReview = async () => {
+    setIsSubmitting(true);
+
+    try {
+      await submitSingleBulkListingApi(listingId);
+      showToast("Vehicle submitted for admin review", "success");
+      await fetchListing();
+    } catch (error) {
+      showToast(error.response?.data?.message || "Unable to submit for review", "error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -158,6 +174,18 @@ const ListingDetailPage = () => {
               <Check size={14} />
             )}
             {listing.isSold ? "Unmark as Sold" : "Mark as Sold"}
+          </button>
+        )}
+
+        {listing.status === "DRAFT" && (
+          <button
+            type="button"
+            onClick={handleSubmitForReview}
+            disabled={isSubmitting}
+            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+          >
+            {isSubmitting && <Loader2 size={14} className="animate-spin" />}
+            Submit for Review
           </button>
         )}
 
