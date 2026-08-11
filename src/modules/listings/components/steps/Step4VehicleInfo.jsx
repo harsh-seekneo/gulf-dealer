@@ -5,15 +5,22 @@ import { carFormConfig } from "../../config/categoryForms/carForm.config";
 import { commercialFormConfig } from "../../config/categoryForms/commercialForm.config";
 import { heavyEquipmentFormConfig } from "../../config/categoryForms/heavyEquipmentForm.config";
 import { motorbikeFormConfig } from "../../config/categoryForms/motorbikeForm.config";
+import { buggyFormConfig } from "../../config/categoryForms/buggyForm.config";
+import { caravanFormConfig } from "../../config/categoryForms/caravanForm.config";
+import { specialNumberFormConfig } from "../../config/categoryForms/specialNumberForm.config";
 import DynamicField from "../formFields/DynamicField";
 import FormField from "../FormField";
 import WizardFooterNav from "../WizardFooterNav";
+import PlateSummary from "../detail/PlateSummary";
 
 const configByFormType = {
   CAR: carFormConfig,
   COMMERCIAL: commercialFormConfig,
   HEAVY_EQUIPMENT: heavyEquipmentFormConfig,
   MOTORBIKE: motorbikeFormConfig,
+  BUGGY: buggyFormConfig,
+  CARAVAN: caravanFormConfig,
+  SPECIAL_NUMBER: specialNumberFormConfig,
 };
 
 const Step4VehicleInfo = () => {
@@ -131,6 +138,12 @@ const Step4VehicleInfo = () => {
           );
         })}
       </div>
+
+      {formType === "SPECIAL_NUMBER" && (
+        <div className="mt-5">
+          <PlateSummary vehicleInfo={form} />
+        </div>
+      )}
 
       <WizardFooterNav
         onPrevious={goPrevious}

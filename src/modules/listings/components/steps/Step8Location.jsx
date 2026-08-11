@@ -5,6 +5,23 @@ import { GULF_COUNTRIES } from "../../config/gulfLocations.config";
 import FormField from "../FormField";
 import ToggleSwitchField from "../ToggleSwitchField";
 import WizardFooterNav from "../WizardFooterNav";
+import { carFormConfig } from "../../config/categoryForms/carForm.config";
+import { commercialFormConfig } from "../../config/categoryForms/commercialForm.config";
+import { heavyEquipmentFormConfig } from "../../config/categoryForms/heavyEquipmentForm.config";
+import { motorbikeFormConfig } from "../../config/categoryForms/motorbikeForm.config";
+import { buggyFormConfig } from "../../config/categoryForms/buggyForm.config";
+import { caravanFormConfig } from "../../config/categoryForms/caravanForm.config";
+import { specialNumberFormConfig } from "../../config/categoryForms/specialNumberForm.config";
+
+const configByFormType = {
+  CAR: carFormConfig,
+  COMMERCIAL: commercialFormConfig,
+  HEAVY_EQUIPMENT: heavyEquipmentFormConfig,
+  MOTORBIKE: motorbikeFormConfig,
+  BUGGY: buggyFormConfig,
+  CARAVAN: caravanFormConfig,
+  SPECIAL_NUMBER: specialNumberFormConfig,
+};
 
 const inputClass =
   "h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100";
@@ -12,11 +29,16 @@ const inputClass =
 const Step8Location = () => {
   const { listing, isSaving, saveStep, goPrevious, saveDraft } = useBulkVehicleWizard();
 
+  const formType = listing?.category?.vehicleFormType || "CAR";
+  const config = configByFormType[formType] || carFormConfig;
+  const hasAreaField = Boolean(config.hasAreaField);
+
   const existingLocation = listing?.location || {};
 
   const [country, setCountry] = useState(existingLocation.country || "");
   const [governorate, setGovernorate] = useState(existingLocation.governorate || "");
   const [city, setCity] = useState(existingLocation.city || "");
+  const [area, setArea] = useState(existingLocation.area || "");
   const [showPhoneNumber, setShowPhoneNumber] = useState(existingLocation.showPhoneNumber ?? true);
   const [showWhatsappNumber, setShowWhatsappNumber] = useState(existingLocation.showWhatsappNumber ?? true);
 
@@ -54,6 +76,7 @@ const Step8Location = () => {
     if (!country) nextErrors.country = "Country is required";
     if (!governorate) nextErrors.governorate = "Governorate/State is required";
     if (!city) nextErrors.city = "City/Area is required";
+    if (hasAreaField && !area) nextErrors.area = "Area is required";
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
@@ -61,7 +84,14 @@ const Step8Location = () => {
     }
 
     try {
-      await saveStep(8, { country, governorate, city, showPhoneNumber, showWhatsappNumber });
+      await saveStep(8, {
+        country,
+        governorate,
+        city,
+        area: hasAreaField ? area : undefined,
+        showPhoneNumber,
+        showWhatsappNumber,
+      });
     } catch {
       // Error toast already shown by context.
     }
@@ -92,7 +122,7 @@ const Step8Location = () => {
         </FormField>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <FormField label="City / Area" required error={errors.city}>
           <select value={city} onChange={(e) => handleCityChange(e.target.value)} disabled={!governorate} className={inputClass}>
             <option value="">Select city</option>
@@ -101,6 +131,22 @@ const Step8Location = () => {
             ))}
           </select>
         </FormField>
+
+        {hasAreaField && (
+          <FormField label="Area" required error={errors.area}>
+            <input
+              type="text"
+              value={area}
+              onChange={(e) => {
+                setArea(e.target.value);
+                setErrors((previous) => ({ ...previous, area: "" }));
+              }}
+              placeholder="e.g. Adliya, Deira, Al Olaya"
+              disabled={!city}
+              className={inputClass}
+            />
+          </FormField>
+        )}
       </div>
 
       <div className="mt-5 divide-y divide-slate-100 rounded-xl border border-slate-200 px-4">

@@ -10,6 +10,10 @@ import { carFormConfig } from "../config/categoryForms/carForm.config";
 import { commercialFormConfig } from "../config/categoryForms/commercialForm.config";
 import { heavyEquipmentFormConfig } from "../config/categoryForms/heavyEquipmentForm.config";
 import { motorbikeFormConfig } from "../config/categoryForms/motorbikeForm.config";
+import { buggyFormConfig } from "../config/categoryForms/buggyForm.config";
+import { caravanFormConfig } from "../config/categoryForms/caravanForm.config";
+import { specialNumberFormConfig } from "../config/categoryForms/specialNumberForm.config";
+import PlateSummary from "../components/detail/PlateSummary";
 
 import ListingHeroGallery from "../components/detail/ListingHeroGallery";
 import ListingHeaderStats from "../components/detail/ListingHeaderStats";
@@ -24,6 +28,9 @@ const configByFormType = {
   COMMERCIAL: commercialFormConfig,
   HEAVY_EQUIPMENT: heavyEquipmentFormConfig,
   MOTORBIKE: motorbikeFormConfig,
+  BUGGY: buggyFormConfig,
+  CARAVAN: caravanFormConfig,
+  SPECIAL_NUMBER: specialNumberFormConfig,
 };
 
 const EDITABLE_STATUSES = ["DRAFT", "PENDING_REVIEW", "REJECTED"];
@@ -212,6 +219,7 @@ const ListingDetailPage = () => {
           canEdit={canEdit}
           onSaved={handleSectionSaved}
         />
+        {formType === "SPECIAL_NUMBER" && <PlateSummary vehicleInfo={listing.vehicleInfo} />}
 
         <EditableFieldSection
           title={config.engineSectionTitle || `${config.label} Specifications`}
