@@ -81,6 +81,28 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
         />
       );
 
+      case "url":
+      return (
+        <input
+          type="url"
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={field.placeholder || "https://maps.google.com/..."}
+          className={`${baseInputClass} ${errorClass}`}
+        />
+      );
+
+    case "email":
+      return (
+        <input
+          type="email"
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={field.placeholder || "email@example.com"}
+          className={`${baseInputClass} ${errorClass}`}
+        />
+      );
+
     case "select":
       return (
         <select value={value ?? ""} onChange={(e) => onChange(e.target.value)} className={`${baseInputClass} ${errorClass}`}>

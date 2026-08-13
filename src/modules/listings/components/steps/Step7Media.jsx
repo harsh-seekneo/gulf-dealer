@@ -4,12 +4,42 @@ import { FileText, ImagePlus, Trash2, Upload, Video, X } from "lucide-react";
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
 import WizardFooterNav from "../WizardFooterNav";
 
+import { carFormConfig } from "../../config/categoryForms/carForm.config";
+import { commercialFormConfig } from "../../config/categoryForms/commercialForm.config";
+import { heavyEquipmentFormConfig } from "../../config/categoryForms/heavyEquipmentForm.config";
+import { motorbikeFormConfig } from "../../config/categoryForms/motorbikeForm.config";
+import { buggyFormConfig } from "../../config/categoryForms/buggyForm.config";
+import { caravanFormConfig } from "../../config/categoryForms/caravanForm.config";
+import { specialNumberFormConfig } from "../../config/categoryForms/specialNumberForm.config";
+
+const configByFormType = {
+  CAR: carFormConfig,
+  COMMERCIAL: commercialFormConfig,
+  HEAVY_EQUIPMENT: heavyEquipmentFormConfig,
+  MOTORBIKE: motorbikeFormConfig,
+  BUGGY: buggyFormConfig,
+  CARAVAN: caravanFormConfig,
+  SPECIAL_NUMBER: specialNumberFormConfig,
+};
+
 const Step7Media = () => {
   const { listing, isSaving, saveMedia, goPrevious, saveDraft } = useBulkVehicleWizard();
 
   const maxPhotos = listing?.planLimitsSnapshot?.maxPhotosSnapshot ?? null;
   const maxVideos = listing?.planLimitsSnapshot?.maxVideosSnapshot ?? 0;
   const videoAllowed = Boolean(maxVideos);
+
+  const formType = listing?.category?.vehicleFormType || "CAR";
+  const config = configByFormType[formType] || carFormConfig;
+  const hasSecondaryGallery = Boolean(config.hasSecondaryGallery);
+  const secondaryGalleryLabel = config.secondaryGalleryLabel || "Additional Images";
+
+  const [existingSecondaryImages, setExistingSecondaryImages] = useState(
+    listing?.media?.secondaryImages || []
+  );
+  const [newSecondaryImageFiles, setNewSecondaryImageFiles] = useState([]);
+  const [newSecondaryImagePreviews, setNewSecondaryImagePreviews] = useState([]);
+  const [isDraggingSecondaryImages, setIsDraggingSecondaryImages] = useState(false);
 
   const [existingImages, setExistingImages] = useState(listing?.media?.images || []);
   const [existingFeaturedImage, setExistingFeaturedImage] = useState(listing?.media?.featuredImage || null);
@@ -36,6 +66,7 @@ const Step7Media = () => {
   const imagesInputRef = useRef(null);
   const videoInputRef = useRef(null);
   const brochureInputRef = useRef(null);
+  const secondaryImagesInputRef = useRef(null);
 
   const totalCurrentPhotos = existingImages.length + newImagePreviews.length;
 
@@ -82,6 +113,26 @@ const Step7Media = () => {
   const removeNewImage = (index) => {
     setNewImageFiles((previous) => previous.filter((_, i) => i !== index));
     setNewImagePreviews((previous) => previous.filter((_, i) => i !== index));
+  };
+
+  const addSecondaryImageFiles = (files) => {
+    const fileArray = Array.from(files);
+    setNewSecondaryImageFiles((previous) => [...previous, ...fileArray]);
+    setNewSecondaryImagePreviews((previous) => [
+      ...previous,
+      ...fileArray.map((file) => URL.createObjectURL(file)),
+    ]);
+  };
+
+  const handleSecondaryImagesDrop = (event) => {
+    event.preventDefault();
+    setIsDraggingSecondaryImages(false);
+    addSecondaryImageFiles(event.dataTransfer.files);
+  };
+
+  const removeNewSecondaryImage = (index) => {
+    setNewSecondaryImageFiles((previous) => previous.filter((_, i) => i !== index));
+    setNewSecondaryImagePreviews((previous) => previous.filter((_, i) => i !== index));
   };
 
   const handleVideoSelect = (file) => {
@@ -134,6 +185,7 @@ const Step7Media = () => {
 
     if (featuredFile) formData.append("featuredImage", featuredFile);
     newImageFiles.forEach((file) => formData.append("images", file));
+    newSecondaryImageFiles.forEach((file) => formData.append("secondaryImages", file));
     if (videoFile) formData.append("video", videoFile);
     if (brochureFile) formData.append("brochure", brochureFile);
     formData.append("removedImageKeys", JSON.stringify(removedImageKeys));
@@ -254,6 +306,63 @@ const Step7Media = () => {
           </div>
         )}
       </div>
+
+      {hasSecondaryGallery && (
+        <div className="mt-6">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-medium text-slate-700">{secondaryGalleryLabel}</p>
+            <span className="text-xs font-medium text-slate-500">
+              {existingSecondaryImages.length + newSecondaryImagePreviews.length} uploaded
+            </span>
+          </div>
+
+          <input
+            ref={secondaryImagesInputRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            multiple
+            className="hidden"
+            onChange={(e) => addSecondaryImageFiles(e.target.files)}
+          />
+
+          <div
+            onDragOver={(e) => { e.preventDefault(); setIsDraggingSecondaryImages(true); }}
+            onDragLeave={() => setIsDraggingSecondaryImages(false)}
+            onDrop={handleSecondaryImagesDrop}
+            onClick={() => secondaryImagesInputRef.current?.click()}
+            className={`flex h-24 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed transition-all duration-200 ${
+              isDraggingSecondaryImages ? "border-blue-500 bg-blue-50" : "border-slate-300 text-slate-400 hover:border-blue-400 hover:bg-blue-50/50"
+            }`}
+          >
+            <Upload size={18} />
+            <span className="text-sm font-medium">Drag &amp; drop {secondaryGalleryLabel.toLowerCase()} here</span>
+            <span className="text-xs">or click to browse</span>
+          </div>
+
+          {(existingSecondaryImages.length > 0 || newSecondaryImagePreviews.length > 0) && (
+            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+              {existingSecondaryImages.map((image) => (
+                <div key={image.key} className="aspect-square overflow-hidden rounded-lg border border-slate-200">
+                  <img src={image.url} alt="" className="h-full w-full object-cover" />
+                </div>
+              ))}
+
+              {newSecondaryImagePreviews.map((preview, index) => (
+                <div key={preview} className="group relative aspect-square overflow-hidden rounded-lg border border-blue-200">
+                  <img src={preview} alt="" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeNewSecondaryImage(index)}
+                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-950/70 text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="mt-6">
         <p className="mb-2 text-sm font-medium text-slate-700">

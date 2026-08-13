@@ -8,6 +8,8 @@ import ListingsTable from "../components/ListingsTable";
 import { listingsApi } from "../api/listingsApi";
 import { LISTING_TABS } from "../listings.constants";
 import ConfirmModal from "../../../components/ui/ConfirmModal";
+import ListingQuickViewModal from "../components/ListingQuickViewModal";
+import ListingsPagination from "../components/ListingsPagination";
 
 export default function ListingsPage() {
   const [activeTab, setActiveTab] = useState("all");
@@ -21,6 +23,9 @@ export default function ListingsPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusCounts, setStatusCounts] = useState({});
+  const [quickViewVehicle, setQuickViewVehicle] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, totalItems: 0, totalPages: 0 });
 
   const loadVehicles = async () => {
     setLoading(true);
@@ -33,6 +38,7 @@ export default function ListingsPage() {
       const data = await listingsApi.getAll({
         status: selectedTab?.status,
         search: search || undefined,
+        page,
       });
 
       const mappedVehicles = (data.items || []).map((listing) => ({
@@ -53,6 +59,9 @@ export default function ListingsPage() {
 
       setVehicles(mappedVehicles);
       setTotalCount(data.pagination?.totalItems || 0);
+      setPagination(
+        data.pagination || { page: 1, limit: 10, totalItems: 0, totalPages: 0 }
+      );
     } catch (err) {
       console.error("Failed to load listings:", err);
       setVehicles([]);
@@ -85,15 +94,22 @@ export default function ListingsPage() {
   };
 
   useEffect(() => {
+  setPage(1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [activeTab, search]);
+
+useEffect(() => {
   loadVehicles();
   loadStatusCounts();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [activeTab]);
+}, [activeTab, page]);
+
 
 useEffect(() => {
 
   const timer = setTimeout(() => {
 
+    setPage(1);
     loadVehicles();
 
   }, 500);
@@ -229,19 +245,29 @@ useEffect(() => {
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-400">
-          Loading listings...
-        </p>
-      ) : (
-        <ListingsTable
-          tab={activeTab}
-          vehicles={vehicles}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onToggleFeatured={handleToggleFeatured}
-          onToggleSold={handleToggleSold}
-        />
-      )}
+  <p className="text-sm text-slate-400">
+    Loading listings...
+  </p>
+) : (
+  <>
+    <ListingsTable
+      tab={activeTab}
+      vehicles={vehicles}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
+      onToggleFeatured={handleToggleFeatured}
+      onToggleSold={handleToggleSold}
+      onRowClick={setQuickViewVehicle}
+    />
+
+    <ListingsPagination
+      page={pagination.page}
+      limit={pagination.limit}
+      totalItems={pagination.totalItems}
+      onPageChange={setPage}
+    />
+  </>
+)}
 
       <ConfirmModal
         isOpen={Boolean(deleteVehicle)}
@@ -254,6 +280,13 @@ useEffect(() => {
         }}
         onConfirm={confirmDelete}
       />
+
+      {quickViewVehicle && (
+        <ListingQuickViewModal
+          vehicle={quickViewVehicle}
+          onClose={() => setQuickViewVehicle(null)}
+        />
+      )}
     </div>
   );
 }

@@ -46,3 +46,17 @@ export const GULF_COUNTRIES = [
     ],
   },
 ];
+
+// Optional 4th location tier ("Area"), used only by categories whose
+// config sets `hasAreaField: true` (Buggy, Caravan, Special Number).
+// Kept as a flat lookup by city name so it doesn't require restructuring
+// the existing 3-tier GULF_COUNTRIES data every other category relies on.
+export const AREAS_BY_CITY = {
+  Manama: ["Adliya", "Juffair", "Seef", "Hoora"],
+  Riffa: ["East Riffa", "West Riffa", "Riffa Views"],
+  Dubai: ["Deira", "Jumeirah", "Al Barsha", "Business Bay"],
+  "Abu Dhabi": ["Al Reem Island", "Khalifa City", "Al Mushrif"],
+  Riyadh: ["Al Olaya", "Al Malaz", "Diplomatic Quarter"],
+  Doha: ["West Bay", "Al Sadd", "The Pearl"],
+  "Kuwait City": ["Sharq", "Dasman", "Salmiya"],
+};

@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useToast } from "../../../context/ToastContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { submitBulkSessionApi } from "../api/bulkListingApi";
+import { submitSingleBulkListingApi } from "../api/bulkListingApi";
 
 import {
   getListingByIdApi,
@@ -119,7 +119,7 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
 
     if (index === BULK_STEP_SEQUENCE.length - 1) {
       try {
-        await submitBulkSessionApi(subscriptionId);
+        await submitSingleBulkListingApi(listing._id);
         showToast("Vehicle submitted for admin review", "success");
       } catch (error) {
         const message =
@@ -134,7 +134,7 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
     }
 
     goToStepIndex(index + 1);
-  }, [currentStep, goToStepIndex, navigate, subscriptionId, showToast]);
+  }, [currentStep, goToStepIndex, navigate, subscriptionId, listing, showToast]);
 
   const goPrevious = useCallback(() => {
     const index = BULK_STEP_SEQUENCE.indexOf(currentStep);

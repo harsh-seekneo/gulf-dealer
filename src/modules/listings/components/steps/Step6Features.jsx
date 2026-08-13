@@ -5,6 +5,9 @@ import { carFormConfig } from "../../config/categoryForms/carForm.config";
 import { commercialFormConfig } from "../../config/categoryForms/commercialForm.config";
 import { heavyEquipmentFormConfig } from "../../config/categoryForms/heavyEquipmentForm.config";
 import { motorbikeFormConfig } from "../../config/categoryForms/motorbikeForm.config";
+import { buggyFormConfig } from "../../config/categoryForms/buggyForm.config";
+import { caravanFormConfig } from "../../config/categoryForms/caravanForm.config";
+import { specialNumberFormConfig } from "../../config/categoryForms/specialNumberForm.config";
 import CollapsibleFeatureGroup from "../CollapsibleFeatureGroup";
 import WizardFooterNav from "../WizardFooterNav";
 
@@ -13,6 +16,9 @@ const configByFormType = {
   COMMERCIAL: commercialFormConfig,
   HEAVY_EQUIPMENT: heavyEquipmentFormConfig,
   MOTORBIKE: motorbikeFormConfig,
+  BUGGY: buggyFormConfig,
+  CARAVAN: caravanFormConfig,
+  SPECIAL_NUMBER: specialNumberFormConfig,
 };
 
 const Step6Features = () => {

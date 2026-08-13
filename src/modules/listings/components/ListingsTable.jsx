@@ -8,6 +8,7 @@ export default function ListingsTable({
   onDelete,
   onToggleFeatured,
   onToggleSold,
+  onRowClick,
 }) {
   if (!vehicles.length) {
     return (
@@ -55,8 +56,12 @@ export default function ListingsTable({
 
         <tbody className="divide-y divide-slate-100">
           {vehicles.map((v) => (
-            <tr key={v._id}>
-              <td className="px-4 py-4">
+            <tr
+              key={v._id}
+              onClick={() => onRowClick(v)}
+              className="cursor-pointer transition-colors duration-150 hover:bg-slate-50"
+            >
+              <td className="px-4 py-4" onClick={(event) => event.stopPropagation()}>
                 <input type="checkbox" className="h-4 w-4 rounded border-slate-300" />
               </td>
 
@@ -74,7 +79,8 @@ export default function ListingsTable({
                   <div>
                     <p className="font-semibold text-slate-900">{v.vehicleInfo?.title}</p>
                     <p className="text-xs text-slate-400">
-                      {v.vehicleInfo?.manufacturingYear} • {v.vehicleInfo?.mileage?.toLocaleString()} km • {v.vehicleInfo?.fuelType}
+                      {v.vehicleInfo?.manufacturingYear} • {v.vehicleInfo?.mileage?.toLocaleString() || 0} km •{" "}
+                      {v.vehicleInfo?.fuelType || v.specs?.fuelType || "—"}
                     </p>
                   </div>
                 </div>
@@ -116,7 +122,7 @@ export default function ListingsTable({
                 </td>
               )}
 
-              <td className="px-2 py-4">
+              <td className="px-2 py-4" onClick={(event) => event.stopPropagation()}>
                 <div className="flex items-center gap-3">
                   <button onClick={() => onEdit(v)} className="text-slate-400 hover:text-slate-700">
                     <Pencil size={16} />
@@ -137,7 +143,7 @@ export default function ListingsTable({
               </td>
 
               {showFeatured && (
-                <td className="px-2 py-4">
+                <td className="px-2 py-4" onClick={(event) => event.stopPropagation()}>
                   {v.status === "PUBLISHED" ? (
                     <button
                       onClick={() => onToggleFeatured(v)}

@@ -3,6 +3,7 @@ import { Tag, RefreshCw } from "lucide-react";
 
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
 import WizardFooterNav from "../WizardFooterNav";
+import { specialNumberFormConfig } from "../../config/categoryForms/specialNumberForm.config";
 
 const listingTypeOptions = [
   { value: "SALE", label: "For Sale", description: "List your vehicle as a one-time purchase for interested buyers.", icon: Tag },
@@ -18,6 +19,18 @@ const conditionOptions = [
 const Step2ListingType = () => {
   const { listing, isSaving, saveStep, goPrevious, saveDraft } = useBulkVehicleWizard();
 
+  const formType = listing?.category?.vehicleFormType || "CAR";
+  const isSpecialNumber = formType === "SPECIAL_NUMBER";
+
+  const activeListingTypeOptions = isSpecialNumber
+    ? [
+        { value: "SALE", label: "For Sale", description: "List this number plate for a fixed price.", icon: Tag },
+        { value: "AUCTION", label: "Auction", description: "Let buyers bid on this number plate.", icon: RefreshCw },
+      ]
+    : listingTypeOptions;
+
+  const requiresCondition = !isSpecialNumber;
+
   const [listingType, setListingType] = useState(listing?.listingType || "");
   const [condition, setCondition] = useState(listing?.condition || "");
   const [showValidation, setShowValidation] = useState({ listingType: false, condition: false });
@@ -25,7 +38,7 @@ const Step2ListingType = () => {
   const handleNext = async () => {
     const nextValidation = {
       listingType: !listingType,
-      condition: !condition,
+      condition: requiresCondition && !condition,
     };
 
     if (nextValidation.listingType || nextValidation.condition) {
@@ -34,7 +47,10 @@ const Step2ListingType = () => {
     }
 
     try {
-      await saveStep(2, { listingType, condition });
+      await saveStep(2, {
+        listingType,
+        condition: requiresCondition ? condition : undefined,
+      });
     } catch {
       // Error toast already shown by context.
     }
@@ -82,6 +98,7 @@ const Step2ListingType = () => {
         <p className="mt-2 text-xs font-medium text-red-600">Please choose whether you're selling or renting</p>
       )}
 
+      {requiresCondition && (
       <div className="mt-6">
         <p className="text-sm font-semibold text-slate-900">Vehicle Condition</p>
 
@@ -115,6 +132,7 @@ const Step2ListingType = () => {
           <p className="mt-2 text-xs font-medium text-red-600">Please select the vehicle's condition</p>
         )}
       </div>
+      )}
 
       <WizardFooterNav
         onPrevious={goPrevious}
