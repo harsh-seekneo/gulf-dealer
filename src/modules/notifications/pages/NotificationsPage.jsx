@@ -1,16 +1,25 @@
 import { useEffect, useState } from "react";
-import { NOTIFICATION_ICONS, timeAgo } from "../notifications.constants";
+
+import {
+  getNotificationVisual,
+  timeAgo,
+} from "../notifications.constants";
 import { notificationsApi } from "../api/notificationsApi";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
     try {
-      const data = await notificationsApi.getAll();
-      setNotifications(data.notifications || []);
+      const data = await notificationsApi.getAll({
+        category: "all",
+        limit: 50,
+      });
+      setNotifications(data.items || []);
+      setUnreadCount(data.unreadCount || 0);
     } catch (err) {
       console.error("Failed to load notifications:", err);
     } finally {
@@ -22,63 +31,103 @@ export default function NotificationsPage() {
     load();
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-
   const handleMarkAllRead = async () => {
     await notificationsApi.markAllRead();
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, readAt: n.readAt || new Date().toISOString() })),
+    );
+    setUnreadCount(0);
+  };
+
+  const openNotification = async (notification) => {
+    if (!notification.readAt) {
+      await notificationsApi.markRead(notification._id);
+      setNotifications((prev) =>
+        prev.map((item) =>
+          item._id === notification._id
+            ? { ...item, readAt: new Date().toISOString() }
+            : item,
+        ),
+      );
+      setUnreadCount((count) => Math.max(0, count - 1));
+    }
+
+    if (notification.link) {
+      window.location.href = notification.link;
+    }
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
+    <div className="px-1 pt-7 sm:px-3">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Notifications</h1>
-          <p className="text-sm text-slate-500">{unreadCount} unread notifications</p>
+          <h1 className="text-[29px] font-bold leading-tight text-slate-950">
+            Notifications
+          </h1>
+          <p className="mt-2 text-[19px] font-medium leading-none text-slate-500">
+            {unreadCount} unread notifications
+          </p>
         </div>
-        {unreadCount > 0 && (
-          <button
-            onClick={handleMarkAllRead}
-            className="text-sm font-semibold text-blue-600 hover:underline"
-          >
-            Mark all read
-          </button>
-        )}
+
+        <button
+          type="button"
+          onClick={handleMarkAllRead}
+          disabled={!unreadCount}
+          className="self-start text-[18px] font-bold text-blue-600 disabled:cursor-not-allowed disabled:text-slate-300 sm:self-auto"
+        >
+          Mark all read
+        </button>
       </div>
 
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm">
-        {notifications.map((n, idx) => {
-          const config = NOTIFICATION_ICONS[n.type] || NOTIFICATION_ICONS.lead;
-          const Icon = config.icon;
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        {notifications.map((notification, index) => {
+          const visual = getNotificationVisual(notification.type);
+          const Icon = visual.icon;
+          const isUnread = !notification.readAt;
 
           return (
-            <div
-              key={n._id}
-              className={`flex items-start gap-4 px-6 py-4 ${
-                idx !== notifications.length - 1 ? "border-b border-slate-100" : ""
-              } ${!n.isRead ? "bg-blue-50/50" : ""}`}
+            <button
+              key={notification._id}
+              type="button"
+              onClick={() => openNotification(notification)}
+              className={`grid min-h-[123px] w-full grid-cols-[13px_42px_1fr] items-start gap-5 px-5 py-6 text-left transition hover:bg-slate-50 sm:px-6 lg:px-7 ${
+                isUnread ? "bg-blue-50/60" : "bg-white"
+              } ${index ? "border-t border-slate-100" : ""}`}
             >
-              {!n.isRead ? (
-                <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
-              ) : (
-                <span className="mt-2 h-2 w-2 shrink-0" />
-              )}
-
-              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${config.bg}`}>
-                <Icon size={16} />
-              </div>
-
-              <div className="flex-1">
-                <p className="font-semibold text-slate-900">{n.title}</p>
-                <p className="text-sm text-slate-500">{n.message}</p>
-                <p className="mt-1 text-xs text-slate-400">{timeAgo(n.createdAt)}</p>
-              </div>
-            </div>
+              <span
+                className={`mt-3 h-2.5 w-2.5 rounded-full ${
+                  isUnread ? "bg-blue-600" : "bg-transparent"
+                }`}
+                aria-hidden="true"
+              />
+              <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${visual.bg}`}>
+                <Icon size={21} strokeWidth={2.1} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[19px] font-bold leading-tight text-slate-950">
+                  {notification.title}
+                </span>
+                <span className="mt-2 block text-[19px] font-medium leading-snug text-slate-500">
+                  {notification.body}
+                </span>
+                <span className="mt-3 block text-[16px] font-medium text-slate-400">
+                  {timeAgo(notification.createdAt)}
+                </span>
+              </span>
+            </button>
           );
         })}
 
         {!loading && notifications.length === 0 && (
-          <p className="py-12 text-center text-sm text-slate-400">No notifications yet</p>
+          <p className="py-16 text-center text-sm font-semibold text-slate-400">
+            No notifications yet
+          </p>
+        )}
+
+        {loading && (
+          <p className="py-16 text-center text-sm font-semibold text-slate-400">
+            Loading notifications...
+          </p>
         )}
       </div>
     </div>

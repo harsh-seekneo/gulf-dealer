@@ -1,12 +1,16 @@
 import apiClient from "../../../services/apiClient";
 
 export const notificationsApi = {
-  getAll: async () => {
-    const res = await apiClient.get("/dealer/notifications");
+  getAll: async (params = {}) => {
+    const res = await apiClient.get("/notifications", { params });
     return res.data.data;
   },
   markAllRead: async () => {
-    const res = await apiClient.patch("/dealer/notifications/mark-all-read");
+    const res = await apiClient.patch("/notifications/read-all");
+    return res.data.data;
+  },
+  markRead: async (notificationId) => {
+    const res = await apiClient.patch(`/notifications/${notificationId}/read`);
     return res.data.data;
   },
 };

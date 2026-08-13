@@ -1,5 +1,6 @@
 // [ADMIN] /Users/personal/Desktop/gulf-dealer/src/components/layout/DealerTopbar.jsx
 import { Search, Bell, HelpCircle, ChevronDown, Menu } from "lucide-react";
+import { Link } from "react-router-dom";
 import useAuth from "../../modules/auth/hooks/useAuth";
 
 // Turns "Ahmed Al-Rashid" -> "AA", "Ahmed" -> "A", falls back to "?" if nothing usable
@@ -56,14 +57,18 @@ export default function DealerTopbar({ onMenuClick }) {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
-        <button className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100">
+        <Link
+          to="/notifications"
+          className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+          aria-label="Notifications"
+        >
           <Bell size={18} />
           {unreadCount > 0 && (
             <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
               {unreadCount}
             </span>
           )}
-        </button>
+        </Link>
 
         <button className="hidden rounded-lg p-2 text-slate-500 hover:bg-slate-100 sm:block">
           <HelpCircle size={18} />
