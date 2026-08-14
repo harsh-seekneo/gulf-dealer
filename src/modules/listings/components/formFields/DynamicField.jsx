@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import ColorSwatchField from "./ColorSwatchField";
 import ToggleGroupField from "./ToggleGroupField";
+import ToggleSwitchField from "../ToggleSwitchField";
 import { getBrandOptionsApi, getCatalogModelOptionsApi } from "../../api/catalogApi";
 
 const currentYear = new Date().getFullYear();
@@ -171,19 +172,12 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
 
     case "toggleSwitch":
       return (
-        <label className="flex items-center justify-between py-2">
-          <div>
-            <p className="text-sm font-medium text-slate-800">{field.label}</p>
-            {field.description && <p className="text-xs text-slate-500">{field.description}</p>}
-          </div>
-          <button
-            type="button"
-            onClick={() => onChange(!value)}
-            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ${value ? "bg-blue-600" : "bg-slate-300"}`}
-          >
-            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${value ? "translate-x-5" : "translate-x-0.5"}`} />
-          </button>
-        </label>
+        <ToggleSwitchField
+          checked={Boolean(value)}
+          onChange={onChange}
+          label={field.label}
+          description={field.description}
+        />
       );
 
     default:
