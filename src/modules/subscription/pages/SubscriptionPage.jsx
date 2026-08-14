@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import CurrentPlanBanner from "../components/CurrentPlanBanner";
 import PlanCard from "../components/PlanCard";
 import ComparePlansTable from "../components/ComparePlansTable";
 import { subscriptionApi } from "../api/subscriptionApi";
 import { getDealerStatusApi } from "../../dealer/api/dealerApi";
 import ConfirmModal from "../../../components/ui/ConfirmModal";
+import {
+  handleTapReturnInPaymentWindow,
+  openPaymentWindow,
+  subscribeTapPaymentReturn,
+} from "../../payment/paymentPopup";
+import { useToast } from "../../../context/ToastContext";
 
 export default function SubscriptionPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { showToast } = useToast();
   const [currentPlan, setCurrentPlan] = useState(null);
   const [plans, setPlans] = useState([]);
   const [dealerId, setDealerId] = useState(null);
@@ -17,6 +26,46 @@ export default function SubscriptionPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    const verifyPayment = async (tapId) => {
+      try {
+        const payment = await subscriptionApi.verifyTapPayment(tapId);
+
+        if (payment.status !== "CAPTURED") {
+          showToast(payment.failureReason || "Payment was not completed.", "error");
+          return;
+        }
+
+        showToast("Subscription payment completed.", "success");
+        await loadData();
+      } catch (error) {
+        showToast(
+          error.response?.data?.message || "Unable to verify payment",
+          "error"
+        );
+      }
+    };
+
+    const tapId = searchParams.get("tap_id");
+
+    if (tapId && handleTapReturnInPaymentWindow(tapId)) {
+      return;
+    }
+
+    const unsubscribe = subscribeTapPaymentReturn((returnedTapId) => {
+      void verifyPayment(returnedTapId);
+    });
+
+    if (tapId) {
+      void verifyPayment(tapId).finally(() => {
+        setSearchParams({});
+      });
+    }
+
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, setSearchParams, showToast]);
 
   const loadData = async () => {
     try {
@@ -62,6 +111,17 @@ export default function SubscriptionPage() {
         planId: selectedPlan._id,
         durationDays,
       });
+
+      const payment = await subscriptionApi.pay({
+        dealerId,
+        paymentMethod: "CARD",
+      });
+
+      if (payment?.payment?.redirectUrl) {
+        openPaymentWindow(payment.payment.redirectUrl);
+        setSelectedPlan(null);
+        return;
+      }
 
       setSelectedPlan(null);
       await loadData();

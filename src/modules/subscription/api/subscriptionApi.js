@@ -37,6 +37,23 @@ export const subscriptionApi = {
 
     return data.data;
   },
+
+  async pay({ dealerId, paymentMethod }) {
+    const { data } = await apiClient.post("/dealer/payment", {
+      dealerId,
+      paymentMethod,
+    });
+
+    return data.data;
+  },
+
+  async verifyTapPayment(tapId) {
+    const { data } = await apiClient.get("/payments/tap/return", {
+      params: { tap_id: tapId },
+    });
+
+    return data.data;
+  },
 };
 
 export const getUsableSubscriptionsApi = async (category) => {
