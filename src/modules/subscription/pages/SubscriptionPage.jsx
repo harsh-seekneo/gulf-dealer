@@ -8,10 +8,16 @@ import { getDealerStatusApi } from "../../dealer/api/dealerApi";
 import ConfirmModal from "../../../components/ui/ConfirmModal";
 import {
   handleTapReturnInPaymentWindow,
+  closePreparedPaymentWindow,
   openPaymentWindow,
+  preparePaymentWindow,
   subscribeTapPaymentReturn,
 } from "../../payment/paymentPopup";
 import { useToast } from "../../../context/ToastContext";
+
+const wait = (ms) => new Promise((resolve) => {
+  window.setTimeout(resolve, ms);
+});
 
 export default function SubscriptionPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -89,6 +95,26 @@ export default function SubscriptionPage() {
     setSelectedPlan(plan);
   };
 
+  const waitForPaymentCompletion = async (paymentId) => {
+    if (!paymentId) {
+      return null;
+    }
+
+    const maxAttempts = 45;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const payment = await subscriptionApi.getPaymentStatus(paymentId);
+
+      if (["CAPTURED", "FAILED", "CANCELLED", "EXPIRED"].includes(payment.status)) {
+        return payment;
+      }
+
+      await wait(2000);
+    }
+
+    return null;
+  };
+
   const confirmSelectPlan = async () => {
     if (!selectedPlan) return;
 
@@ -104,6 +130,8 @@ export default function SubscriptionPage() {
       return;
     }
 
+    const paymentWindow = preparePaymentWindow();
+
     try {
       setIsSwitchingPlan(true);
       await subscriptionApi.choosePlan({
@@ -118,14 +146,31 @@ export default function SubscriptionPage() {
       });
 
       if (payment?.payment?.redirectUrl) {
-        openPaymentWindow(payment.payment.redirectUrl);
+        openPaymentWindow(payment.payment.redirectUrl, paymentWindow);
         setSelectedPlan(null);
+        const completedPayment = await waitForPaymentCompletion(payment.payment.id);
+
+        if (completedPayment?.status === "CAPTURED") {
+          showToast("Subscription payment completed.", "success");
+          closePreparedPaymentWindow(paymentWindow);
+          await loadData();
+        } else if (completedPayment) {
+          showToast(
+            completedPayment.failureReason || "Payment was not completed.",
+            "error"
+          );
+        } else {
+          showToast("Payment is still pending. Please refresh after completion.", "info");
+        }
+
         return;
       }
 
+      closePreparedPaymentWindow(paymentWindow);
       setSelectedPlan(null);
       await loadData();
     } catch (err) {
+      closePreparedPaymentWindow(paymentWindow);
       console.error(err);
     } finally {
       setIsSwitchingPlan(false);

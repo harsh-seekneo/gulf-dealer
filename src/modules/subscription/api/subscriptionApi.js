@@ -54,6 +54,11 @@ export const subscriptionApi = {
 
     return data.data;
   },
+
+  async getPaymentStatus(paymentId) {
+    const { data } = await apiClient.get(`/payments/${paymentId}/status`);
+    return data.data;
+  },
 };
 
 export const getUsableSubscriptionsApi = async (category) => {
