@@ -1,4 +1,5 @@
 // [ADMIN] /Users/personal/Desktop/gulf-dealer/src/components/layout/DealerSidebar.jsx
+
 import { NavLink } from "react-router-dom";
 import {
   LayoutGrid,
@@ -16,13 +17,27 @@ import {
 import useAuth from "../../modules/auth/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { subscriptionApi } from "../../modules/subscription/api/subscriptionApi";
+import { profileApi } from "../../modules/profile/api/profileApi";
+
 const navItems = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutGrid },
   { label: "Vehicles", path: "/vehicles", icon: Car, badgeKey: "vehicles" },
   { label: "Leads", path: "/leads", icon: Users, badgeKey: "leads" },
-  { label: "Advertisements", path: "/advertisements", icon: Megaphone },
-  { label: "Subscription", path: "/subscription", icon: CreditCard },
-  { label: "Profile", path: "/profile", icon: Building2 },
+  {
+    label: "Advertisements",
+    path: "/advertisements",
+    icon: Megaphone,
+  },
+  {
+    label: "Subscription",
+    path: "/subscription",
+    icon: CreditCard,
+  },
+  {
+    label: "Profile",
+    path: "/profile",
+    icon: Building2,
+  },
   {
     label: "Notifications",
     path: "/notifications",
@@ -34,54 +49,101 @@ const navItems = [
 export default function DealerSidebar({ isOpen, onClose }) {
   const { user, dealerStatus, isLoading, logout } = useAuth();
 
-  // TODO: confirm exact field names against the real dealer/status and
-  // /auth/me payloads, then drop the unused fallbacks below.
-  const dealerName = user?.name || user?.fullName || "";
-const [subscription, setSubscription] = useState(null);
-// [DEALER] src/components/layout/DealerSidebar.jsx (relevant snippet)
+  const [subscription, setSubscription] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
-useEffect(() => {
-  const loadSubscription = async () => {
-    try {
-      const data = await subscriptionApi.getCurrentPlan();
-      setSubscription(data);
-    } catch (err) {
-      console.error("Failed to load subscription:", err);
-    }
-  };
+  // -----------------------------------------
+  // Load Dealer Profile
+  // -----------------------------------------
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setProfileLoading(true);
 
-  loadSubscription();
-}, []);
+        const data = await profileApi.getProfile();
 
+        setProfile(data);
+      } catch (err) {
+        console.error("Failed to load dealer profile:", err);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
+
+  // -----------------------------------------
+  // Load Subscription
+  // -----------------------------------------
+  useEffect(() => {
+    const loadSubscription = async () => {
+      try {
+        const data = await subscriptionApi.getCurrentPlan();
+
+        setSubscription(data);
+      } catch (err) {
+        console.error("Failed to load subscription:", err);
+      }
+    };
+
+    loadSubscription();
+  }, []);
+
+  // -----------------------------------------
+  // BUSINESS NAME
+  // -----------------------------------------
+  // Profile API is the primary source because
+  // businessName is stored in dealer profile.
   const businessName =
+    profile?.businessName ||
     user?.businessName ||
     dealerStatus?.dealer?.businessName ||
     dealerStatus?.businessName ||
     dealerStatus?.dealer?.name ||
+    "Dealer";
+
+  // -----------------------------------------
+  // SUBSCRIPTION / TIER
+  // -----------------------------------------
+  const tier =
+    subscription?.planNameSnapshot ||
+    dealerStatus?.tier ||
+    dealerStatus?.plan ||
+    dealerStatus?.status ||
     "";
 
-  const tier =
-  subscription?.planNameSnapshot ||
-  dealerStatus?.tier ||
-  dealerStatus?.plan ||
-  dealerStatus?.status ||
-  "";
-
+  // -----------------------------------------
+  // BADGE COUNTS
+  // -----------------------------------------
   const badgeCounts = {
-    vehicles: dealerStatus?.counts?.vehicles ?? user?.counts?.vehicles ?? 0,
-    leads: dealerStatus?.counts?.leads ?? user?.counts?.leads ?? 0,
+    vehicles:
+      dealerStatus?.counts?.vehicles ??
+      user?.counts?.vehicles ??
+      0,
+
+    leads:
+      dealerStatus?.counts?.leads ??
+      user?.counts?.leads ??
+      0,
+
     notifications:
       dealerStatus?.counts?.notifications ??
       user?.unreadNotifications ??
       0,
   };
 
+  // -----------------------------------------
+  // LOGOUT
+  // -----------------------------------------
   const handleLogout = async () => {
     await logout();
   };
 
   return (
     <>
+      {/* Mobile Overlay */}
       {isOpen && (
         <button
           type="button"
@@ -91,12 +153,15 @@ useEffect(() => {
         />
       )}
 
+      {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 flex-col overflow-hidden bg-slate-950 text-white transition-transform duration-300 lg:sticky lg:top-0 lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Header */}
+        {/* -----------------------------------------
+            HEADER
+        ----------------------------------------- */}
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 font-bold">
@@ -113,50 +178,59 @@ useEffect(() => {
             type="button"
             onClick={onClose}
             className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
+            aria-label="Close sidebar"
           >
             <X size={20} />
           </button>
         </div>
 
-        {/* Dealer */}
+        {/* -----------------------------------------
+            DEALER PROFILE
+        ----------------------------------------- */}
         <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-bold">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold">
             <Car size={18} />
           </div>
 
-          {isLoading ? (
+          {isLoading || profileLoading ? (
             <div className="space-y-1.5">
               <div className="h-3 w-28 animate-pulse rounded bg-white/10" />
               <div className="h-2.5 w-24 animate-pulse rounded bg-white/10" />
-              <div className="h-2.5 w-16 animate-pulse rounded bg-white/10" />
             </div>
           ) : (
-            <div>
-              <p className="text-sm font-semibold leading-tight">
-                {dealerName || "Dealer"}
+            <div className="min-w-0">
+              {/* BUSINESS NAME */}
+              <p
+                className="truncate text-sm font-semibold leading-tight text-white"
+                title={businessName}
+              >
+                {businessName}
               </p>
 
-              {businessName && (
-                <p className="text-xs leading-tight text-slate-400">
-                  {businessName}
-                </p>
-              )}
+              {/* SUBSCRIPTION */}
+              <p className="mt-1 flex items-center gap-1 text-xs text-emerald-400">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
 
-              <p className="mt-0.5 flex items-center gap-1 text-xs text-emerald-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                {tier || "-"}
+                <span className="truncate">
+                  {tier || "Dealer"}
+                </span>
               </p>
             </div>
           )}
         </div>
 
-        {/* Navigation */}
+        {/* -----------------------------------------
+            NAVIGATION
+        ----------------------------------------- */}
         <div className="dealer-sidebar-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4">
           <nav className="space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
+
               const badge =
-                item.badgeKey != null ? badgeCounts[item.badgeKey] : null;
+                item.badgeKey != null
+                  ? badgeCounts[item.badgeKey]
+                  : null;
 
               return (
                 <NavLink
@@ -187,65 +261,85 @@ useEffect(() => {
           </nav>
         </div>
 
-        {/* Subscription */}
-  {/* Subscription */}
-<div className="shrink-0 border-t border-white/10 p-4">
-  {subscription ? (() => {
-    const startDate = new Date(subscription.startDate);
-    const endDate = new Date(subscription.endDate);
-    const today = new Date();
+        {/* -----------------------------------------
+            SUBSCRIPTION
+        ----------------------------------------- */}
+        <div className="shrink-0 border-t border-white/10 p-4">
+          {subscription ? (
+            (() => {
+              const startDate = new Date(subscription.startDate);
+              const endDate = new Date(subscription.endDate);
+              const today = new Date();
 
-    const totalDays = Math.max(
-      1,
-      Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))
-    );
+              const totalDays = Math.max(
+                1,
+                Math.ceil(
+                  (endDate - startDate) /
+                    (1000 * 60 * 60 * 24)
+                )
+              );
 
-    const daysUsed = Math.min(
-      totalDays,
-      Math.max(
-        0,
-        Math.ceil((today - startDate) / (1000 * 60 * 60 * 24))
-      )
-    );
+              const daysUsed = Math.min(
+                totalDays,
+                Math.max(
+                  0,
+                  Math.ceil(
+                    (today - startDate) /
+                      (1000 * 60 * 60 * 24)
+                  )
+                )
+              );
 
+              const daysRemaining = Math.max(
+                totalDays - daysUsed,
+                0
+              );
 
-    const daysRemaining = Math.max(totalDays - daysUsed, 0);
+              const usagePct = Math.min(
+                100,
+                Math.round(
+                  (daysUsed / totalDays) * 100
+                )
+              );
 
-    const usagePct = Math.min(
-      100,
-      Math.round((daysUsed / totalDays) * 100)
-    );
+              return (
+                <div className="rounded-xl bg-white/5 p-3">
+                  <p className="flex items-center gap-1.5 text-sm font-semibold text-amber-400">
+                    <Crown size={15} />
 
-    return (
-      <div className="rounded-xl bg-white/5 p-3">
-        <p className="flex items-center gap-1.5 text-sm font-semibold text-amber-400">
-          <Crown size={15} /> {subscription.planNameSnapshot}
-        </p>
+                    {subscription.planNameSnapshot}
+                  </p>
 
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-          <div
-            className="h-full rounded-full bg-amber-500 transition-all duration-500"
-            style={{ width: `${usagePct}%` }}
-          />
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                      style={{
+                        width: `${usagePct}%`,
+                      }}
+                    />
+                  </div>
+
+                  <p className="mt-1.5 text-xs text-slate-400">
+                    {daysRemaining} of {totalDays} days remaining
+                  </p>
+                </div>
+              );
+            })()
+          ) : (
+            <div className="rounded-xl bg-white/5 p-3">
+              <p className="text-sm text-slate-400">
+                No active subscription
+              </p>
+            </div>
+          )}
         </div>
 
-        <p className="mt-1.5 text-xs text-slate-400">
-          {daysRemaining} of {totalDays} days remaining
-        </p>
-      </div>
-    );
-  })() : (
-    <div className="rounded-xl bg-white/5 p-3">
-      <p className="text-sm text-slate-400">
-        No active subscription
-      </p>
-    </div>
-  )}
-</div>
-
-        {/* Logout */}
+        {/* -----------------------------------------
+            LOGOUT
+        ----------------------------------------- */}
         <div className="shrink-0 border-t border-white/10 p-3">
           <button
+            type="button"
             onClick={handleLogout}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-red-500/10 hover:text-red-400"
           >

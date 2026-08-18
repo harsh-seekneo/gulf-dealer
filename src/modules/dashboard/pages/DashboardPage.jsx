@@ -16,6 +16,7 @@ import TopPerformingVehicles from "../components/TopPerformingVehicles";
 
 import { dashboardApi } from "../api/dashboardApi";
 import { listingsApi } from "../../listings/api/listingsApi";
+import { useListingViews } from "../hooks/useListingViews";
 
 
 const DEFAULT_STATS = {
@@ -34,6 +35,12 @@ export default function DashboardPage() {
   const [weeklyViews, setWeeklyViews] = useState([]);
   const [topVehicles, setTopVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Weekly data comes from the summary fetch below; monthly is fetched
+  // lazily by the hook only when the user switches the chart's dropdown
+  // to "This Month".
+  const { weeklyData, monthlyData, monthlyLoading, handleRangeChange } =
+    useListingViews(weeklyViews);
 
 
 
@@ -381,7 +388,13 @@ export default function DashboardPage() {
 
       <WeeklyViewsChart
 
-        data={weeklyViews}
+        weeklyData={weeklyData}
+
+        monthlyData={monthlyData}
+
+        loading={monthlyLoading}
+
+        onRangeChange={handleRangeChange}
 
       />
 
