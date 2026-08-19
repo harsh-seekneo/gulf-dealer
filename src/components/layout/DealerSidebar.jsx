@@ -21,7 +21,7 @@ import { profileApi } from "../../modules/profile/api/profileApi";
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutGrid },
-  { label: "Vehicles", path: "/vehicles", icon: Car, badgeKey: "vehicles" },
+  { label: "Listings", path: "/vehicles", icon: Car, badgeKey: "vehicles" },
   { label: "Leads", path: "/leads", icon: Users, badgeKey: "leads" },
   {
     label: "Advertisements",
@@ -170,7 +170,7 @@ export default function DealerSidebar({ isOpen, onClose }) {
 
             <div>
               <p className="text-sm font-semibold">GulfInCart</p>
-              <p className="text-xs text-slate-400">Dealer Portal</p>
+              <p className="text-xs text-slate-400">Dealer Dashboard</p>
             </div>
           </div>
 
