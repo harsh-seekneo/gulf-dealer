@@ -1,3 +1,5 @@
+//[DEALER] /Users/personal/Desktop/gulf--dealer/gulf-dealer/src/modules/listings/pages/ListingsPage.jsx
+
 import { useEffect, useState } from "react";
 import { Search, Plus, Filter } from "lucide-react";
 import { getDealerStatusApi } from "../../dealer/api/dealerApi";
@@ -6,10 +8,22 @@ import { useNavigate } from "react-router-dom";
 import ListingsTabs from "../components/ListingsTabs";
 import ListingsTable from "../components/ListingsTable";
 import { listingsApi } from "../api/listingsApi";
+import { profileApi } from "../../profile/api/profileApi";
 import { LISTING_TABS } from "../listings.constants";
 import ConfirmModal from "../../../components/ui/ConfirmModal";
 import ListingQuickViewModal from "../components/ListingQuickViewModal";
 import ListingsPagination from "../components/ListingsPagination";
+
+const REQUIRED_PROFILE_FIELDS = [
+  "businessName",
+  "ownerName",
+  "phone",
+  "email",
+];
+
+function isEnded(label) {
+  return Boolean(label) && /expired/i.test(label);
+}
 
 export default function ListingsPage() {
   const [activeTab, setActiveTab] = useState("all");
@@ -41,7 +55,21 @@ export default function ListingsPage() {
         page,
       });
 
-      const mappedVehicles = (data.items || []).map((listing) => ({
+      let items = data.items || [];
+      let paginationData = data.pagination || { page: 1, limit: 10, totalItems: 0, totalPages: 0 };
+
+      // Active tab only shows vehicles that haven't ended yet — keep the
+      // list, count, and pagination consistent with that filter.
+      if (activeTab === "active") {
+        items = items.filter((item) => !isEnded(item.daysLabel));
+        paginationData = {
+          ...paginationData,
+          totalItems: items.length,
+          totalPages: 1,
+        };
+      }
+
+      const mappedVehicles = items.map((listing) => ({
         ...listing,
 
         title: listing.vehicleInfo?.title,
@@ -58,10 +86,8 @@ export default function ListingsPage() {
       }));
 
       setVehicles(mappedVehicles);
-      setTotalCount(data.pagination?.totalItems || 0);
-      setPagination(
-        data.pagination || { page: 1, limit: 10, totalItems: 0, totalPages: 0 }
-      );
+      setTotalCount(paginationData.totalItems || 0);
+      setPagination(paginationData);
     } catch (err) {
       console.error("Failed to load listings:", err);
       setVehicles([]);
@@ -74,12 +100,26 @@ export default function ListingsPage() {
   const loadStatusCounts = async () => {
     try {
       const results = await Promise.all(
-        LISTING_TABS.map((tab) =>
-          listingsApi.getAll({ status: tab.status, limit: 1 }).then((data) => ({
-            key: tab.key,
-            count: data.pagination?.totalItems || 0,
-          }))
-        )
+        LISTING_TABS.map(async (tab) => {
+          if (tab.key === "active") {
+            // Active count must exclude ended listings, so fetch the full
+            // active list and count client-side rather than trusting the
+            // backend's raw "active" totalItems.
+            const data = await listingsApi.getAll({
+              status: tab.status,
+              limit: 1000,
+            });
+
+            const items = (data.items || []).filter(
+              (item) => !isEnded(item.daysLabel)
+            );
+
+            return { key: tab.key, count: items.length };
+          }
+
+          const data = await listingsApi.getAll({ status: tab.status, limit: 1 });
+          return { key: tab.key, count: data.pagination?.totalItems || 0 };
+        })
       );
 
       const counts = {};
@@ -94,32 +134,26 @@ export default function ListingsPage() {
   };
 
   useEffect(() => {
-  setPage(1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [activeTab, search]);
-
-useEffect(() => {
-  loadVehicles();
-  loadStatusCounts();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [activeTab, page]);
-
-
-useEffect(() => {
-
-  const timer = setTimeout(() => {
-
     setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, search]);
+
+  useEffect(() => {
     loadVehicles();
+    loadStatusCounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, page]);
 
-  }, 500);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      loadVehicles();
+    }, 500);
 
+    return () => clearTimeout(timer);
 
-  return () => clearTimeout(timer);
-
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [search]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   const handleDelete = (vehicle) => {
     setDeleteVehicle(vehicle);
@@ -166,8 +200,23 @@ useEffect(() => {
     setIsCheckingPlan(true);
 
     try {
-      const { dealer } = await getDealerStatusApi();
-      const subscriptionId = dealer?.business?.businessSubscriptionRef?._id;
+      const profile = await profileApi.getProfile();
+
+      const missingField = REQUIRED_PROFILE_FIELDS.find(
+        (field) => !profile?.[field]
+      );
+
+      if (missingField) {
+        alert(
+          "Please complete your dealer profile (business name, owner name, phone, and email) before adding a vehicle."
+        );
+        navigate("/profile");
+        return;
+      }
+
+      const dealerStatus = await getDealerStatusApi();
+      const subscriptionId =
+        dealerStatus?.dealer?.business?.businessSubscriptionRef?._id;
 
       if (!subscriptionId) {
         alert(
@@ -179,7 +228,7 @@ useEffect(() => {
       navigate(`/listings/add-vehicle?subscriptionId=${subscriptionId}`);
     } catch (err) {
       console.error("Failed to check dealer status:", err);
-      alert("Unable to verify your plan. Please try again.");
+      alert("Unable to verify your profile or plan. Please try again.");
     } finally {
       setIsCheckingPlan(false);
     }
@@ -190,14 +239,14 @@ useEffect(() => {
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-4">
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold">My Listings</h1>
+          <h1 className="text-2xl font-bold text-slate-900">My Listings</h1>
 
           <a
             href="/vehicles"
-            className="text-sm text-blue-600"
+            className="text-sm text-gray-600 hover:text-blue-700"
           >
             View all Listings
           </a>
@@ -206,10 +255,10 @@ useEffect(() => {
         <button
           onClick={handleAddNewVehicle}
           disabled={isCheckingPlan}
-          className="flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
+          className="flex items-center gap-2 rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-wait disabled:opacity-70"
         >
           <Plus size={16} />
-          {isCheckingPlan ? "Checking..." : "Add New Vehicle"}
+          {isCheckingPlan ? "Checking..." : "Add new listing"}
         </button>
       </div>
 
@@ -245,29 +294,27 @@ useEffect(() => {
       </div>
 
       {loading ? (
-  <p className="text-sm text-slate-400">
-    Loading listings...
-  </p>
-) : (
-  <>
-    <ListingsTable
-      tab={activeTab}
-      vehicles={vehicles}
-      onEdit={handleEdit}
-      onDelete={handleDelete}
-      onToggleFeatured={handleToggleFeatured}
-      onToggleSold={handleToggleSold}
-      onRowClick={setQuickViewVehicle}
-    />
+        <p className="text-sm text-slate-400">Loading listings...</p>
+      ) : (
+        <>
+          <ListingsTable
+            tab={activeTab}
+            vehicles={vehicles}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onToggleFeatured={handleToggleFeatured}
+            onToggleSold={handleToggleSold}
+            onRowClick={setQuickViewVehicle}
+          />
 
-    <ListingsPagination
-      page={pagination.page}
-      limit={pagination.limit}
-      totalItems={pagination.totalItems}
-      onPageChange={setPage}
-    />
-  </>
-)}
+          <ListingsPagination
+            page={pagination.page}
+            limit={pagination.limit}
+            totalItems={pagination.totalItems}
+            onPageChange={setPage}
+          />
+        </>
+      )}
 
       <ConfirmModal
         isOpen={Boolean(deleteVehicle)}

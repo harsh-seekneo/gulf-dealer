@@ -1,3 +1,5 @@
+//[DEALER] /Users/personal/Desktop/gulf--dealer/gulf-dealer/src/modules/dashboard/components/TopPerformingVehicles.jsx
+
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -8,10 +10,7 @@ const ASSET_BASE_URL = import.meta.env.VITE_ASSET_BASE_URL || "";
 function toUrl(candidate) {
   if (!candidate || typeof candidate !== "string") return null;
 
-  if (
-    /^(https?:)?\/\//i.test(candidate) ||
-    candidate.startsWith("data:")
-  ) {
+  if (/^(https?:)?\/\//i.test(candidate) || candidate.startsWith("data:")) {
     return candidate;
   }
 
@@ -22,9 +21,7 @@ function toUrl(candidate) {
 function resolveImages(vehicle) {
   const raw = [
     vehicle?.media?.featuredImage,
-    ...(Array.isArray(vehicle?.media?.images)
-      ? vehicle.media.images
-      : []),
+    ...(Array.isArray(vehicle?.media?.images) ? vehicle.media.images : []),
     vehicle?.image,
     ...(Array.isArray(vehicle?.images) ? vehicle.images : []),
   ];
@@ -52,13 +49,11 @@ function VehicleImage({ images, alt }) {
 
     setFailed(false);
 
-    setIndex(
-      (prev) => (prev + dir + images.length) % images.length
-    );
+    setIndex((prev) => (prev + dir + images.length) % images.length);
   };
 
   return (
-    <div className="group/img relative h-16 w-24 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 sm:h-20 sm:w-28">
+    <div className="group/img relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
       <img
         src={src}
         alt={alt}
@@ -88,42 +83,20 @@ function VehicleImage({ images, alt }) {
           >
             <ChevronRight size={12} />
           </button>
-
-          {/* Image Indicators */}
-          <div className="absolute bottom-1 left-1/2 flex -translate-x-1/2 gap-1">
-            {images.map((_, i) => (
-              <span
-                key={i}
-                className={`h-1 w-1 rounded-full transition ${
-                  i === index
-                    ? "bg-white"
-                    : "bg-white/50"
-                }`}
-              />
-            ))}
-          </div>
         </>
       )}
     </div>
   );
 }
 
-export default function TopPerformingVehicles({
-  vehicles = [],
-}) {
+export default function TopPerformingVehicles({ vehicles = [] }) {
   return (
     <div className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-5 sm:px-6">
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 sm:text-xl">
-            Top Performing Vehicles
-          </h3>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Your recently listed vehicles
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-6 py-5">
+        <h3 className="text-xl font-bold text-slate-900">
+          Top Performing Vehicles
+        </h3>
 
         <Link
           to="/vehicles"
@@ -151,92 +124,51 @@ export default function TopPerformingVehicles({
           {vehicles.map((vehicle) => {
             const images = resolveImages(vehicle);
 
-            const title =
-              vehicle?.vehicleInfo?.title ||
-              "Untitled Vehicle";
+            const title = vehicle?.vehicleInfo?.title || "Untitled Vehicle";
 
-            const brand =
-              vehicle?.vehicleInfo?.brand?.name ||
-              vehicle?.vehicleInfo?.brand ||
-              "";
+            const price = vehicle?.pricing?.price || 0;
 
-            const model =
-              vehicle?.vehicleInfo?.catalogModel?.name ||
-              vehicle?.vehicleInfo?.catalogModel ||
-              "";
+            const views = vehicle?.viewCount || vehicle?.views || 0;
 
-            const year =
-              vehicle?.vehicleInfo?.manufacturingYear || "";
-
-            const price =
-              vehicle?.pricing?.price || 0;
-
-            const views =
-              vehicle?.viewCount ||
-              vehicle?.views ||
-              0;
-
-            const leads =
-              vehicle?.leadsCount || 0;
-
-            const daysLabel =
-              vehicle?.daysLabel || "N/A";
+            const leads = vehicle?.leadsCount || 0;
 
             return (
               <div
                 key={vehicle._id}
-                className="flex flex-wrap items-center gap-4 px-4 py-4 transition hover:bg-slate-50 sm:flex-nowrap sm:gap-5 sm:px-6 sm:py-5"
+                className="flex items-center gap-4 px-6 py-5 transition hover:bg-slate-50"
               >
                 {/* Vehicle Image */}
-                <VehicleImage
-                  images={images}
-                  alt={title}
-                />
+                <VehicleImage images={images} alt={title} />
 
                 {/* Vehicle Details */}
-                <div className="min-w-[140px] flex-1 basis-full sm:basis-auto">
-                  <h4 className="truncate text-base font-semibold text-slate-900">
+                <div className="min-w-0 flex-1">
+                  <h4 className="truncate text-lg font-bold text-slate-900">
                     {title}
                   </h4>
 
-                  <p className="mt-1 text-sm text-slate-500">
-                    {brand}
-                    {model && ` ${model}`}
-                    {year && ` • ${year}`}
-                  </p>
-
-                  <p className="mt-2 text-lg font-bold text-blue-600">
-                    BHD{" "}
-                    {Number(price).toLocaleString("en-GB")}
-                  </p>
-
-                  <p className="mt-1 text-xs font-medium text-green-600">
-                    {daysLabel}
+                  <p className="mt-1 text-base text-slate-500">
+                    BHD {Number(price).toLocaleString("en-GB")}
                   </p>
                 </div>
 
                 {/* Stats */}
-                <div className="ml-auto flex items-center gap-6 sm:ml-0 sm:gap-10">
+                <div className="flex items-center gap-10">
                   {/* Views */}
-                  <div className="flex w-16 flex-col items-center sm:w-24">
-                    <span className="text-base font-bold text-slate-900 sm:text-lg">
+                  <div className="flex flex-col items-center">
+                    <span className="text-lg font-bold text-slate-900">
                       {Number(views).toLocaleString("en-GB")}
                     </span>
 
-                    <span className="text-xs text-slate-400">
-                      Views
-                    </span>
+                    <span className="text-sm text-slate-400">views</span>
                   </div>
 
                   {/* Leads */}
-                  <div className="flex w-16 flex-col items-center sm:w-24">
-                    <span className="text-base font-bold text-blue-600 sm:text-lg">
+                  <div className="flex flex-col items-center">
+                    <span className="text-lg font-bold text-blue-600">
                       {Number(leads).toLocaleString("en-GB")}
                     </span>
 
-                    <span className="text-xs text-slate-400">
-                      Leads
-                    </span>
+                    <span className="text-sm text-slate-400">leads</span>
                   </div>
                 </div>
               </div>

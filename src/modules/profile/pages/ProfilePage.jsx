@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
@@ -13,6 +14,7 @@ import {
 import BusinessInfoCard from "../components/BusinessInfoCard";
 import VerificationDocumentsCard from "../components/VerificationDocumentsCard";
 import WorkingHoursCard from "../components/WorkingHoursCard";
+import Breadcrumb from "../../../components/ui/Breadcrumb";
 import { profileApi } from "../api/profileApi";
 
 const EMPTY_FORM = {
@@ -77,20 +79,13 @@ const validateFile = (file) => {
    FORM FIELD
 ------------------------------------------------------- */
 
-function Field({
-  children,
-  label,
-  locked = false,
-  required = false,
-}) {
+function Field({ children, label, locked = false, required = false }) {
   return (
     <label className="block">
       <span className="flex items-center gap-2 text-xs font-bold text-slate-500">
         {label}
 
-        {required ? (
-          <span className="text-red-500">*</span>
-        ) : null}
+        {required ? <span className="text-red-500">*</span> : null}
 
         {locked ? (
           <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] uppercase text-emerald-700">
@@ -108,12 +103,7 @@ function Field({
    PROFILE FORM
 ------------------------------------------------------- */
 
-function ProfileForm({
-  initialValues,
-  locks = {},
-  submitLabel,
-  onSaved,
-}) {
+function ProfileForm({ initialValues, locks = {}, submitLabel, onSaved }) {
   const [form, setForm] = useState({
     ...EMPTY_FORM,
     ...initialValues,
@@ -141,7 +131,7 @@ function ProfileForm({
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          "Couldn't save your profile. Please try again.",
+          "Couldn't save your profile. Please try again."
       );
     } finally {
       setSaving(false);
@@ -153,11 +143,7 @@ function ProfileForm({
       onSubmit={handleSubmit}
       className="grid grid-cols-1 gap-4 text-left sm:grid-cols-2"
     >
-      <Field
-        label="Business Name"
-        required
-        locked={locks.businessName}
-      >
+      <Field label="Business Name" required locked={locks.businessName}>
         <input
           className={fieldClass}
           disabled={locks.businessName}
@@ -176,11 +162,7 @@ function ProfileForm({
         />
       </Field>
 
-      <Field
-        label="Mobile Number"
-        required
-        locked={locks.phone}
-      >
+      <Field label="Mobile Number" required locked={locks.phone}>
         <input
           className={fieldClass}
           disabled={locks.phone}
@@ -324,19 +306,13 @@ function ProfileForm({
    EDIT PROFILE MODAL
 ------------------------------------------------------- */
 
-function EditProfileModal({
-  profile,
-  onClose,
-  onSaved,
-}) {
+function EditProfileModal({ profile, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6 shadow-lg sm:p-8">
         <div className="mb-5 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold">
-              Edit Business Profile
-            </h2>
+            <h2 className="text-lg font-bold">Edit Business Profile</h2>
 
             <p className="mt-1 text-sm text-slate-500">
               Approved dealers cannot change business name, mobile
@@ -392,8 +368,7 @@ export default function ProfilePage() {
       setProfile(data);
     } catch (err) {
       setError(
-        err.response?.data?.message ||
-          "Failed to load dealer profile.",
+        err.response?.data?.message || "Failed to load dealer profile."
       );
     } finally {
       setLoading(false);
@@ -429,17 +404,13 @@ export default function ProfilePage() {
       }
 
       if (type === "document") {
-        await profileApi.uploadDocument(
-          file,
-          "Trade License Certificate",
-        );
+        await profileApi.uploadDocument(file, "Trade License Certificate");
       }
 
       await load();
     } catch (err) {
       setError(
-        err.response?.data?.message ||
-          "Upload failed. Please try again.",
+        err.response?.data?.message || "Upload failed. Please try again."
       );
     } finally {
       setUploading("");
@@ -456,8 +427,7 @@ export default function ProfilePage() {
       await load();
     } catch (err) {
       setError(
-        err.response?.data?.message ||
-          "Failed to save working hours.",
+        err.response?.data?.message || "Failed to save working hours."
       );
     }
   };
@@ -467,9 +437,7 @@ export default function ProfilePage() {
   ------------------------------------------------------- */
 
   const initials = useMemo(() => {
-    const name = String(
-      profile?.businessName || "G",
-    );
+    const name = String(profile?.businessName || "G");
 
     return name
       .split(" ")
@@ -487,9 +455,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="flex min-h-[300px] items-center justify-center">
-        <p className="text-sm text-slate-400">
-          Loading profile...
-        </p>
+        <p className="text-sm text-slate-400">Loading profile...</p>
       </div>
     );
   }
@@ -512,6 +478,9 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Breadcrumb */}
+      <Breadcrumb items={[{ label: "Dealer Profile" }]} />
+
       {/* ---------------------------------------------------
           PAGE HEADER
       --------------------------------------------------- */}
@@ -529,11 +498,7 @@ export default function ProfilePage() {
 
         {profile.isVerified ? (
           <span className="flex w-fit items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-sm font-semibold text-emerald-700">
-            <BadgeCheck
-              size={18}
-              className="text-emerald-600"
-            />
-
+            <BadgeCheck size={18} className="text-emerald-600" />
             Verified Dealer
           </span>
         ) : null}
@@ -571,9 +536,7 @@ export default function ProfilePage() {
           <label
             title="Update cover banner"
             className={`absolute right-5 top-5 flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl bg-white/20 text-white backdrop-blur-sm transition hover:bg-white/30 ${
-              uploading === "cover"
-                ? "pointer-events-none opacity-60"
-                : ""
+              uploading === "cover" ? "pointer-events-none opacity-60" : ""
             }`}
           >
             {uploading === "cover" ? (
@@ -605,18 +568,14 @@ export default function ProfilePage() {
         <div className="relative px-5 pb-6 pt-0 sm:px-10 sm:pb-8">
           {/* EDIT PROFILE — pinned top-right of the content area */}
 
-      <button
-  type="button"
-  onClick={() => setIsEditOpen(true)}
-  className="absolute right-5 top-20 flex w-fit shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 sm:right-10 sm:top-16"
->
-  <Pencil
-    size={17}
-    strokeWidth={2}
-  />
-
-  Edit Profile
-</button>
+          <button
+            type="button"
+            onClick={() => setIsEditOpen(true)}
+            className="absolute right-5 top-20 flex w-fit shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 sm:right-10 sm:top-16"
+          >
+            <Pencil size={17} strokeWidth={2} />
+            Edit Profile
+          </button>
 
           {/* LOGO */}
 
@@ -630,12 +589,7 @@ export default function ProfilePage() {
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center rounded-2xl border-4 border-white bg-slate-100 text-xl font-black text-slate-500 shadow-lg">
-                {initials || (
-                  <Building2
-                    size={36}
-                    strokeWidth={1.8}
-                  />
-                )}
+                {initials || <Building2 size={36} strokeWidth={1.8} />}
               </div>
             )}
 
@@ -644,9 +598,7 @@ export default function ProfilePage() {
             <label
               title="Update business logo"
               className={`absolute -right-1.5 -top-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-blue-600 text-white shadow-md ring-2 ring-white transition hover:bg-blue-700 ${
-                uploading === "logo"
-                  ? "pointer-events-none opacity-60"
-                  : ""
+                uploading === "logo" ? "pointer-events-none opacity-60" : ""
               }`}
             >
               {uploading === "logo" ? (
@@ -684,10 +636,7 @@ export default function ProfilePage() {
               {profile.tier || "Dealer"}
 
               {profile.memberSince ? (
-                <>
-                  {" "}
-                  · Member since {profile.memberSince}
-                </>
+                <> · Member since {profile.memberSince}</>
               ) : null}
             </p>
 
@@ -695,29 +644,21 @@ export default function ProfilePage() {
 
             <div className="mt-4 flex flex-wrap items-center gap-6">
               <div className="flex items-center gap-2 text-sm text-slate-600">
-                <Car
-                  size={18}
-                  className="text-blue-600"
-                />
+                <Car size={18} className="text-blue-600" />
 
                 <span className="font-medium">
-                  {Number(
-                    profile.listingsCount || 0,
-                  ).toLocaleString("en-GB")}{" "}
+                  {Number(profile.listingsCount || 0).toLocaleString(
+                    "en-GB"
+                  )}{" "}
                   Listings
                 </span>
               </div>
 
               <div className="flex items-center gap-2 text-sm text-slate-600">
-                <Users
-                  size={18}
-                  className="text-emerald-500"
-                />
+                <Users size={18} className="text-emerald-500" />
 
                 <span className="font-medium">
-                  {Number(
-                    profile.leadsCount || 0,
-                  ).toLocaleString("en-GB")}{" "}
+                  {Number(profile.leadsCount || 0).toLocaleString("en-GB")}{" "}
                   Leads
                 </span>
               </div>
@@ -736,13 +677,8 @@ export default function ProfilePage() {
         <div className="flex flex-col gap-5">
           <VerificationDocumentsCard
             documents={profile.documents || []}
-            locked={
-              profile.locks
-                ?.tradeLicenseCertificate
-            }
-            onUpload={(file) =>
-              handleUpload("document", file)
-            }
+            locked={profile.locks?.tradeLicenseCertificate}
+            onUpload={(file) => handleUpload("document", file)}
           />
 
           <WorkingHoursCard

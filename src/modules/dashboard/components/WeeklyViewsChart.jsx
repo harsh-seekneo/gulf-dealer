@@ -1,15 +1,9 @@
+//[DEALER] /Users/personal/Desktop/gulf--dealer/gulf-dealer/src/modules/dashboard/components/WeeklyViewsChart.jsx
+
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
-const DEFAULT_WEEK_DAYS = [
-  "Mon",
-  "Tue",
-  "Wed",
-  "Thu",
-  "Fri",
-  "Sat",
-  "Sun",
-];
+const DEFAULT_WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const RANGE_OPTIONS = [
   { key: "week", label: "This Week" },
@@ -51,19 +45,12 @@ export default function WeeklyViewsChart({
   const resolvedWeekly = weeklyData ?? data;
 
   const activeData = useMemo(() => {
-    const source =
-      range === "month"
-        ? monthlyData
-        : resolvedWeekly;
+    const source = range === "month" ? monthlyData : resolvedWeekly;
 
-    return source && source.length
-      ? source
-      : fallbackData(range);
+    return source && source.length ? source : fallbackData(range);
   }, [range, resolvedWeekly, monthlyData]);
 
-  const hasData = activeData.some(
-    (d) => (Number(d.views) || 0) > 0
-  );
+  const hasData = activeData.some((d) => (Number(d.views) || 0) > 0);
 
   const handleSelectRange = (key) => {
     setRange(key);
@@ -72,14 +59,13 @@ export default function WeeklyViewsChart({
   };
 
   const activeLabel =
-    RANGE_OPTIONS.find((o) => o.key === range)?.label ??
-    "This Week";
+    RANGE_OPTIONS.find((o) => o.key === range)?.label ?? "This Week";
 
   return (
-    <div className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+    <div className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       {/* Header */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-lg font-bold text-slate-900">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-base font-bold text-slate-900 sm:text-lg">
           {title}
         </h3>
 
@@ -122,7 +108,7 @@ export default function WeeklyViewsChart({
       </div>
 
       {loading ? (
-        <div className="flex h-64 items-center justify-center text-sm text-slate-400 sm:h-72">
+        <div className="flex h-36 items-center justify-center text-sm text-slate-400 sm:h-44">
           Loading chart data…
         </div>
       ) : (
@@ -130,12 +116,9 @@ export default function WeeklyViewsChart({
           {/* =========================
               Y AXIS
           ========================== */}
-          <div className="mr-3 flex h-56 shrink-0 flex-col justify-between text-xs text-slate-400 sm:h-64">
+          <div className="mr-3 flex h-36 shrink-0 flex-col justify-between text-xs text-slate-400 sm:h-44">
             {Y_AXIS_VALUES.map((value) => (
-              <span
-                key={value}
-                className="leading-none"
-              >
+              <span key={value} className="leading-none">
                 {value.toLocaleString()}
               </span>
             ))}
@@ -146,11 +129,11 @@ export default function WeeklyViewsChart({
           ========================== */}
           <div className="relative min-w-[420px] flex-1">
             {/* Gridlines */}
-            <div className="absolute inset-0 flex h-56 flex-col justify-between sm:h-64">
+            <div className="absolute inset-0 flex h-36 flex-col justify-between sm:h-44">
               {Y_AXIS_VALUES.map((value) => (
                 <div
                   key={value}
-                  className="border-t border-dashed border-slate-100"
+                  className="border-t border-dashed border-slate-300"
                 />
               ))}
             </div>
@@ -158,12 +141,9 @@ export default function WeeklyViewsChart({
             {/* =========================
                 BARS
             ========================== */}
-            <div className="relative flex h-56 items-end justify-between gap-3 px-2 sm:h-64 sm:gap-4">
+            <div className="relative flex h-36 items-end justify-between gap-3 px-2 sm:h-44 sm:gap-4">
               {activeData.map((d) => {
-                const views = Math.max(
-                  0,
-                  Number(d.views) || 0
-                );
+                const views = Math.max(0, Number(d.views) || 0);
 
                 /*
                  * Both Week and Month use the same
@@ -171,10 +151,7 @@ export default function WeeklyViewsChart({
                  */
                 const heightPct =
                   CHART_MAX > 0
-                    ? Math.min(
-                        (views / CHART_MAX) * 100,
-                        100
-                      )
+                    ? Math.min((views / CHART_MAX) * 100, 100)
                     : 0;
 
                 return (
@@ -192,8 +169,7 @@ export default function WeeklyViewsChart({
                       className="w-6 rounded-t-md bg-blue-600 transition-all duration-300 ease-out hover:bg-blue-700 sm:w-10"
                       style={{
                         height: `${heightPct}%`,
-                        minHeight:
-                          views > 0 ? 4 : 0,
+                        minHeight: views > 0 ? 4 : 0,
                       }}
                     />
                   </div>
