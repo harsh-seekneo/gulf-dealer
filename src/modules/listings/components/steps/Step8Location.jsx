@@ -1,7 +1,11 @@
 import { useMemo, useState } from "react";
 
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
-import { GULF_COUNTRIES } from "../../config/gulfLocations.config";
+import {
+  GULF_COUNTRIES,
+  getNormalizedLocationCity,
+  getNormalizedLocationCountry,
+} from "../../config/gulfLocations.config";
 import FormField from "../FormField";
 import ToggleSwitchField from "../ToggleSwitchField";
 import WizardFooterNav from "../WizardFooterNav";
@@ -35,9 +39,16 @@ const Step8Location = () => {
 
   const existingLocation = listing?.location || {};
 
-  const [country, setCountry] = useState(existingLocation.country || "");
-  const [governorate, setGovernorate] = useState(existingLocation.governorate || "");
-  const [city, setCity] = useState(existingLocation.city || "");
+  const normalizedCountry = getNormalizedLocationCountry(existingLocation.country);
+  const normalizedCity = getNormalizedLocationCity(
+    normalizedCountry,
+    existingLocation.city,
+    existingLocation.governorate
+  );
+
+  const [country, setCountry] = useState(normalizedCountry);
+  const [governorate, setGovernorate] = useState(normalizedCity);
+  const [city, setCity] = useState(normalizedCity);
   const [area, setArea] = useState(existingLocation.area || "");
   const [showPhoneNumber, setShowPhoneNumber] = useState(existingLocation.showPhoneNumber ?? true);
   const [showWhatsappNumber, setShowWhatsappNumber] = useState(existingLocation.showWhatsappNumber ?? true);
@@ -48,10 +59,6 @@ const Step8Location = () => {
     return GULF_COUNTRIES.find((item) => item.name === country)?.governorates || [];
   }, [country]);
 
-  const cityOptions = useMemo(() => {
-    return governorateOptions.find((item) => item.name === governorate)?.cities || [];
-  }, [governorateOptions, governorate]);
-
   const handleCountryChange = (value) => {
     setCountry(value);
     setGovernorate("");
@@ -61,20 +68,15 @@ const Step8Location = () => {
 
   const handleGovernorateChange = (value) => {
     setGovernorate(value);
-    setCity("");
-    setErrors((previous) => ({ ...previous, governorate: "" }));
-  };
-
-  const handleCityChange = (value) => {
     setCity(value);
-    setErrors((previous) => ({ ...previous, city: "" }));
+    setErrors((previous) => ({ ...previous, governorate: "", city: "" }));
   };
 
   const handleNext = async () => {
     const nextErrors = {};
 
     if (!country) nextErrors.country = "Country is required";
-    if (!governorate) nextErrors.governorate = "Governorate/State is required";
+    if (!governorate) nextErrors.governorate = "City is required";
     if (!city) nextErrors.city = "City/Area is required";
     if (hasAreaField && !area) nextErrors.area = "Area is required";
 
@@ -112,22 +114,11 @@ const Step8Location = () => {
           </select>
         </FormField>
 
-        <FormField label="Governorate / State" required error={errors.governorate}>
+        <FormField label="City" required error={errors.governorate || errors.city}>
           <select value={governorate} onChange={(e) => handleGovernorateChange(e.target.value)} disabled={!country} className={inputClass}>
-            <option value="">Select governorate</option>
+            <option value="">Select city</option>
             {governorateOptions.map((item) => (
               <option key={item.name} value={item.name}>{item.name}</option>
-            ))}
-          </select>
-        </FormField>
-      </div>
-
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <FormField label="City / Area" required error={errors.city}>
-          <select value={city} onChange={(e) => handleCityChange(e.target.value)} disabled={!governorate} className={inputClass}>
-            <option value="">Select city</option>
-            {cityOptions.map((item) => (
-              <option key={item} value={item}>{item}</option>
             ))}
           </select>
         </FormField>

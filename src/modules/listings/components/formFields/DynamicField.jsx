@@ -3,11 +3,10 @@ import ColorSwatchField from "./ColorSwatchField";
 import ToggleGroupField from "./ToggleGroupField";
 import ToggleSwitchField from "../ToggleSwitchField";
 import { getBrandOptionsApi, getCatalogModelOptionsApi } from "../../api/catalogApi";
+import { GULF_COUNTRY_NAMES } from "../../config/gulfLocations.config";
 
 const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: 30 }, (_, i) => currentYear + 1 - i);
-
-const GULF_COUNTRIES = ["Bahrain", "UAE", "Saudi Arabia", "Qatar", "Kuwait", "Oman"];
 
 const baseInputClass =
   "h-10 w-full rounded-lg border bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
@@ -128,7 +127,7 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
       return (
         <select value={value ?? ""} onChange={(e) => onChange(e.target.value)} className={`${baseInputClass} ${errorClass}`}>
           <option value="">Select country</option>
-          {GULF_COUNTRIES.map((country) => (
+          {GULF_COUNTRY_NAMES.map((country) => (
             <option key={country} value={country}>{country}</option>
           ))}
         </select>
