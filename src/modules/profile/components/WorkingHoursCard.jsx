@@ -14,15 +14,11 @@ const defaultDay = { open: false, opens: "09:00", closes: "18:00" };
 
 const normalizeHours = (hours = {}) =>
   DAYS.reduce((result, day) => {
-    result[day.key] = {
-      ...defaultDay,
-      ...(hours?.[day.key] || {}),
-    };
-
+    result[day.key] = { ...defaultDay, ...(hours?.[day.key] || {}) };
     return result;
   }, {});
 
-export default function WorkingHoursCard({ hours = {}, onSave }) {
+export default function WorkingHoursEditable({ hours = {}, onSave }) {
   const [form, setForm] = useState(() => normalizeHours(hours));
   const [saving, setSaving] = useState(false);
 
@@ -33,10 +29,7 @@ export default function WorkingHoursCard({ hours = {}, onSave }) {
   const updateDay = (key, patch) => {
     setForm((current) => ({
       ...current,
-      [key]: {
-        ...current[key],
-        ...patch,
-      },
+      [key]: { ...current[key], ...patch },
     }));
   };
 
@@ -50,9 +43,9 @@ export default function WorkingHoursCard({ hours = {}, onSave }) {
   };
 
   return (
-    <div className="rounded-xl bg-white p-5 shadow-sm sm:p-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h3 className="text-lg font-bold">Working Hours</h3>
+    <div className="rounded-2xl bg-white p-6 shadow-sm">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-bold text-slate-900">Working Hours</h3>
         <button
           type="button"
           onClick={saveHours}
@@ -63,18 +56,16 @@ export default function WorkingHoursCard({ hours = {}, onSave }) {
         </button>
       </div>
 
-      <div className="space-y-3">
+      <div className="mt-3 border-t border-slate-100">
         {DAYS.map((day) => {
           const value = form[day.key] || defaultDay;
 
           return (
             <div
               key={day.key}
-              className="grid gap-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-3 text-sm sm:grid-cols-[110px_90px_1fr_1fr]"
+              className="flex flex-wrap items-center justify-between gap-3 py-3.5 border-b border-slate-50 last:border-b-0"
             >
-              <span className="font-semibold text-slate-700">{day.label}</span>
-
-              <label className="flex items-center gap-2 font-medium text-slate-600">
+              <label className="flex items-center gap-2 min-w-[140px]">
                 <input
                   type="checkbox"
                   checked={value.open}
@@ -83,28 +74,32 @@ export default function WorkingHoursCard({ hours = {}, onSave }) {
                   }
                   className="h-4 w-4 rounded border-slate-300 text-blue-600"
                 />
-                Open
+                <span className="text-slate-700">{day.label}</span>
               </label>
 
-              <input
-                type="time"
-                value={value.opens || ""}
-                disabled={!value.open}
-                onChange={(event) =>
-                  updateDay(day.key, { opens: event.target.value })
-                }
-                className="h-10 rounded-lg border border-slate-200 bg-white px-3 font-semibold text-slate-700 disabled:bg-slate-100 disabled:text-slate-400"
-              />
-
-              <input
-                type="time"
-                value={value.closes || ""}
-                disabled={!value.open}
-                onChange={(event) =>
-                  updateDay(day.key, { closes: event.target.value })
-                }
-                className="h-10 rounded-lg border border-slate-200 bg-white px-3 font-semibold text-slate-700 disabled:bg-slate-100 disabled:text-slate-400"
-              />
+              {value.open ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="time"
+                    value={value.opens}
+                    onChange={(event) =>
+                      updateDay(day.key, { opens: event.target.value })
+                    }
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm font-semibold text-slate-900 focus:border-blue-400 focus:outline-none"
+                  />
+                  <span className="text-slate-400">&ndash;</span>
+                  <input
+                    type="time"
+                    value={value.closes}
+                    onChange={(event) =>
+                      updateDay(day.key, { closes: event.target.value })
+                    }
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm font-semibold text-slate-900 focus:border-blue-400 focus:outline-none"
+                  />
+                </div>
+              ) : (
+                <span className="font-semibold text-red-500">Closed</span>
+              )}
             </div>
           );
         })}

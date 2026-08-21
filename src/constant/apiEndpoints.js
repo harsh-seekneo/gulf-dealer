@@ -10,8 +10,17 @@ export const API_ENDPOINTS = {
     DRAFT: "/dealer/draft",
 
     PROFILE: "/dealer/profile",
-    SUBSCRIPTION: "/dealer/subscription",
-    UPLOAD_DOCUMENT: "/dealer/upload-document",
+
+    LOGO: "/dealer/profile/logo",
     COVER_BANNER: "/dealer/profile/cover-banner",
+
+    UPLOAD_DOCUMENT: "/dealer/upload-document",
+
+    SUBSCRIPTION: "/dealer/subscription",
+  },
+
+  DASHBOARD: {
+    SUMMARY: "/dealer/dashboard/summary",
+    MONTHLY_VIEWS: "/dealer/dashboard/monthly-views",
   },
 };

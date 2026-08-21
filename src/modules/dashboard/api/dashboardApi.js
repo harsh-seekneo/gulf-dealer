@@ -1,5 +1,6 @@
 // src/modules/dashboard/api/dashboardApi.js
 import apiClient from "../../../services/apiClient";
+import { API_ENDPOINTS } from "../../../constant/apiEndpoints";
 
 const DEFAULT_DASHBOARD = {
   stats: {
@@ -23,7 +24,7 @@ export const dashboardApi = {
    */
   async getSummary() {
     try {
-      const response = await apiClient.get("/dealer/dashboard/summary");
+      const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.SUMMARY);
       const dashboard = response?.data?.data || response?.data || {};
 
       return {
@@ -40,8 +41,34 @@ export const dashboardApi = {
         topVehicles: Array.isArray(dashboard?.topVehicles) ? dashboard.topVehicles : [],
       };
     } catch (error) {
-      console.error("Failed to load dashboard summary:", error);
+      console.error(
+        "Failed to load dashboard summary:",
+        error?.response?.status,
+        error?.response?.data || error.message
+      );
       return DEFAULT_DASHBOARD;
+    }
+  },
+
+  /**
+   * Fetch monthly listing-view stats.
+   * NOTE: requires API_ENDPOINTS.DASHBOARD.MONTHLY_VIEWS to exist in
+   * apiEndpoints.js (add it next to SUMMARY, pointing at your real
+   * monthly-stats route). Resolves to [] on any error, same fallback
+   * pattern as getSummary.
+   */
+  async getMonthlyViews() {
+    try {
+      const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.MONTHLY_VIEWS);
+      const rows = response?.data?.data || response?.data || [];
+      return Array.isArray(rows) ? rows : [];
+    } catch (error) {
+      console.error(
+        "Failed to load monthly views:",
+        error?.response?.status,
+        error?.response?.data || error.message
+      );
+      return [];
     }
   },
 };

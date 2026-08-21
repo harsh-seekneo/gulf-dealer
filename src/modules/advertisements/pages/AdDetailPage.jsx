@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
+  Check,
   Download,
   ExternalLink,
   FileText,
@@ -20,24 +21,28 @@ const categoryConfig = {
     subtitle: "Top placement with maximum homepage visibility",
     dimensions: "1440 x 200 px",
     icon: Layers,
+    priority: "Premium",
   },
   LISTING_BANNER: {
     title: "Listing Page Banner",
     subtitle: "Appears inside listing detail pages",
     dimensions: "728 x 90 px",
     icon: FileText,
+    priority: "High Intent",
   },
   LARGE_CATEGORY_BANNER: {
     title: "Large Category Ad",
     subtitle: "Shown on category and search result pages",
     dimensions: "300 x 250 px",
     icon: Layers,
+    priority: "Standard",
   },
   SMALL_ADVERTISEMENT_SPACE: {
     title: "Small Ad Space",
     subtitle: "Sidebar and inline ad slots",
     dimensions: "160 x 600 px",
     icon: Tag,
+    priority: "Basic",
   },
 };
 
@@ -59,6 +64,24 @@ const formatDate = (value) => {
   }).format(new Date(value));
 };
 
+const formatDateTime = (value) => {
+  if (!value) return "-";
+
+  const datePart = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+
+  const timePart = new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(value));
+
+  return `${datePart} \u00b7 ${timePart}`;
+};
+
 const getStatusClass = (status) => {
   if (status === "ACTIVE") return "bg-emerald-100 text-emerald-700";
   if (status === "PENDING") return "bg-amber-100 text-amber-700";
@@ -66,10 +89,28 @@ const getStatusClass = (status) => {
   return "bg-slate-100 text-slate-600";
 };
 
-const DetailRow = ({ label, value, children }) => (
-  <div className="flex items-center justify-between border-b border-slate-100 py-3 text-sm last:border-b-0">
-    <span className="text-slate-500">{label}</span>
-    {children || <span className="text-right font-semibold text-slate-900">{value || "-"}</span>}
+/*
+  InfoRow renders one bordered row containing a left and (optional) right
+  label/value pair, label on the left and value right-aligned on the same
+  line, matching the target design. A cell is only rendered when the
+  caller supplies a real value — callers are responsible for omitting
+  fields the backend doesn't provide yet, rather than faking a value, so
+  this component never needs to know what's "real".
+*/
+const InfoCell = ({ label, value, children }) =>
+  label ? (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-slate-500">{label}</span>
+      {children || <span className="text-right font-bold text-slate-950">{value ?? "-"}</span>}
+    </div>
+  ) : (
+    <div />
+  );
+
+const InfoRow = ({ left, right }) => (
+  <div className="grid grid-cols-2 gap-x-10 border-b border-slate-100 py-4 text-sm last:border-b-0">
+    <InfoCell {...left} />
+    <InfoCell {...(right || {})} />
   </div>
 );
 
@@ -122,6 +163,30 @@ export default function AdDetailPage() {
   const activeDevice = devices.find((item) => item.key === device) || devices[0];
   const creativeUrl = ad.creatives?.[device]?.url || ad.creatives?.desktop?.url;
   const startDate = ad.startsAt || ad.createdAt;
+
+  // Fields the backend does not currently provide stay undefined until
+  // the schema/service layer actually supports them — never hardcoded —
+  // so a row only ever shows real data.
+  // Priority is fixed per placement type — no backend field needed.
+  const priorityLabel = config.priority;
+  const hasAutoRenewal = typeof ad.autoRenewal === "boolean";
+  const hasMaskedCard = Boolean(ad.cardBrand && ad.cardLast4);
+  const paymentMethodDisplay = hasMaskedCard
+    ? `${ad.cardBrand} \u2022\u2022\u2022\u2022 ${ad.cardLast4}`
+    : ad.paymentMethod || "-";
+  const durationLabel = ad.renewalDays
+    ? `${ad.durationDays || 0} Days + ${ad.renewalDays} Day Renewal`
+    : `${ad.durationDays || 0} Days`;
+
+  // End date isn't always sent by the backend, so derive it from the
+  // start date plus the plan's total duration (including any renewal
+  // days) whenever an explicit endsAt value isn't available.
+  const totalDays = (ad.durationDays || 0) + (ad.renewalDays || 0);
+  const computedEndDate =
+    startDate && totalDays
+      ? new Date(new Date(startDate).getTime() + totalDays * 24 * 60 * 60 * 1000)
+      : null;
+  const endDate = ad.endsAt || computedEndDate;
 
   return (
     <div className="flex flex-col gap-6">
@@ -180,7 +245,7 @@ export default function AdDetailPage() {
                   gulfincart.com - {config.dimensions}
                 </span>
               </div>
-              <div className="p-4">
+              <div className="relative p-4">
                 {creativeUrl ? (
                   <img
                     src={creativeUrl}
@@ -192,73 +257,102 @@ export default function AdDetailPage() {
                     No {device} creative uploaded
                   </div>
                 )}
+                {creativeUrl ? (
+                  <span className="absolute right-6 top-6 rounded bg-slate-950/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                    Ad
+                  </span>
+                ) : null}
               </div>
             </div>
           </div>
         </div>
       </Section>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Section title="Campaign Details">
-          <DetailRow label="Advertisement Name" value={ad.name} />
-          <DetailRow label="Ad ID" value={ad.advertisementId} />
-          <DetailRow label="Placement" value={config.title} />
-          <DetailRow label="Duration" value={`${ad.durationDays || 0} Days`} />
-          <DetailRow label="Views" value={(ad.viewCount || 0).toLocaleString()} />
-          <DetailRow label="Redirect URL">
-            {ad.redirectTo ? (
-              <a
-                href={ad.redirectTo}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex max-w-[260px] items-center gap-1 truncate text-right font-semibold text-blue-600"
+      <Section title="Advertisement Placement">
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Object.entries(categoryConfig).map(([key, item]) => {
+            const Icon = item.icon;
+            const selected = ad.category === key;
+            return (
+              <div
+                key={key}
+                className={`relative rounded-xl border p-4 ${
+                  selected ? "border-blue-600 bg-blue-50 ring-1 ring-blue-600" : "border-slate-200 bg-white"
+                }`}
               >
-                <span className="truncate">{ad.redirectTo}</span>
-                <ExternalLink size={13} />
-              </a>
-            ) : (
-              <span className="font-semibold text-slate-900">-</span>
-            )}
-          </DetailRow>
-        </Section>
-
-        <Section title="Advertisement Placement">
-          <div className="grid gap-3 sm:grid-cols-2">
-            {Object.entries(categoryConfig).map(([key, item]) => {
-              const Icon = item.icon;
-              const selected = ad.category === key;
-              return (
-                <div
-                  key={key}
-                  className={`rounded-xl border p-4 ${
-                    selected ? "border-blue-600 bg-blue-50" : "border-slate-200 bg-white"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-                      selected ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500"
-                    }`}>
-                      <Icon size={17} />
-                    </span>
-                    <div>
-                      <p className="font-bold text-slate-950">{item.title}</p>
-                      <p className="mt-1 text-xs text-slate-500">{item.subtitle}</p>
-                    </div>
+                {selected ? (
+                  <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-white">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                ) : null}
+                <div className="flex items-start gap-3">
+                  <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                    selected ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500"
+                  }`}>
+                    <Icon size={17} />
+                  </span>
+                  <div>
+                    <p className="font-bold text-slate-950">{item.title}</p>
+                    <p className="mt-1 text-xs text-slate-500">{item.subtitle}</p>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </Section>
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      </Section>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Section title="Advertisement Plan">
-          <DetailRow label="Plan Name" value={`Premium ${config.title}`} />
-          <DetailRow label="Start Date" value={formatDate(startDate)} />
-          <DetailRow label="End Date" value={formatDate(ad.endsAt)} />
-          <DetailRow label="Payment Status" value={ad.paymentStatus} />
-          <DetailRow label="Amount" value={formatCurrency(ad.totalAmount || ad.price)} />
+      <div className="grid gap-6">
+        <Section
+          title="Advertisement Plan"
+          action={
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-600">
+              {priorityLabel}
+            </span>
+          }
+        >
+          <div>
+            <InfoRow
+              left={{ label: "Plan Name", value: `Premium ${config.title}` }}
+              right={{ label: "Duration", value: durationLabel }}
+            />
+            <InfoRow
+              left={{ label: "Start Date", value: formatDate(startDate) }}
+              right={{ label: "End Date", value: formatDate(endDate) }}
+            />
+            <InfoRow
+              left={{ label: "Priority", value: priorityLabel }}
+              right={
+                hasAutoRenewal
+                  ? {
+                      label: "Auto Renewal",
+                      children: (
+                        <span className={`text-right font-bold ${ad.autoRenewal ? "text-blue-600" : "text-slate-950"}`}>
+                          {ad.autoRenewal ? "Enabled" : "Disabled"}
+                        </span>
+                      ),
+                    }
+                  : null
+              }
+            />
+            <InfoRow
+              left={{
+                label: "Payment Status",
+                children: (
+                  <span
+                    className={`text-right font-bold ${
+                      ad.paymentStatus === "Paid" || ad.paymentStatus === "PAID"
+                        ? "text-emerald-600"
+                        : "text-slate-950"
+                    }`}
+                  >
+                    {ad.paymentStatus || "-"}
+                  </span>
+                ),
+              }}
+              right={{ label: "Amount", value: formatCurrency(ad.totalAmount || ad.price) }}
+            />
+          </div>
         </Section>
 
         <Section
@@ -274,18 +368,50 @@ export default function AdDetailPage() {
             </button>
           }
         >
-          <DetailRow label="Invoice Number" value={`INV-${String(ad._id).slice(-8).toUpperCase()}`} />
-          <DetailRow label="Payment Method" value={ad.paymentMethod || "-"} />
-          <DetailRow label="Transaction Date" value={formatDate(ad.paidAt || ad.createdAt)} />
-          <DetailRow label="VAT (5%)" value={formatCurrency(ad.vatAmount)} />
-          <DetailRow label="Amount Paid" value={formatCurrency(ad.totalAmount || ad.price)} />
+          <div>
+            <InfoRow
+              left={{ label: "Advertisement ID", value: ad.advertisementId }}
+              right={{ label: "Invoice Number", value: `INV-${String(ad._id).slice(-8).toUpperCase()}` }}
+            />
+            <InfoRow
+              left={{ label: "Plan Purchased", value: `Premium ${config.title}` }}
+              right={{ label: "Amount Paid", value: formatCurrency(ad.totalAmount || ad.price) }}
+            />
+            <InfoRow
+              left={{ label: "Payment Method", value: paymentMethodDisplay }}
+              right={{ label: "Transaction Date", value: formatDateTime(ad.paidAt || ad.createdAt) }}
+            />
+            <InfoRow
+              left={{
+                label: "Invoice Status",
+                children: (
+                  <span
+                    className={`text-right font-bold ${
+                      ad.paymentStatus === "Paid" || ad.paymentStatus === "PAID"
+                        ? "text-emerald-600"
+                        : "text-slate-950"
+                    }`}
+                  >
+                    {ad.paymentStatus || "-"}
+                  </span>
+                ),
+              }}
+              right={{ label: "VAT (10%)", value: formatCurrency(ad.vatAmount) }}
+            />
+          </div>
         </Section>
       </div>
 
       {ad.status === "REJECTED" ? (
         <Section title="Review Notes">
-          <DetailRow label="Reason" value={ad.rejectionReason} />
-          <DetailRow label="Remark" value={ad.rejectionRemark} />
+          <div className="flex items-center justify-between border-b border-slate-100 py-3 text-sm">
+            <span className="text-slate-500">Reason</span>
+            <span className="text-right font-semibold text-slate-900">{ad.rejectionReason || "-"}</span>
+          </div>
+          <div className="flex items-center justify-between py-3 text-sm">
+            <span className="text-slate-500">Remark</span>
+            <span className="text-right font-semibold text-slate-900">{ad.rejectionRemark || "-"}</span>
+          </div>
         </Section>
       ) : null}
     </div>

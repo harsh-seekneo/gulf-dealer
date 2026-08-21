@@ -180,9 +180,7 @@ export default function SubscriptionPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <p className="text-base text-slate-500">
-          Loading subscription...
-        </p>
+        <p className="text-base text-slate-500">Loading subscription...</p>
       </div>
     );
   }
@@ -217,25 +215,18 @@ export default function SubscriptionPage() {
 
           const isCurrent = currentPlanId === plan._id;
 
-          const isPremium =
-            plan.planName?.toLowerCase().includes("premium") ||
-            plan.planName?.toLowerCase().includes("prestige");
-
           return (
             <PlanCard
               key={plan._id}
               plan={plan}
               isCurrent={isCurrent}
-              isPremium={isPremium}
               onSelect={handleSelectPlan}
             />
           );
         })}
       </div>
 
-      {plans.length > 0 && (
-        <ComparePlansTable plans={plans} />
-      )}
+      {plans.length > 0 && <ComparePlansTable plans={plans} />}
 
       <ConfirmModal
         isOpen={Boolean(selectedPlan)}
