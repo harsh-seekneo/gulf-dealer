@@ -5,6 +5,7 @@ export default function PlanCard({
   onSelect,
 }) {
   const tier = plan.pricingTiers?.[0];
+  const price = plan.finalPrice ?? tier?.finalPrice ?? tier?.price ?? 0;
 
   return (
     <div
@@ -31,7 +32,14 @@ export default function PlanCard({
           isPremium ? "text-amber-400" : "text-blue-600"
         }`}
       >
-        BHD {tier?.price ?? 0}
+        BHD {Number(price || 0).toFixed(3)}
+      </p>
+      <p
+        className={`mt-1 text-xs ${
+          isPremium ? "text-slate-300" : "text-slate-500"
+        }`}
+      >
+        {plan.vatEnabled ? "VAT-inclusive" : "VAT-exclusive"}
       </p>
 
       {/* Duration */}
@@ -44,6 +52,16 @@ export default function PlanCard({
       >
         {tier?.durationDays} Days
       </p>
+
+      {plan.launchOfferEnabled && Number(plan.launchOfferFreeMonths || 0) > 0 && (
+        <p
+          className={`mt-2 text-sm font-semibold ${
+            isPremium ? "text-amber-300" : "text-amber-600"
+          }`}
+        >
+          + {plan.launchOfferFreeMonths} free months on first purchase
+        </p>
+      )}
 
       {/* Features */}
       <ul className="mt-5 flex-1 space-y-2 text-sm">
