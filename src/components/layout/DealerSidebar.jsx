@@ -21,7 +21,7 @@ import { profileApi } from "../../modules/profile/api/profileApi";
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutGrid },
-  { label: "Listings", path: "/vehicles", icon: Car, badgeKey: "vehicles" },
+  { label: "Vehicles", path: "/vehicles", icon: Car, badgeKey: "vehicles" },
   { label: "Leads", path: "/leads", icon: Users, badgeKey: "leads" },
   {
     label: "Advertisements",
