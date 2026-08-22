@@ -1,5 +1,3 @@
-// [ADMIN] /Users/personal/Desktop/gulf-dealer/src/components/layout/DealerSidebar.jsx
-
 import { NavLink } from "react-router-dom";
 import {
   LayoutGrid,
@@ -21,7 +19,7 @@ import { profileApi } from "../../modules/profile/api/profileApi";
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutGrid },
-  { label: "Vehicles", path: "/vehicles", icon: Car, badgeKey: "vehicles" },
+  { label: "Listings", path: "/vehicles", icon: Car, badgeKey: "vehicles" },
   { label: "Leads", path: "/leads", icon: Users, badgeKey: "leads" },
   {
     label: "Advertisements",
@@ -52,6 +50,7 @@ export default function DealerSidebar({ isOpen, onClose }) {
   const [subscription, setSubscription] = useState(null);
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [logoError, setLogoError] = useState(false);
 
   // -----------------------------------------
   // Load Dealer Profile
@@ -103,6 +102,19 @@ export default function DealerSidebar({ isOpen, onClose }) {
     dealerStatus?.businessName ||
     dealerStatus?.dealer?.name ||
     "Dealer";
+
+  // -----------------------------------------
+  // DEALER LOGO
+  // -----------------------------------------
+  // profileApi.updateLogo() uploads under the "logo" field,
+  // but getProfile() returns the stored URL as profile.logoUrl.
+  const dealerLogoUrl = profile?.logoUrl || null;
+
+  // Reset the "broken image" flag whenever the logo URL changes
+  // (e.g. dealer uploads a new one and profile state updates).
+  useEffect(() => {
+    setLogoError(false);
+  }, [dealerLogoUrl]);
 
   // -----------------------------------------
   // SUBSCRIPTION / TIER
@@ -188,8 +200,17 @@ export default function DealerSidebar({ isOpen, onClose }) {
             DEALER PROFILE
         ----------------------------------------- */}
         <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold">
-            <Car size={18} />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-sm font-bold">
+            {dealerLogoUrl && !logoError ? (
+              <img
+                src={dealerLogoUrl}
+                alt={businessName}
+                className="h-full w-full object-cover"
+                onError={() => setLogoError(true)}
+              />
+            ) : (
+              <Car size={18} />
+            )}
           </div>
 
           {isLoading || profileLoading ? (
