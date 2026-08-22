@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
@@ -623,19 +622,23 @@ export default function ProfilePage() {
 
           {/* LOGO */}
 
-          <div className="relative -mt-12 h-24 w-24 sm:-mt-14 sm:h-28 sm:w-28">
-            {profile.logoUrl ? (
-              <img
-                key={profile.logoUrl}
-                src={profile.logoUrl}
-                alt={`${profile.businessName || "Dealer"} logo`}
-                className="h-full w-full rounded-2xl border-4 border-white bg-white object-contain shadow-lg"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center rounded-2xl border-4 border-white bg-slate-100 text-xl font-black text-slate-500 shadow-lg">
-                {initials || <Building2 size={36} strokeWidth={1.8} />}
+          <div className="relative -mt-16 h-28 w-28 sm:-mt-20 sm:h-32 sm:w-32 rounded-3xl bg-white p-1.5 shadow-lg">
+            <div className="flex h-full w-full items-center justify-center rounded-3xl bg-blue-600 p-2">
+              <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-white">
+                {profile.logoUrl ? (
+                  <img
+                    key={profile.logoUrl}
+                    src={profile.logoUrl}
+                    alt={`${profile.businessName || "Dealer"} logo`}
+                    className="h-full w-full object-contain p-1"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-lg font-black text-slate-500">
+                    {initials || <Building2 size={30} strokeWidth={1.8} />}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* LOGO CAMERA — small, subtle badge */}
 
