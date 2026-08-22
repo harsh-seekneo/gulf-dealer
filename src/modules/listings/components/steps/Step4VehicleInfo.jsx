@@ -55,7 +55,11 @@ const Step4VehicleInfo = () => {
   const handleChange = (fieldName, value) => {
     setForm((previous) => {
       const next = { ...previous, [fieldName]: value };
-      if (fieldName === "brand") next.catalogModel = "";
+      if (fieldName === "brand") {
+        next.catalogModel = "";
+        next.variantTrim = "";
+      }
+      if (fieldName === "catalogModel") next.variantTrim = "";
       return next;
     });
     setErrors((previous) => ({ ...previous, [fieldName]: "" }));

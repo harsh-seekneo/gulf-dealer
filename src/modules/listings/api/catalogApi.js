@@ -16,3 +16,8 @@ export const getCatalogModelOptionsApi = async (params) => {
   const { data } = await apiClient.get(`${BASE_URL}/models/options`, { params });
   return data.data;
 };
+
+export const getVariantOptionsApi = async (params) => {
+  const { data } = await apiClient.get(`${BASE_URL}/variants/options`, { params });
+  return data.data;
+};

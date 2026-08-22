@@ -12,7 +12,7 @@ export const buggyFormConfig = {
     { name: "title", label: "Listing Title", type: "text", required: true, span: 2, placeholder: "e.g. 2023 Polaris RZR Pro XP Sand Buggy" },
     { name: "brand", label: "Brand", type: "brandSelect", required: true },
     { name: "catalogModel", label: "Model", type: "modelSelect", required: true },
-    { name: "variantTrim", label: "Variant / Trim", type: "text" },
+    { name: "variantTrim", label: "Variant / Trim", type: "variantSelect" },
     { name: "manufacturingYear", label: "Manufacturing Year", type: "yearSelect", required: true },
     { name: "bodyType", label: "Body Type", type: "select", options: ["Single Seat", "2-Seater", "4-Seater", "Side-by-Side (UTV)"] },
     { name: "mileage", label: "Mileage", type: "number", placeholder: "e.g. 3200" },

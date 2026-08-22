@@ -57,6 +57,24 @@ export default function PlanCard({ plan, isCurrent, onSelect }) {
           • {plan.activeListingCount ?? 0} Active Listings
         </li>
 
+        {plan.homepageBanner !== null && plan.homepageBanner !== undefined && (
+          <li className={isPremium ? "text-slate-300" : "text-slate-600"}>
+            • {plan.homepageBanner} Homepage Banner{Number(plan.homepageBanner) === 1 ? "" : "s"}
+          </li>
+        )}
+
+        {plan.largeAdsSpace !== null && plan.largeAdsSpace !== undefined && (
+          <li className={isPremium ? "text-slate-300" : "text-slate-600"}>
+            • {plan.largeAdsSpace} Large Ads Space
+          </li>
+        )}
+
+        {plan.smallAdsSpace !== null && plan.smallAdsSpace !== undefined && (
+          <li className={isPremium ? "text-slate-300" : "text-slate-600"}>
+            • {plan.smallAdsSpace} Small Ads Space
+          </li>
+        )}
+
         <li className={isPremium ? "text-slate-300" : "text-slate-600"}>
           • {plan.maxPhotos ?? 0} Photos
         </li>

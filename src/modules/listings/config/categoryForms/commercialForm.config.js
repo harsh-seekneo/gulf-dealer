@@ -12,7 +12,7 @@ export const commercialFormConfig = {
     { name: "title", label: "Vehicle Title", type: "text", required: true, span: 2, placeholder: "e.g. 2023 Mercedes-Benz Arocs 5460 Tipper Truck" },
     { name: "brand", label: "Brand", type: "brandSelect", required: true },
     { name: "catalogModel", label: "Model", type: "modelSelect", required: true },
-    { name: "variantTrim", label: "Variant / Trim", type: "text", placeholder: "e.g. Long Wheelbase, High Roof" },
+    { name: "variantTrim", label: "Variant / Trim", type: "variantSelect" },
     { name: "vehicleType", label: "Vehicle Type", type: "select", required: true, options: ["Tipper Truck", "Cargo Van", "Pickup", "Mini Truck", "Bus", "Trailer"] },
     { name: "manufacturingYear", label: "Manufacturing Year", type: "yearSelect", required: true },
     { name: "bodyType", label: "Body Type", type: "select", required: true, options: ["Rigid Body", "Flatbed", "Box Body", "Tanker", "Refrigerated"] },

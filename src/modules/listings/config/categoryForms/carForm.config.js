@@ -12,7 +12,7 @@ export const carFormConfig = {
     { name: "title", label: "Vehicle Title", type: "text", required: true, span: 2, placeholder: "e.g. 2023 Toyota Land Cruiser GXR V8" },
     { name: "brand", label: "Brand", type: "brandSelect", required: true },
     { name: "catalogModel", label: "Model", type: "modelSelect", required: true },
-    { name: "variantTrim", label: "Variant / Trim", type: "text", placeholder: "e.g. GXR VE, Executive" },
+    { name: "variantTrim", label: "Variant / Trim", type: "variantSelect" },
     { name: "manufacturingYear", label: "Manufacturing Year", type: "yearSelect", required: true },
     { name: "bodyType", label: "Body Type", type: "select", required: true, options: ["Sedan", "SUV", "Hatchback", "Coupe"] },
     { name: "availability", label: "Availability", type: "select", options: ["Available", "Reserved"] },

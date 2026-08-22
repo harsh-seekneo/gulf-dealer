@@ -14,7 +14,7 @@ export const motorbikeFormConfig = {
     { name: "bikeType", label: "Bike Type", type: "select", required: true, options: ["Sport Bike", "Cruiser", "Touring", "Naked", "Adventure", "Scooter"] },
     { name: "brand", label: "Brand", type: "brandSelect", required: true },
     { name: "catalogModel", label: "Model", type: "modelSelect", required: true },
-    { name: "variantTrim", label: "Variant / Trim", type: "text", placeholder: "e.g. ABS, SE, Special Edition" },
+    { name: "variantTrim", label: "Variant / Trim", type: "variantSelect" },
     { name: "manufacturingYear", label: "Manufacturing Year", type: "yearSelect", required: true },
     { name: "mileage", label: "Mileage (km)", type: "number", placeholder: "e.g. 8500" },
     { name: "exteriorColor", label: "Color", type: "colorSwatch", swatches: MOTORBIKE_COLOR_SWATCHES, span: 2 },

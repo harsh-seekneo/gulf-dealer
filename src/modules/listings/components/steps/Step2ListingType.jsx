@@ -3,7 +3,6 @@ import { Tag, RefreshCw } from "lucide-react";
 
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
 import WizardFooterNav from "../WizardFooterNav";
-import { specialNumberFormConfig } from "../../config/categoryForms/specialNumberForm.config";
 
 const listingTypeOptions = [
   { value: "SALE", label: "For Sale", description: "List your vehicle as a one-time purchase for interested buyers.", icon: Tag },
@@ -25,13 +24,14 @@ const Step2ListingType = () => {
   const activeListingTypeOptions = isSpecialNumber
     ? [
         { value: "SALE", label: "For Sale", description: "List this number plate for a fixed price.", icon: Tag },
-        { value: "AUCTION", label: "Auction", description: "Let buyers bid on this number plate.", icon: RefreshCw },
       ]
     : listingTypeOptions;
 
   const requiresCondition = !isSpecialNumber;
 
-  const [listingType, setListingType] = useState(listing?.listingType || "");
+  const [listingType, setListingType] = useState(
+    isSpecialNumber ? "SALE" : listing?.listingType || "",
+  );
   const [condition, setCondition] = useState(listing?.condition || "");
   const [showValidation, setShowValidation] = useState({ listingType: false, condition: false });
 
@@ -59,14 +59,18 @@ const Step2ListingType = () => {
   return (
     <div>
       <h2 className="text-lg font-bold text-slate-950">Listing Type</h2>
-      <p className="mt-1 text-sm text-slate-500">Are you selling or renting your vehicle?</p>
+      <p className="mt-1 text-sm text-slate-500">
+        {isSpecialNumber
+          ? "This number plate will be listed for sale."
+          : "Are you selling or renting your vehicle?"}
+      </p>
 
       <div
         className={`mt-5 grid gap-3 sm:grid-cols-2 ${
           showValidation.listingType ? "rounded-xl ring-2 ring-red-400 ring-offset-2" : ""
         }`}
       >
-        {listingTypeOptions.map((option) => {
+        {activeListingTypeOptions.map((option) => {
           const Icon = option.icon;
           const isSelected = listingType === option.value;
 
@@ -95,7 +99,7 @@ const Step2ListingType = () => {
       </div>
 
       {showValidation.listingType && (
-        <p className="mt-2 text-xs font-medium text-red-600">Please choose whether you're selling or renting</p>
+        <p className="mt-2 text-xs font-medium text-red-600">Please choose an option to continue</p>
       )}
 
       {requiresCondition && (

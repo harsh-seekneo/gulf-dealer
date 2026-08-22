@@ -4,6 +4,11 @@ export default function CurrentPlanBanner({ plan }) {
   if (!plan) return null;
 
   const isPendingActivation = plan.status === "PENDING_ACTIVATION" || !plan.startDate || !plan.endDate;
+  const adSlots = [
+    { label: "Homepage", value: plan.homepageBanner ?? plan.plan?.homepageBanner },
+    { label: "Large ads", value: plan.largeAdsSpace ?? plan.plan?.largeAdsSpace },
+    { label: "Small ads", value: plan.smallAdsSpace ?? plan.plan?.smallAdsSpace },
+  ].filter((item) => item.value !== null && item.value !== undefined);
 
   if (isPendingActivation) {
     return (
@@ -24,7 +29,14 @@ export default function CurrentPlanBanner({ plan }) {
 
           {plan.launchOfferFreeMonths > 0 && (
             <p className="mt-1 text-sm text-amber-100">
-              Launch offer eligible: {plan.launchOfferFreeMonths} free months
+              {plan.offerReason ||
+                `Launch offer eligible: ${plan.launchOfferFreeMonths} free months`}
+            </p>
+          )}
+
+          {adSlots.length > 0 && (
+            <p className="mt-1 text-sm text-amber-100">
+              Ads included: {adSlots.map((slot) => `${slot.value} ${slot.label}`).join(" · ")}
             </p>
           )}
         </div>
@@ -37,24 +49,13 @@ export default function CurrentPlanBanner({ plan }) {
     );
   }
 
-  const startDate = new Date(plan.startDate);
   const endDate = new Date(plan.endDate);
-  const today = new Date();
-
-  const totalDays = Math.max(
-    1,
-    Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))
-  );
-
-  const remainingDays = Math.max(
-    0,
-    Math.ceil((endDate - today) / (1000 * 60 * 60 * 24))
-  );
-
-  const usedDays = Math.max(totalDays - remainingDays, 0);
+  const totalDays = Number(plan.daysTotal || plan.durationDaysSnapshot || 0);
+  const remainingDays = Number(plan.daysRemaining ?? totalDays);
+  const usedDays = Number(plan.daysUsed ?? Math.max(totalDays - remainingDays, 0));
 
   // Progress bar shows remaining percentage
-  const progress = Math.round((remainingDays / totalDays) * 100);
+  const progress = totalDays > 0 ? Math.round((remainingDays / totalDays) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white sm:flex-row sm:items-center sm:justify-between">
@@ -80,7 +81,14 @@ export default function CurrentPlanBanner({ plan }) {
 
         {plan.launchOfferApplied && (
           <p className="mt-1 text-sm text-amber-100">
-            Launch offer applied: {plan.launchOfferFreeMonths} free months
+            {plan.offerReason ||
+              `Launch offer applied: ${plan.launchOfferFreeMonths} free months`}
+          </p>
+        )}
+
+        {adSlots.length > 0 && (
+          <p className="mt-1 text-sm text-amber-100">
+            Ads included: {adSlots.map((slot) => `${slot.value} ${slot.label}`).join(" · ")}
           </p>
         )}
       </div>
@@ -88,7 +96,7 @@ export default function CurrentPlanBanner({ plan }) {
       {/* Right */}
       <div className="w-full sm:w-56">
         <p className="text-right text-xs text-amber-100">
-          {remainingDays} Days Remaining
+          {plan.daysLabel || `${remainingDays} Days Remaining`}
         </p>
 
         <p className="text-right text-xl font-bold">

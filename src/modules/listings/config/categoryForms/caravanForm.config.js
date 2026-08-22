@@ -12,7 +12,7 @@ export const caravanFormConfig = {
     { name: "title", label: "Listing Title", type: "text", required: true, span: 2, placeholder: "e.g. 2022 Bailey Phoenix 640 Touring Caravan" },
     { name: "brand", label: "Brand", type: "brandSelect", required: true },
     { name: "catalogModel", label: "Model", type: "modelSelect", required: true },
-    { name: "variantTrim", label: "Variant / Trim", type: "text" },
+    { name: "variantTrim", label: "Variant / Trim", type: "variantSelect" },
     { name: "manufacturingYear", label: "Manufacturing Year", type: "yearSelect", required: true },
     { name: "bodyType", label: "Caravan Type", type: "select", options: ["Touring Caravan", "Motorhome", "Camper Trailer", "Fifth Wheel"] },
     { name: "mileage", label: "Mileage", type: "number", placeholder: "e.g. 15000" },

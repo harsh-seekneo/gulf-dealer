@@ -274,7 +274,7 @@ const FileUpload = ({ file, label, onChange }) => {
   );
 };
 
-const SummaryPanel = ({ placement, durationDays, price }) => {
+const SummaryPanel = ({ placement, durationDays, price, isIncludedWithPlan }) => {
   const vat = Number((Number(price || 0) * 0.05).toFixed(3));
   const total = Number((Number(price || 0) + vat).toFixed(3));
 
@@ -284,6 +284,11 @@ const SummaryPanel = ({ placement, durationDays, price }) => {
       <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs font-medium text-slate-400">
         Dealer advertisement
       </div>
+      {isIncludedWithPlan ? (
+        <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-bold text-emerald-700">
+          Included with dealer plan
+        </div>
+      ) : null}
       <div className="mt-5 space-y-3 text-xs">
         <div className="flex justify-between gap-4">
           <span className="text-slate-500">Placement</span>
@@ -321,7 +326,7 @@ const SummaryPanel = ({ placement, durationDays, price }) => {
   );
 };
 
-function CreateAdModal({ draft, onClose, onCreated }) {
+function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
   const [plans, setPlans] = useState([]);
   const [form, setForm] = useState({
     _id: draft?._id || "",
@@ -379,11 +384,14 @@ function CreateAdModal({ draft, onClose, onCreated }) {
   const selectedPlan = plans.find((plan) => plan.category === form.category);
   const selectedPlacement = getPlacementMeta(form.category);
   const price = getTierPrice(selectedPlan, form.durationDays);
-  const vat = Number((price * 0.05).toFixed(3));
-  const total = Number((price + vat).toFixed(3));
+  const selectedPlanBenefit = planAdBenefits[form.category];
+  const isIncludedWithPlan = Number(selectedPlanBenefit?.remaining || 0) > 0;
+  const effectivePrice = isIncludedWithPlan ? 0 : price;
+  const vat = Number((effectivePrice * 0.05).toFixed(3));
+  const total = Number((effectivePrice + vat).toFixed(3));
   const progress = Math.round((step / wizardSteps.length) * 100);
   const walletBalance = Number(wallet?.balance || 0);
-  const walletAmountUsed = useWalletBalance ? Math.min(walletBalance, total) : 0;
+  const walletAmountUsed = useWalletBalance && !isIncludedWithPlan ? Math.min(walletBalance, total) : 0;
   const onlineAmountDue = Math.max(0, total - walletAmountUsed);
 
   const setCreative = (device, file) => {
@@ -406,7 +414,7 @@ function CreateAdModal({ draft, onClose, onCreated }) {
     if (!form.category) return "Choose advertisement placement.";
     if (!form.name.trim()) return "Advertisement name is required.";
     if (!form.redirectTo.trim()) return "Redirect URL is required.";
-    if (!price) return "Pricing is not configured for this duration.";
+    if (!isIncludedWithPlan && !price) return "Pricing is not configured for this duration.";
     const missing = devices.find((device) => !form.creatives[device.key] && !draft?.creatives?.[device.key]?.url);
     if (missing) return `${missing.label} creative is required.`;
     return "";
@@ -485,7 +493,7 @@ function CreateAdModal({ draft, onClose, onCreated }) {
       }
     }
 
-    if (step === 4 && !price) {
+    if (step === 4 && !isIncludedWithPlan && !price) {
       setError("Pricing is not configured for this duration.");
       return;
     }
@@ -683,7 +691,7 @@ function CreateAdModal({ draft, onClose, onCreated }) {
                     </span>
                   </span>
                   <span className={`text-xl font-black ${active ? "text-blue-600" : "text-slate-950"}`}>
-                    {formatCurrency(optionPrice)}
+                    {isIncludedWithPlan ? "Included" : formatCurrency(optionPrice)}
                   </span>
                 </button>
               );
@@ -728,6 +736,7 @@ function CreateAdModal({ draft, onClose, onCreated }) {
               ["Placement", selectedPlacement.title],
               ["Duration", `${form.durationDays} Days`],
               ["Total", formatCurrency(total)],
+              ...(isIncludedWithPlan ? [["Plan Benefit", `${selectedPlanBenefit.remaining} remaining`]] : []),
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl border border-slate-200 p-5">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p>
@@ -763,7 +772,7 @@ function CreateAdModal({ draft, onClose, onCreated }) {
                 ["Advertisement", form.name || selectedPlacement.title],
                 ["Placement", selectedPlacement.title],
                 ["Duration", `${form.durationDays} Days`],
-                ["Ad Fee", formatCurrency(price)],
+                ["Ad Fee", isIncludedWithPlan ? "Included with dealer plan" : formatCurrency(effectivePrice)],
                 ["VAT (5%)", formatCurrency(vat)],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between gap-4 border-b border-slate-100 pb-3">
@@ -776,6 +785,11 @@ function CreateAdModal({ draft, onClose, onCreated }) {
               <span className="font-bold text-blue-600">Total</span>
               <span className="text-2xl font-black text-blue-600">{formatCurrency(total)}</span>
             </div>
+            {isIncludedWithPlan ? (
+              <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
+                This advertisement will use 1 included {selectedPlacement.title} slot from your dealer plan.
+              </div>
+            ) : (
             <label className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-white px-4 py-3">
               <span>
                 <span className="block text-sm font-bold text-slate-900">Use wallet balance</span>
@@ -791,7 +805,8 @@ function CreateAdModal({ draft, onClose, onCreated }) {
                 className="h-5 w-5 rounded border-slate-300 text-blue-600"
               />
             </label>
-            {useWalletBalance ? (
+            )}
+            {useWalletBalance && !isIncludedWithPlan ? (
               <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 text-xs">
                 <div className="flex justify-between text-slate-600">
                   <span>Wallet used</span>
@@ -875,7 +890,8 @@ function CreateAdModal({ draft, onClose, onCreated }) {
             <SummaryPanel
               placement={selectedPlacement}
               durationDays={form.durationDays}
-              price={price}
+              price={effectivePrice}
+              isIncludedWithPlan={isIncludedWithPlan}
             />
           ) : null}
         </div>
@@ -921,6 +937,7 @@ export default function AdvertisementsPage() {
     totalSpent: 0,
   });
   const [ads, setAds] = useState([]);
+  const [planAdBenefits, setPlanAdBenefits] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -937,6 +954,7 @@ export default function AdvertisementsPage() {
       const data = await advertisementsApi.getSummary();
       setStats(data.stats || {});
       setAds(data.ads || []);
+      setPlanAdBenefits(data.planAdBenefits || {});
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load advertisements");
     } finally {
@@ -1146,6 +1164,7 @@ export default function AdvertisementsPage() {
             setModalDraft(null);
           }}
           onCreated={handleCreated}
+          planAdBenefits={planAdBenefits}
         />
       ) : null}
 

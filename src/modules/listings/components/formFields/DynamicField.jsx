@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import ColorSwatchField from "./ColorSwatchField";
 import ToggleGroupField from "./ToggleGroupField";
 import ToggleSwitchField from "../ToggleSwitchField";
-import { getBrandOptionsApi, getCatalogModelOptionsApi } from "../../api/catalogApi";
+import {
+  getBrandOptionsApi,
+  getCatalogModelOptionsApi,
+  getVariantOptionsApi,
+} from "../../api/catalogApi";
 import { GULF_COUNTRY_NAMES } from "../../config/gulfLocations.config";
 
 const currentYear = new Date().getFullYear();
@@ -16,6 +20,7 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
 
   const [brandOptions, setBrandOptions] = useState([]);
   const [modelOptions, setModelOptions] = useState([]);
+  const [variantOptions, setVariantOptions] = useState([]);
 
   useEffect(() => {
     if (field.type !== "brandSelect" || !categoryId) return;
@@ -33,6 +38,32 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
       .then((data) => setModelOptions(data || []))
       .catch(() => setModelOptions([]));
   }, [field.type, categoryId, form?.brand]);
+
+  useEffect(() => {
+    if (field.type !== "variantSelect" || !categoryId || !form?.brand || !form?.catalogModel) {
+      setVariantOptions([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    getVariantOptionsApi({
+      category: categoryId,
+      brand: form.brand,
+      catalogModel: form.catalogModel,
+      status: "ACTIVE",
+    })
+      .then((data) => {
+        if (isMounted) setVariantOptions(data || []);
+      })
+      .catch(() => {
+        if (isMounted) setVariantOptions([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [field.type, categoryId, form?.brand, form?.catalogModel]);
 
   switch (field.type) {
     case "text":
@@ -149,6 +180,23 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
           <option value="">Select model</option>
           {modelOptions.map((model) => (
             <option key={model._id} value={model._id}>{model.name}</option>
+          ))}
+        </select>
+      );
+
+    case "variantSelect":
+      return (
+        <select
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={!form?.catalogModel}
+          className={`${baseInputClass} ${errorClass} disabled:bg-slate-100`}
+        >
+          <option value="">Select variant</option>
+          {variantOptions.map((variant) => (
+            <option key={variant._id} value={variant.name}>
+              {variant.name}
+            </option>
           ))}
         </select>
       );

@@ -12,7 +12,7 @@ export const heavyEquipmentFormConfig = {
     { name: "title", label: "Equipment Title", type: "text", required: true, span: 2, placeholder: "e.g. Caterpillar 320D Excavator, Bahrain" },
     { name: "brand", label: "Brand", type: "brandSelect", required: true },
     { name: "catalogModel", label: "Model", type: "modelSelect", required: true },
-    { name: "variantTrim", label: "Variant / Trim", type: "text" },
+    { name: "variantTrim", label: "Variant / Trim", type: "variantSelect" },
     { name: "equipmentType", label: "Equipment Type", type: "select", required: true, options: ["Excavator", "Crane", "Loader", "Bulldozer", "Forklift", "Grader", "Backhoe Loader"] },
     { name: "manufacturingYear", label: "Year", type: "yearSelect", required: true },
     { name: "operatingHours", label: "Operating Hours", type: "number", required: true, placeholder: "e.g. 4500" },

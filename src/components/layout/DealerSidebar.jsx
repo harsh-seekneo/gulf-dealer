@@ -267,39 +267,21 @@ export default function DealerSidebar({ isOpen, onClose }) {
         <div className="shrink-0 border-t border-white/10 p-4">
           {subscription ? (
             (() => {
-              const startDate = new Date(subscription.startDate);
-              const endDate = new Date(subscription.endDate);
-              const today = new Date();
-
-              const totalDays = Math.max(
-                1,
-                Math.ceil(
-                  (endDate - startDate) /
-                    (1000 * 60 * 60 * 24)
-                )
+              const totalDays = Number(
+                subscription.daysTotal ||
+                  subscription.durationDaysSnapshot ||
+                  0
               );
-
-              const daysUsed = Math.min(
-                totalDays,
-                Math.max(
-                  0,
-                  Math.ceil(
-                    (today - startDate) /
-                      (1000 * 60 * 60 * 24)
-                  )
-                )
+              const daysRemaining = Number(
+                subscription.daysRemaining ?? totalDays
               );
-
-              const daysRemaining = Math.max(
-                totalDays - daysUsed,
-                0
+              const daysUsed = Number(
+                subscription.daysUsed ??
+                  Math.max(totalDays - daysRemaining, 0)
               );
-
               const usagePct = Math.min(
                 100,
-                Math.round(
-                  (daysUsed / totalDays) * 100
-                )
+                totalDays > 0 ? Math.round((daysUsed / totalDays) * 100) : 0
               );
 
               return (
@@ -322,6 +304,12 @@ export default function DealerSidebar({ isOpen, onClose }) {
                   <p className="mt-1.5 text-xs text-slate-400">
                     {daysRemaining} of {totalDays} days remaining
                   </p>
+
+                  {subscription.offerReason ? (
+                    <p className="mt-1 text-[11px] leading-snug text-slate-500">
+                      {subscription.offerReason}
+                    </p>
+                  ) : null}
                 </div>
               );
             })()

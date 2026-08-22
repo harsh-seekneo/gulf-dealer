@@ -5,7 +5,6 @@ import {
   Building2,
   Camera,
   Car,
-  ImagePlus,
   Pencil,
   Users,
   X,
@@ -16,6 +15,7 @@ import VerificationDocumentsCard from "../components/VerificationDocumentsCard";
 import WorkingHoursCard from "../components/WorkingHoursCard";
 import Breadcrumb from "../../../components/ui/Breadcrumb";
 import { profileApi } from "../api/profileApi";
+import { GULF_COUNTRIES } from "../../listings/config/gulfLocations.config";
 
 const EMPTY_FORM = {
   businessName: "",
@@ -116,6 +116,34 @@ function ProfileForm({ initialValues, locks = {}, submitLabel, onSaved }) {
     setForm((current) => ({
       ...current,
       [field]: event.target.value,
+    }));
+  };
+
+  const stateOptions = useMemo(
+    () =>
+      GULF_COUNTRIES.find((country) => country.name === form.country)
+        ?.governorates || [],
+    [form.country],
+  );
+
+  const handleCountryChange = (event) => {
+    const nextCountry = event.target.value;
+
+    setForm((current) => ({
+      ...current,
+      country: nextCountry,
+      state: "",
+      city: "",
+    }));
+  };
+
+  const handleStateChange = (event) => {
+    const nextState = event.target.value;
+
+    setForm((current) => ({
+      ...current,
+      state: nextState,
+      city: nextState,
     }));
   };
 
@@ -235,27 +263,43 @@ function ProfileForm({ initialValues, locks = {}, submitLabel, onSaved }) {
         />
       </Field>
 
-      <Field label="City">
+      <Field label="Country">
+        <select
+          className={fieldClass}
+          value={form.country}
+          onChange={handleCountryChange}
+        >
+          <option value="">Select country</option>
+          {GULF_COUNTRIES.map((country) => (
+            <option key={country.iso2} value={country.name}>
+              {country.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+
+      <Field label="State / Governorate">
+        <select
+          className={fieldClass}
+          value={form.state}
+          onChange={handleStateChange}
+          disabled={!form.country}
+        >
+          <option value="">Select State / Governorate</option>
+          {stateOptions.map((state) => (
+            <option key={state.name} value={state.name}>
+              {state.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+
+      <Field label="City / Area">
         <input
           className={fieldClass}
           value={form.city}
           onChange={update("city")}
-        />
-      </Field>
-
-      <Field label="State">
-        <input
-          className={fieldClass}
-          value={form.state}
-          onChange={update("state")}
-        />
-      </Field>
-
-      <Field label="Country">
-        <input
-          className={fieldClass}
-          value={form.country}
-          onChange={update("country")}
+          placeholder="City / area"
         />
       </Field>
 
@@ -639,6 +683,15 @@ export default function ProfilePage() {
                 <> · Member since {profile.memberSince}</>
               ) : null}
             </p>
+
+            {profile.subscription?.daysTotal ? (
+              <p className="mt-2 text-sm font-semibold text-blue-700">
+                {profile.subscription.daysRemaining}/{profile.subscription.daysTotal} days
+                {profile.subscription.offerReason
+                  ? ` · ${profile.subscription.offerReason}`
+                  : ""}
+              </p>
+            ) : null}
 
             {/* LISTINGS + LEADS */}
 
