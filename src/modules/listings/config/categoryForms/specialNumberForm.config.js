@@ -33,6 +33,4 @@ export const specialNumberFormConfig = {
   featureGroups: [
     { key: "features", label: "Features", options: ["Easy to Remember", "Exclusive Number", "Highly Sought After", "Mirror Number", "Premium Number", "Rare Number", "Repeated Digits", "Reserved Number", "Sequential Number", "Single Digit", "Special Number", "Unique Number", "VIP Number"] },
   ],
-
-  hasAreaField: true,
 };

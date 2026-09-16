@@ -1,5 +1,5 @@
 import { Check, Star } from "lucide-react";
-import { getServiceCountryCurrencyByName } from "../../config/gulfLocations.config";
+import { formatListingPrice, getServiceCountryCurrencyByName } from "../../config/gulfLocations.config";
 
 const statusConfig = {
   DRAFT: { label: "Draft", className: "bg-slate-100 text-slate-600" },
@@ -74,7 +74,12 @@ const ListingHeaderStats = ({ listing }) => {
         <div>
           <p className="text-xs text-slate-400">Listing Price</p>
           <p className="text-2xl font-bold text-blue-600">
-            {selectedCurrency} {Number(pricing.price || 0).toLocaleString()}
+            {formatListingPrice({
+              price: pricing.price,
+              rentalPrices: pricing.rentalPrices,
+              listingType: listing?.listingType,
+              currency: selectedCurrency,
+            })}
           </p>
         </div>
 

@@ -106,6 +106,38 @@ const COUNTRY_CURRENCY_MAP = {
 export const getServiceCountryCurrencyByName = (countryName) =>
   COUNTRY_CURRENCY_MAP[String(countryName || "").trim()] || "BHD";
 
+export const RENTAL_PERIODS = [
+  { key: "daily", label: "Daily", suffix: "day" },
+  { key: "weekly", label: "Weekly", suffix: "week" },
+  { key: "monthly", label: "Monthly", suffix: "month" },
+];
+
+export const formatRentalPriceLines = (rentalPrices = {}, currency = "BHD") =>
+  RENTAL_PERIODS.map(({ key, suffix }) => {
+    const price = Number(rentalPrices?.[key]);
+    return Number.isFinite(price) && price > 0
+      ? `${currency} ${price.toLocaleString("en-US")} / ${suffix}`
+      : null;
+  }).filter(Boolean);
+
+export const formatListingPrice = ({
+  price,
+  rentalPrices,
+  listingType,
+  currency = "BHD",
+  emptyFallback = "—",
+} = {}) => {
+  if (listingType === "RENT") {
+    const rentalLabels = formatRentalPriceLines(rentalPrices, currency);
+    if (rentalLabels.length) return rentalLabels.join(", ");
+  }
+
+  const numericPrice = Number(price);
+  if (!Number.isFinite(numericPrice) || numericPrice <= 0) return emptyFallback;
+
+  return `${currency} ${numericPrice.toLocaleString("en-US")}${listingType === "RENT" ? " / day" : ""}`;
+};
+
 export const getServiceCityNamesByCountry = (countryName) =>
   GULF_COUNTRIES.find((country) => country.name === countryName)?.governorates.flatMap(
     (governorate) => governorate.cities

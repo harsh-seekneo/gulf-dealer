@@ -1,7 +1,7 @@
 //[DEALER] /Users/personal/Desktop/gulf--dealer/gulf-dealer/src/modules/listings/components/ListingsTable.jsx
 
 import { SquarePen, Trash2 } from "lucide-react";
-import { formatPrice } from "../listings.constants";
+import { formatListingPrice } from "../listings.constants";
 import { getServiceCountryCurrencyByName } from "../config/gulfLocations.config";
 
 function formatDaysLabel(label) {
@@ -134,8 +134,8 @@ export default function ListingsTable({
 
                 {showPrice && (
                   <td className="px-2 py-4 font-semibold">
-                    {formatPrice(
-                      v.pricing?.price,
+                    {formatListingPrice(
+                      v,
                       v.pricing?.currency || getServiceCountryCurrencyByName(v.location?.country)
                     )}
                   </td>

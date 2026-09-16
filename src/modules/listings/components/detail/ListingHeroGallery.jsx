@@ -8,6 +8,8 @@ const MediaLightbox = ({
   onNext,
   onPrevious,
   onSelect,
+  mediaTitle = "Vehicle media",
+  mediaAlt = "Vehicle",
 }) => {
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -33,7 +35,7 @@ const MediaLightbox = ({
     <div className="fixed inset-0 z-[90] flex flex-col bg-slate-950 text-white">
       <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">Vehicle media</p>
+          <p className="truncate text-sm font-semibold">{mediaTitle}</p>
           <p className="text-xs font-medium text-white/60">
             {activeIndex + 1} / {items.length}
           </p>
@@ -80,7 +82,7 @@ const MediaLightbox = ({
         ) : (
           <img
             src={activeMedia.url}
-            alt="Vehicle"
+            alt={mediaAlt}
             className="max-h-full max-w-full rounded-lg object-contain"
           />
         )}
@@ -111,7 +113,7 @@ const MediaLightbox = ({
   );
 };
 
-const ListingHeroGallery = ({ media }) => {
+const ListingHeroGallery = ({ media, isSpecialNumber = false }) => {
   const images = media?.images || [];
   const video = media?.video;
   const featuredImage = media?.featuredImage;
@@ -200,6 +202,8 @@ const ListingHeroGallery = ({ media }) => {
           onNext={showNext}
           onPrevious={showPrevious}
           onSelect={setActiveIndex}
+          mediaTitle={isSpecialNumber ? "Plate media" : "Vehicle media"}
+          mediaAlt={isSpecialNumber ? "Plate" : "Vehicle"}
         />
       ) : null}
     </div>

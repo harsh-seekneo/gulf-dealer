@@ -62,7 +62,7 @@ export const commercialFormConfig = {
     { name: "torque", label: "Torque", type: "text", placeholder: "e.g. 1800 Nm" },
     { name: "emissionStandard", label: "Emission Standard", type: "select", options: ["Euro 3", "Euro 4", "Euro 5", "Euro 6"] },
     { name: "payloadCapacity", label: "Payload Capacity", type: "text", placeholder: "e.g. 18,500 kg" },
-    { name: "grossVehicleWeight", label: "Gross Vehicle Weight", type: "text", placeholder: "e.g. 26,000 kg" },
+    { name: "grossVehicleWeight", label: "Gross Vehicle Weight (kg)", type: "text", placeholder: "e.g. 26,000 kg" },
     { name: "fuelTankCapacity", label: "Fuel Tank Capacity", type: "text", placeholder: "e.g. 300 L" },
     { name: "seatingCapacity", label: "Seating Capacity", type: "number", placeholder: "e.g. 3" },
     { name: "doorCount", label: "Door Count", type: "number", placeholder: "e.g. 2" },

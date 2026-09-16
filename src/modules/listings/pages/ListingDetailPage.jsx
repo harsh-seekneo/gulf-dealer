@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getServiceCountryCurrencyByName } from "../config/gulfLocations.config";
+import { formatListingPrice, getServiceCountryCurrencyByName } from "../config/gulfLocations.config";
 import { Check, ChevronLeft, ChevronRight, Loader2, PlayCircle, SquarePen, Star, Trash2, X, ZoomIn } from "lucide-react";
 
 import {
@@ -95,7 +95,7 @@ const MediaLightbox = ({
     <div className="fixed inset-0 z-[90] flex flex-col bg-slate-950 text-white">
       <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
         <div className="min-w-0">
-          <p className="truncate text-sm font-black">{title || "Vehicle media"}</p>
+          <p className="truncate text-sm font-black">{title || "Listing media"}</p>
           <p className="text-xs font-semibold text-white/60">
             {activeIndex + 1} / {items.length}
           </p>
@@ -218,6 +218,7 @@ const ListingOverviewCard = ({
   const activeMedia = thumbs[activeIndex] || thumbs[0];
   const vehicleInfo = listing?.vehicleInfo || {};
   const specs = listing?.specs || {};
+  const isSpecialNumber = listing?.category?.vehicleFormType === "SPECIAL_NUMBER";
   const pricing = listing?.pricing || {};
   const selectedCurrency =
     pricing.currency ||
@@ -297,8 +298,13 @@ const ListingOverviewCard = ({
             {vehicleInfo.title || "Untitled Listing"}
           </h1>
           <p className="mt-1 text-xs font-semibold text-white/75">
-            {vehicleInfo.manufacturingYear || "2022"} • {(vehicleInfo.mileage || 0).toLocaleString()} km •{" "}
-            {vehicleInfo.fuelType || specs.fuelType || "Petrol"} • GCC Specs
+            {isSpecialNumber
+              ? [vehicleInfo.plateNumber, vehicleInfo.plateType, vehicleInfo.plateCategory]
+                  .filter(Boolean)
+                  .join(" • ") || "Plate listing"
+              : `${vehicleInfo.manufacturingYear || "2022"} • ${(vehicleInfo.mileage || 0).toLocaleString()} km • ${
+                  vehicleInfo.fuelType || specs.fuelType || "Petrol"
+                } • GCC Specs`}
           </p>
         </div>
 
@@ -345,7 +351,7 @@ const ListingOverviewCard = ({
           onNext={showNextMedia}
           onPrevious={showPreviousMedia}
           onSelect={setActiveIndex}
-          title={vehicleInfo.title || "Vehicle media"}
+          title={vehicleInfo.title || (isSpecialNumber ? "Plate media" : "Vehicle media")}
         />
       ) : null}
 
@@ -353,7 +359,12 @@ const ListingOverviewCard = ({
         <div>
           <p className="text-xs font-semibold text-[#8897ad]">Listing Price</p>
           <p className="mt-1 text-[22px] font-black leading-none text-[#2454ef]">
-            {selectedCurrency} {Number(pricing.price || 0).toLocaleString()}
+            {formatListingPrice({
+              price: pricing.price,
+              rentalPrices: pricing.rentalPrices,
+              listingType: listing?.listingType,
+              currency: selectedCurrency,
+            })}
           </p>
         </div>
 

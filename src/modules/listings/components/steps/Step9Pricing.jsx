@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
-import { getServiceCountryCurrencyByName } from "../../config/gulfLocations.config";
+import { getServiceCountryCurrencyByName, RENTAL_PERIODS } from "../../config/gulfLocations.config";
 import FormField from "../FormField";
 import ToggleSwitchField from "../ToggleSwitchField";
 import WizardFooterNav from "../WizardFooterNav";
@@ -16,9 +16,34 @@ const Step9Pricing = () => {
     getServiceCountryCurrencyByName(listing?.location?.country);
   const listingType = listing?.listingType;
   const isBulkListing = Boolean(listing?.isBulkListing);
+  const isSpecialNumber = listing?.category?.vehicleFormType === "SPECIAL_NUMBER";
+  const accuracyLabel = isSpecialNumber ? "plate information" : "vehicle information";
 
   const [price, setPrice] = useState(
     existingPricing.price !== null && existingPricing.price !== undefined ? String(existingPricing.price) : ""
+  );
+  const [selectedRentalPeriods, setSelectedRentalPeriods] = useState(() =>
+    RENTAL_PERIODS.filter(({ key }) => Number(existingPricing.rentalPrices?.[key]) > 0)
+      .map(({ key }) => key)
+      .concat(
+        listingType === "RENT" &&
+          !RENTAL_PERIODS.some(({ key }) => Number(existingPricing.rentalPrices?.[key]) > 0) &&
+          Number(existingPricing.price) > 0
+          ? ["daily"]
+          : []
+      )
+  );
+  const [rentalPrices, setRentalPrices] = useState(() =>
+    RENTAL_PERIODS.reduce((result, { key }) => {
+      result[key] =
+        existingPricing.rentalPrices?.[key] !== null &&
+        existingPricing.rentalPrices?.[key] !== undefined
+          ? String(existingPricing.rentalPrices[key])
+          : key === "daily" && listingType === "RENT" && Number(existingPricing.price) > 0
+            ? String(existingPricing.price)
+            : "";
+      return result;
+    }, {})
   );
   const [isNegotiable, setIsNegotiable] = useState(existingPricing.isNegotiable ?? false);
   const [error, setError] = useState("");
@@ -34,7 +59,63 @@ const Step9Pricing = () => {
     }
   };
 
+  const handleRentalPeriodToggle = (period) => {
+    setSelectedRentalPeriods((current) =>
+      current.includes(period)
+        ? current.filter((item) => item !== period)
+        : [...current, period]
+    );
+    setError("");
+  };
+
+  const handleRentalPriceChange = (period, value) => {
+    if (value === "" || /^\d*\.?\d{0,3}$/.test(value)) {
+      setRentalPrices((current) => ({ ...current, [period]: value }));
+      setError("");
+    }
+  };
+
   const handleNext = async () => {
+    if (listingType === "RENT") {
+      if (!selectedRentalPeriods.length) {
+        setError("Please select at least one rental period");
+        scrollElementIntoWizardView(priceFieldRef.current);
+        return;
+      }
+
+      const nextRentalPrices = selectedRentalPeriods.reduce((result, period) => {
+        const numericPrice = Number(rentalPrices[period]);
+        if (Number.isFinite(numericPrice) && numericPrice > 0) {
+          result[period] = numericPrice;
+        }
+        return result;
+      }, {});
+
+      if (Object.keys(nextRentalPrices).length !== selectedRentalPeriods.length) {
+        setError("Please enter a valid price for each selected rental period");
+        scrollElementIntoWizardView(priceFieldRef.current);
+        return;
+      }
+
+      if (isBulkListing && !isAccepted) {
+        setAcceptanceError("Please accept the terms to submit this bulk listing");
+        scrollElementIntoWizardView(acceptanceFieldRef.current);
+        return;
+      }
+
+      try {
+        await saveStep(9, {
+          price: Object.values(nextRentalPrices)[0],
+          rentalPrices: nextRentalPrices,
+          currency: selectedCurrency,
+          isNegotiable,
+        });
+      } catch {
+        // Error toast already shown by context.
+      }
+      return;
+    }
+
     const numericPrice = Number(price);
 
     if (!price || Number.isNaN(numericPrice) || numericPrice <= 0) {
@@ -52,6 +133,7 @@ const Step9Pricing = () => {
     try {
       await saveStep(9, {
         price: numericPrice,
+        rentalPrices: {},
         currency: selectedCurrency,
         isNegotiable,
       });
@@ -66,29 +148,71 @@ const Step9Pricing = () => {
       <p className="mt-1 text-sm text-slate-500">Set a competitive price to attract serious buyers.</p>
 
       <div ref={priceFieldRef} className="mt-5">
-        <FormField
-          label={
-            listingType === "RENT"
-              ? `Rental Price (${selectedCurrency} / day)`
-              : `Listing Price (${selectedCurrency})`
-          }
-          required
-          error={error}
-        >
-          <div className={`flex h-11 items-center overflow-hidden rounded-lg border ${error ? "border-red-400" : "border-slate-300"} focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100`}>
-            <span className="border-r border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500">
-              {selectedCurrency}
-            </span>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={price}
-              onChange={(e) => handlePriceChange(e.target.value)}
-              placeholder="0.000"
-              className="h-full flex-1 border-0 px-3 text-sm font-semibold text-blue-600 outline-none"
-            />
-          </div>
-        </FormField>
+        {listingType === "RENT" ? (
+          <FormField label="Rental Period" required error={error}>
+            <div className="space-y-3">
+              <div className="grid gap-2 sm:grid-cols-3">
+                {RENTAL_PERIODS.map(({ key, label }) => {
+                  const isSelected = selectedRentalPeriods.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => handleRentalPeriodToggle(key)}
+                      className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                        isSelected
+                          ? "border-blue-600 bg-blue-50 text-blue-700"
+                          : "border-slate-300 text-slate-600 hover:border-blue-300"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {selectedRentalPeriods.map((period) => {
+                const option = RENTAL_PERIODS.find((item) => item.key === period);
+                return (
+                  <div key={period}>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      {option.label} Price ({selectedCurrency})
+                    </label>
+                    <div className="flex h-11 items-center overflow-hidden rounded-lg border border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
+                      <span className="border-r border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500">
+                        {selectedCurrency}
+                      </span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={rentalPrices[period]}
+                        onChange={(e) => handleRentalPriceChange(period, e.target.value)}
+                        placeholder="0.000"
+                        className="h-full flex-1 border-0 px-3 text-sm font-semibold text-blue-600 outline-none"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </FormField>
+        ) : (
+          <FormField label={`Listing Price (${selectedCurrency})`} required error={error}>
+            <div className={`flex h-11 items-center overflow-hidden rounded-lg border ${error ? "border-red-400" : "border-slate-300"} focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100`}>
+              <span className="border-r border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500">
+                {selectedCurrency}
+              </span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={price}
+                onChange={(e) => handlePriceChange(e.target.value)}
+                placeholder="0.000"
+                className="h-full flex-1 border-0 px-3 text-sm font-semibold text-blue-600 outline-none"
+              />
+            </div>
+          </FormField>
+        )}
       </div>
 
       <div className="mt-5 rounded-xl border border-slate-200 px-4">
@@ -113,7 +237,7 @@ const Step9Pricing = () => {
               className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
             <span className="text-sm text-slate-600">
-              I confirm that the vehicle information is accurate and I accept the{" "}
+              I confirm that the {accuracyLabel} is accurate and I accept the{" "}
               <a href="/terms-and-conditions" target="_blank" rel="noreferrer" className="font-medium text-blue-600 hover:underline">
                 Terms &amp; Conditions
               </a>{" "}

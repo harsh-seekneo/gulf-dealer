@@ -32,6 +32,12 @@ const configByFormType = {
   SPECIAL_NUMBER: specialNumberFormConfig,
 };
 
+const getInfoTitle = (formType, config) => {
+  if (formType === "SPECIAL_NUMBER") return "Plate Info";
+  if (formType === "CARAVAN") return "Caravan Information";
+  return `${config.label} Information`;
+};
+
 const Step4VehicleInfo = () => {
   const { listing, isSaving, saveStep, goPrevious, saveDraft } = useBulkVehicleWizard();
   const { user } = useAuth();
@@ -40,8 +46,7 @@ const Step4VehicleInfo = () => {
   const formType = listing?.category?.vehicleFormType || "CAR";
   const baseConfig = configByFormType[formType] || carFormConfig;
   const { config } = useListingAttributeConfig(categoryId, baseConfig);
-  const infoTitle =
-    formType === "SPECIAL_NUMBER" ? "Plate Info" : `${config.label} Information`;
+  const infoTitle = getInfoTitle(formType, config);
 
   const existingInfo = listing?.vehicleInfo || {};
   const dealerProfile = user?.dealerProfile || user?.dealer || {};

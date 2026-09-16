@@ -29,6 +29,7 @@ const Step6Features = () => {
   const formType = listing?.category?.vehicleFormType || "CAR";
   const baseConfig = configByFormType[formType] || carFormConfig;
   const { config } = useListingAttributeConfig(categoryId, baseConfig);
+  const isSpecialNumber = formType === "SPECIAL_NUMBER";
   const featureGroups = Array.isArray(config?.featureGroups)
     ? config.featureGroups
     : [];
@@ -93,13 +94,19 @@ const Step6Features = () => {
 
   return (
     <div>
-      <h2 className="text-lg font-bold text-slate-950">Vehicle Features</h2>
-      <p className="mt-1 text-sm text-slate-500">Select all features included with your vehicle.</p>
+      <h2 className="text-lg font-bold text-slate-950">
+        {isSpecialNumber ? "Plate Features" : "Vehicle Features"}
+      </h2>
+      <p className="mt-1 text-sm text-slate-500">
+        {isSpecialNumber
+          ? "Select all features that apply to this plate."
+          : "Select all features included with your vehicle."}
+      </p>
 
       {featureGroups.length === 0 ? (
         <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-5">
           <p className="text-sm text-slate-600">
-            No additional features are available for this vehicle category.
+            No additional features are available for this category.
           </p>
         </div>
       ) : (

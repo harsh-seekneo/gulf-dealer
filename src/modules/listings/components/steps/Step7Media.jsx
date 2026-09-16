@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { FileText, ImagePlus, Trash2, Upload, Video, X } from "lucide-react";
 
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
+import { uploadListingVideoMultipartApi } from "../../api/vehicleListingApi";
 import WizardFooterNav from "../WizardFooterNav";
 
 import { carFormConfig } from "../../config/categoryForms/carForm.config";
@@ -32,6 +33,17 @@ const Step7Media = () => {
 
   const formType = listing?.category?.vehicleFormType || "CAR";
   const config = configByFormType[formType] || carFormConfig;
+  const isSpecialNumber = formType === "SPECIAL_NUMBER";
+  const imageLabel = isSpecialNumber ? "Plate Images" : "Vehicle Images";
+  const imageAlt = isSpecialNumber ? "Plate" : "Vehicle";
+  const videoLabel = isSpecialNumber ? "Video" : "Vehicle Video";
+  const videoUploadLabel = isSpecialNumber
+    ? "Upload a video"
+    : "Upload a vehicle walkthrough video";
+  const mediaIntro = isSpecialNumber
+    ? "Upload clear plate photos to attract more buyers. Minimum 6 photos required."
+    : "Upload high-quality photos to attract more buyers. Minimum 6 photos required.";
+  const allowBrochure = !isSpecialNumber;
   const hasSecondaryGallery = Boolean(config.hasSecondaryGallery);
   const secondaryGalleryLabel = config.secondaryGalleryLabel || "Additional Images";
 
@@ -56,6 +68,8 @@ const Step7Media = () => {
 
   const [videoFile, setVideoFile] = useState(null);
   const [videoName, setVideoName] = useState(existingVideo ? "Uploaded video" : "");
+  const [videoUploadProgress, setVideoUploadProgress] = useState(null);
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
 
   const [brochureFile, setBrochureFile] = useState(null);
   const [brochureName, setBrochureName] = useState(existingBrochure ? "Uploaded brochure" : "");
@@ -152,6 +166,7 @@ const Step7Media = () => {
 
     setVideoFile(file);
     setVideoName(file.name);
+    setVideoUploadProgress(null);
     setExistingVideo(null);
     setErrorMessage("");
     setMediaErrors((previous) => ({ ...previous, video: "" }));
@@ -160,6 +175,7 @@ const Step7Media = () => {
   const removeVideo = () => {
     setVideoFile(null);
     setVideoName("");
+    setVideoUploadProgress(null);
     setExistingVideo(null);
   };
 
@@ -199,14 +215,30 @@ const Step7Media = () => {
     if (featuredFile) formData.append("featuredImage", featuredFile);
     newImageFiles.forEach((file) => formData.append("images", file));
     newSecondaryImageFiles.forEach((file) => formData.append("secondaryImages", file));
-    if (videoFile) formData.append("video", videoFile);
-    if (brochureFile) formData.append("brochure", brochureFile);
+    if (allowBrochure && brochureFile) formData.append("brochure", brochureFile);
     formData.append("removedImageKeys", JSON.stringify(removedImageKeys));
 
     try {
+      if (videoFile) {
+        setIsVideoUploading(true);
+        setVideoUploadProgress(0);
+        await uploadListingVideoMultipartApi({
+          listingId: listing._id,
+          file: videoFile,
+          onProgress: setVideoUploadProgress,
+        });
+      }
+
       await saveMedia(formData);
-    } catch {
-      // Error toast already shown by context.
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Unable to upload media. Please try again.";
+      setErrorMessage(message);
+      setMediaErrors((previous) => ({ ...previous, video: message }));
+    } finally {
+      setIsVideoUploading(false);
     }
   };
 
@@ -214,7 +246,7 @@ const Step7Media = () => {
     <div>
       <h2 className="text-lg font-bold text-slate-950">Media Upload</h2>
       <p className="mt-1 text-sm text-slate-500">
-        Upload high-quality photos to attract more buyers. Minimum 6 photos required.
+        {mediaIntro}
       </p>
 
       {errorMessage && (
@@ -272,7 +304,7 @@ const Step7Media = () => {
 
       <div className="mt-6">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-medium text-slate-700">Vehicle Images (max {maxPhotos ?? "∞"})</p>
+          <p className="text-sm font-medium text-slate-700">{imageLabel} (max {maxPhotos ?? "∞"})</p>
           <span className="text-xs font-medium text-slate-500">{totalCurrentPhotos}/{maxPhotos ?? "∞"} uploaded</span>
         </div>
 
@@ -307,7 +339,7 @@ const Step7Media = () => {
           <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
             {existingImages.map((image) => (
               <div key={image.key} className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200">
-                <img src={image.url} alt="Vehicle" className="h-full w-full object-cover" />
+                <img src={image.url} alt={imageAlt} className="h-full w-full object-cover" />
                 <button
                   type="button"
                   onClick={() => removeExistingImage(image.key)}
@@ -393,7 +425,7 @@ const Step7Media = () => {
 
       <div className="mt-6">
         <p className="mb-2 text-sm font-medium text-slate-700">
-          Vehicle Video {!videoAllowed && <span className="text-xs font-normal text-slate-400">(not included in your current plan)</span>}
+          {videoLabel} {!videoAllowed && <span className="text-xs font-normal text-slate-400">(not included in your current plan)</span>}
         </p>
 
         <input
@@ -409,6 +441,9 @@ const Step7Media = () => {
             <div className="flex items-center gap-2 text-sm text-slate-700">
               <Video size={17} className="text-blue-600" />
               {videoName}
+              {videoUploadProgress !== null && videoUploadProgress < 100
+                ? ` (${videoUploadProgress}%)`
+                : ""}
             </div>
             <button type="button" onClick={removeVideo} className="text-slate-400 transition-colors hover:text-red-600">
               <Trash2 size={16} />
@@ -426,12 +461,13 @@ const Step7Media = () => {
             }`}
           >
             <Video size={17} />
-            Upload a vehicle walkthrough video
+            {videoUploadLabel}
             <span className="ml-auto text-xs font-normal text-slate-400">MP4, MOV up to 100MB, 1 video max</span>
           </button>
         )}
       </div>
 
+      {allowBrochure && (
       <div className="mt-6">
         <p className="mb-2 text-sm font-medium text-slate-700">
           Vehicle Brochure <span className="text-xs font-normal text-slate-400">(optional, PDF only)</span>
@@ -467,12 +503,13 @@ const Step7Media = () => {
           </button>
         )}
       </div>
+      )}
 
       <WizardFooterNav
         onPrevious={goPrevious}
         onSaveDraft={saveDraft}
         onNext={handleNext}
-        isSaving={isSaving}
+        isSaving={isSaving || isVideoUploading}
       />
     </div>
   );

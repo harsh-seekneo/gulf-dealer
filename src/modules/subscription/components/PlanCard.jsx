@@ -108,7 +108,7 @@ export default function PlanCard({ plan, isCurrent, onSelect }) {
 
         {plan.hasVehicleVideo && (
           <li className={isPremium ? "text-slate-300" : "text-slate-600"}>
-            • Vehicle Video
+            • Video
           </li>
         )}
 
