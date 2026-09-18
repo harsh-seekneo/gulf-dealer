@@ -31,3 +31,8 @@ export const getListingAttributeOptionsApi = async (params) => {
   const { data } = await apiClient.get(`${BASE_URL}/listing-attributes/options`, { params });
   return data.data;
 };
+
+export const getDealerProfileMasterOptionsApi = async (params) => {
+  const { data } = await apiClient.get(`${BASE_URL}/dealer-profile-masters/options`, { params });
+  return data.data;
+};

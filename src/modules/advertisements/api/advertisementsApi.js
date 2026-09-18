@@ -11,6 +11,8 @@ const buildAdvertisementFormData = (payload, { status } = {}) => {
 
   appendIfPresent(formData, "name", payload.name);
   appendIfPresent(formData, "category", payload.category);
+  appendIfPresent(formData, "packageType", payload.packageType);
+  appendIfPresent(formData, "bundleCode", payload.bundleCode);
   appendIfPresent(formData, "redirectTo", payload.redirectTo);
   appendIfPresent(formData, "durationDays", payload.durationDays);
   appendIfPresent(formData, "paymentMethod", payload.paymentMethod);
@@ -18,6 +20,9 @@ const buildAdvertisementFormData = (payload, { status } = {}) => {
   appendIfPresent(formData, "useDealerPlanBenefit", payload.useDealerPlanBenefit);
   appendIfPresent(formData, "currentStep", payload.currentStep);
   appendIfPresent(formData, "status", status);
+  if (payload.details) {
+    formData.append("details", JSON.stringify(payload.details));
+  }
 
   ["desktop", "tablet", "mobile"].forEach((device) => {
     const creative = payload.creatives?.[device];
@@ -33,6 +38,10 @@ const buildAdvertisementFormData = (payload, { status } = {}) => {
 export const advertisementsApi = {
   getPlans: async () => {
     const res = await apiClient.get("/advertisement-subscriptions");
+    return res.data.data;
+  },
+  getPromotions: async () => {
+    const res = await apiClient.get("/advertisement-promotions");
     return res.data.data;
   },
   getSummary: async () => {

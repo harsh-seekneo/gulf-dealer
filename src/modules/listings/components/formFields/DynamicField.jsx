@@ -33,6 +33,10 @@ const getCounterClass = (currentLength, maxLength) => {
 
 const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
   const errorClass = error ? "border-red-400 ring-2 ring-red-400 ring-offset-1" : "border-slate-300";
+  const isDisabled =
+    Boolean(field.disabled) ||
+    (field.disabledWhen &&
+      form?.[field.disabledWhen.field] === field.disabledWhen.value);
 
   const [brandOptions, setBrandOptions] = useState([]);
   const [modelOptions, setModelOptions] = useState([]);
@@ -119,7 +123,8 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}
           readOnly={field.readOnly}
-          className={`${baseInputClass} ${errorClass} ${field.readOnly ? "cursor-not-allowed bg-slate-100 text-slate-600" : ""}`}
+          disabled={isDisabled}
+          className={`${baseInputClass} ${errorClass} ${field.readOnly || isDisabled ? "cursor-not-allowed bg-slate-100 text-slate-600" : ""}`}
         />
       );
 
@@ -218,11 +223,24 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
           shouldLoadFacetOptions && categoryId
             ? facetOptions
             : field.options || [];
+        const mergedOptions = [...selectOptions];
+        (field.extraOptions || []).forEach((extraOption) => {
+          const extraValue =
+            typeof extraOption === "object" && extraOption !== null
+              ? extraOption.value
+              : extraOption;
+          const hasOption = mergedOptions.some((option) => {
+            const optionValue =
+              typeof option === "object" && option !== null ? option.value : option;
+            return String(optionValue).toLowerCase() === String(extraValue).toLowerCase();
+          });
+          if (!hasOption) mergedOptions.push(extraOption);
+        });
 
         return (
           <select value={value ?? ""} onChange={(e) => onChange(e.target.value)} className={`${baseInputClass} ${errorClass}`}>
             <option value="">Select {field.label.toLowerCase()}</option>
-            {selectOptions.map((option, idx) => {
+            {mergedOptions.map((option, idx) => {
               const isObject = typeof option === "object" && option !== null;
               const optVal = isObject ? option.value : option;
               const optLabel = isObject ? option.label : option;

@@ -22,6 +22,12 @@ const ELECTRIC_DEPENDENT_FIELDS = new Set(["engineCapacity", "numberOfCylinders"
 const isElectricFuel = (value) =>
   String(value || "").trim().toLowerCase() === "electric";
 
+const matchesFieldCondition = (form, condition) =>
+  !condition ||
+  (typeof condition.value === "string"
+    ? String(form?.[condition.field] || "").toLowerCase() === condition.value.toLowerCase()
+    : form?.[condition.field] === condition.value);
+
 const configByFormType = {
   CAR: carFormConfig,
   COMMERCIAL: commercialFormConfig,
@@ -94,12 +100,14 @@ const Step4VehicleInfo = () => {
   const hasFuelType = String(form?.fuelType || "").trim() !== "";
   const isElectric = isElectricFuel(form?.fuelType);
   const shouldHideField = (field) =>
-    isElectric && ELECTRIC_DEPENDENT_FIELDS.has(field.name);
+    (isElectric && ELECTRIC_DEPENDENT_FIELDS.has(field.name)) ||
+    !matchesFieldCondition(form, field.showWhen);
   const visibleVehicleInfoFields = config.vehicleInfoFields.filter(
     (field) => !shouldHideField(field)
   );
   const isRequiredField = (field) =>
-    Boolean(field.required) ||
+    (Boolean(field.required) &&
+      !(field.requiredUnless && matchesFieldCondition(form, field.requiredUnless))) ||
     (hasFuelType && !isElectric && ELECTRIC_DEPENDENT_FIELDS.has(field.name));
 
   useEffect(() => {
@@ -128,12 +136,16 @@ const Step4VehicleInfo = () => {
       if (fieldName === "catalogModel") next.variantTrim = "";
       if (fieldName === "mobileNumber" && previous.whatsappAvailable) next.whatsappNumber = value;
       if (fieldName === "whatsappAvailable" && value) next.whatsappNumber = previous.mobileNumber || "";
+      if (fieldName === "bodyType" && String(value).toLowerCase() !== "other") next.caravanTypeOther = "";
+      if (fieldName === "mileageNotApplicable" && value) next.mileage = "";
       return next;
     });
     setErrors((previous) => ({
       ...previous,
       [fieldName]: "",
       ...(fieldName === "mobileNumber" || fieldName === "whatsappAvailable" ? { whatsappNumber: "" } : {}),
+      ...(fieldName === "bodyType" ? { caravanTypeOther: "" } : {}),
+      ...(fieldName === "mileageNotApplicable" ? { mileage: "" } : {}),
     }));
   };
 
@@ -187,8 +199,9 @@ const Step4VehicleInfo = () => {
       }
     });
 
+    if (payload.mileageNotApplicable) payload.mileage = null;
     if (payload.manufacturingYear) payload.manufacturingYear = Number(payload.manufacturingYear);
-    if (payload.mileage !== undefined && payload.mileage !== "") payload.mileage = Number(payload.mileage);
+    if (payload.mileage !== undefined && payload.mileage !== "" && payload.mileage !== null) payload.mileage = Number(payload.mileage);
     if (payload.vinNumber) payload.vinNumber = String(payload.vinNumber).trim().toUpperCase();
 
     try {
