@@ -1,7 +1,63 @@
 const PAYMENT_WINDOW_NAME = "gulfincart_secure_payment";
 const PAYMENT_RETURN_EVENT = "gulfincart:tap-payment-return";
+export const PENDING_PAYMENT_SESSION_KEY = "gulfincart:pending-payment";
 const POPUP_WIDTH = 640;
 const POPUP_HEIGHT = 820;
+
+export const storePendingPaymentRedirect = (payment = {}, context = {}) => {
+  if (typeof window === "undefined" || !payment?.redirectUrl) {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(
+      PENDING_PAYMENT_SESSION_KEY,
+      JSON.stringify({
+        paymentId: payment.id || "",
+        redirectUrl: payment.redirectUrl,
+        purpose: payment.purpose || "",
+        createdAt: Date.now(),
+        ...context,
+      }),
+    );
+  } catch {
+    // Session storage can be unavailable; redirect still works without it.
+  }
+};
+
+export const clearPendingPaymentRedirect = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.removeItem(PENDING_PAYMENT_SESSION_KEY);
+  } catch {
+    // Ignore hardened-browser storage failures.
+  }
+};
+
+export const getPendingPaymentRedirect = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return JSON.parse(window.sessionStorage.getItem(PENDING_PAYMENT_SESSION_KEY) || "null");
+  } catch {
+    return null;
+  }
+};
+
+export const redirectToPaymentUrl = (payment = {}, context = {}) => {
+  if (!payment?.redirectUrl || typeof window === "undefined") {
+    return false;
+  }
+
+  storePendingPaymentRedirect(payment, context);
+  window.location.assign(payment.redirectUrl);
+  return true;
+};
 
 const getPaymentWindowFeatures = () => {
   const width = Math.min(POPUP_WIDTH, Math.max(360, window.screen.availWidth - 40));

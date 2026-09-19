@@ -20,6 +20,9 @@ const buildAdvertisementFormData = (payload, { status } = {}) => {
   appendIfPresent(formData, "useDealerPlanBenefit", payload.useDealerPlanBenefit);
   appendIfPresent(formData, "currentStep", payload.currentStep);
   appendIfPresent(formData, "status", status);
+  if (payload.bundleSlots) {
+    formData.append("bundleSlots", JSON.stringify(payload.bundleSlots));
+  }
   if (payload.details) {
     formData.append("details", JSON.stringify(payload.details));
   }
@@ -30,6 +33,16 @@ const buildAdvertisementFormData = (payload, { status } = {}) => {
     if (creative instanceof File) {
       formData.append(device, creative);
     }
+  });
+
+  (payload.bundleSlots || []).forEach((slot, index) => {
+    ["desktop", "tablet", "mobile"].forEach((device) => {
+      const creative = slot.creatives?.[device];
+
+      if (creative instanceof File) {
+        formData.append(`bundleSlot_${index}_${device}`, creative);
+      }
+    });
   });
 
   return formData;
@@ -50,6 +63,12 @@ export const advertisementsApi = {
   },
   getWallet: async () => {
     const res = await apiClient.get("/wallet/me");
+    return res.data.data;
+  },
+  verifyTapPayment: async (tapId) => {
+    const res = await apiClient.get("/payments/tap/return", {
+      params: { tap_id: tapId },
+    });
     return res.data.data;
   },
   create: async (payload) => {

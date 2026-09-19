@@ -7,6 +7,7 @@ import {
   FileText,
   Layers,
   Monitor,
+  Pencil,
   Smartphone,
   Tablet,
   Tag,
@@ -211,6 +212,15 @@ export default function AdDetailPage() {
           </div>
           <p className="mt-1 text-sm text-slate-500">{ad.advertisementId}</p>
         </div>
+        {ad.status === "REJECTED" ? (
+          <Link
+            to={`/advertisements?edit=${ad._id}`}
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white hover:bg-blue-700"
+          >
+            <Pencil size={16} />
+            Edit & Resubmit
+          </Link>
+        ) : null}
       </div>
 
       <Section

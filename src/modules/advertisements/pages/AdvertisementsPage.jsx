@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,6 +9,7 @@ import {
   Image as ImageIcon,
   Megaphone,
   Monitor,
+  Pencil,
   Plus,
   Search,
   Shield,
@@ -22,6 +23,11 @@ import StatCard from "../../../components/ui/StatCard";
 import ConfirmModal from "../../../components/ui/ConfirmModal";
 import useAuth from "../../auth/hooks/useAuth";
 import { getDealerProfileMasterOptionsApi } from "../../listings/api/catalogApi";
+import {
+  clearPendingPaymentRedirect,
+  getPendingPaymentRedirect,
+  redirectToPaymentUrl,
+} from "../../payment/paymentPopup";
 import { advertisementsApi } from "../api/advertisementsApi";
 
 const categories = {
@@ -135,7 +141,7 @@ const normalizeWizardStep = (step) => {
   if (numericStep <= 3) return numericStep;
   if (numericStep === 4) return 4;
   if (numericStep === 5) return 4;
-  if (numericStep === 6) return 5;
+  if (numericStep === 6) return 6;
   return 6;
 };
 
@@ -206,7 +212,43 @@ const formatDate = (value) => {
 };
 
 const getTitle = (ad) =>
-  ad?.name || ad?.bundleNameSnapshot || categories[ad?.category] || "Advertisement";
+  ad?.name ||
+  ad?.bundleSlotLabel ||
+  ad?.bundleNameSnapshot ||
+  categories[ad?.category] ||
+  "Advertisement";
+
+const isPaidBundleSlotDraft = (ad) =>
+  ad?.status === "DRAFT" && ad?.bundleParentAdvertisement && ad?.paymentStatus === "PAID";
+
+const getBundleParentKey = (ad) =>
+  String(ad?.bundleParentAdvertisement?._id || ad?.bundleParentAdvertisement || "");
+
+const getBundleSlotLabel = (ad) =>
+  ad?.bundleSlotLabel || categories[ad?.category] || ad?.categoryLabel || "Advertisement";
+
+const groupRemainingBundleDrafts = (ads = []) => {
+  const groups = new Map();
+
+  ads.filter(isPaidBundleSlotDraft).forEach((ad) => {
+    const key = getBundleParentKey(ad) || ad._id;
+    const group = groups.get(key) || {
+      key,
+      name: ad.bundleNameSnapshot || "Promotion Bundle",
+      slots: [],
+    };
+
+    group.slots.push(ad);
+    groups.set(key, group);
+  });
+
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    slots: group.slots.sort(
+      (first, second) => Number(first.bundleSlotIndex || 0) - Number(second.bundleSlotIndex || 0),
+    ),
+  }));
+};
 
 const getStatusClass = (status) => {
   if (status === "ACTIVE") return "bg-emerald-100 text-emerald-700";
@@ -226,6 +268,93 @@ const getMostPopularDuration = (pricingTiers = []) =>
   pricingTiers.find((tier) => tier.isMostPopular)?.durationDays || 30;
 
 const getBundlePrice = (bundle) => Number(bundle?.bundlePrice || 0);
+
+const getBundleSlotsFromItems = (bundle) => {
+  const slots = [];
+
+  (bundle?.items || []).forEach((item) => {
+    const quantity = Math.max(1, Number(item.quantity || 1));
+
+    for (let index = 1; index <= quantity; index += 1) {
+      slots.push({
+        slotIndex: slots.length + 1,
+        category: item.category,
+        categoryLabel: item.categoryLabel || categories[item.category] || "Advertisement",
+        name: "",
+        redirectTo: "",
+        details: {
+          businessName: "",
+          businessCategoryCode: "",
+          countryIso: "",
+          callPhone: "",
+          whatsappPhone: "",
+        },
+        creatives: { desktop: null, tablet: null, mobile: null },
+        existingCreatives: {},
+        isComplete: false,
+      });
+    }
+  });
+
+  return slots;
+};
+
+const hydrateBundleSlots = ({ bundle, draft, fallbackDetails }) => {
+  const slots = getBundleSlotsFromItems(bundle);
+  const draftSlots = draft?.bundleSlotDrafts || [];
+
+  return slots.map((slot) => {
+    const draftSlot = draftSlots.find(
+      (item) => Number(item.slotIndex || 0) === Number(slot.slotIndex),
+    );
+
+    if (!draftSlot) {
+      return {
+        ...slot,
+        details: { ...fallbackDetails },
+      };
+    }
+
+    return {
+      ...slot,
+      name: draftSlot.name || "",
+      redirectTo: draftSlot.redirectTo || "",
+      details: {
+        ...fallbackDetails,
+        ...(draftSlot.details || {}),
+      },
+      creatives: { desktop: null, tablet: null, mobile: null },
+      existingCreatives: draftSlot.creatives || {},
+      isComplete: Boolean(draftSlot.isComplete),
+    };
+  });
+};
+
+const hasBundleSlotCreative = (slot, deviceKey) =>
+  Boolean(slot.creatives?.[deviceKey] || slot.existingCreatives?.[deviceKey]?.url);
+
+const getBundleSlotMissingFields = (slot, accountCountryIso) => {
+  const missing = [];
+  if (!slot.name?.trim()) missing.push("name");
+  if (!slot.details?.businessName?.trim()) missing.push("business name");
+  if (!slot.details?.businessCategoryCode) missing.push("business category");
+  if (validateCountryPhone(slot.details?.callPhone, accountCountryIso, "Call phone number")) {
+    missing.push("call number");
+  }
+  if (validateCountryPhone(slot.details?.whatsappPhone, accountCountryIso, "WhatsApp number")) {
+    missing.push("WhatsApp number");
+  }
+  devices.forEach((device) => {
+    if (!hasBundleSlotCreative(slot, device.key)) {
+      missing.push(`${device.label.toLowerCase()} creative`);
+    }
+  });
+
+  return missing;
+};
+
+const isBundleSlotComplete = (slot, accountCountryIso) =>
+  getBundleSlotMissingFields(slot, accountCountryIso).length === 0;
 
 const isLaunchOfferActiveForDuration = (launchOffer, durationDays) => {
   if (!launchOffer?.enabled) return false;
@@ -420,8 +549,8 @@ const LockedCountryPhoneField = ({
   );
 };
 
-const FileUpload = ({ file, label, onChange }) => {
-  const previewUrl = getObjectUrl(file);
+const FileUpload = ({ file, label, onChange, existingUrl = "" }) => {
+  const previewUrl = getObjectUrl(file) || existingUrl;
 
   return (
     <label className="flex min-h-[132px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-center hover:border-blue-300 hover:bg-blue-50/40">
@@ -555,6 +684,8 @@ const SummaryPanel = ({
 };
 
 function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
+  const isBundleSlot = Boolean(draft?.bundleParentAdvertisement);
+  const minimumStep = isBundleSlot ? 2 : 1;
   const { user } = useAuth();
   const [plans, setPlans] = useState([]);
   const [promotionSettings, setPromotionSettings] = useState({
@@ -580,6 +711,8 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     },
     creatives: { desktop: null, tablet: null, mobile: null },
   });
+  const [bundleSlots, setBundleSlots] = useState([]);
+  const [activeBundleSlotIndex, setActiveBundleSlotIndex] = useState(0);
   const [businessCategoryOptions, setBusinessCategoryOptions] = useState(
     fallbackBusinessCategoryOptions,
   );
@@ -589,7 +722,10 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
   const [wallet, setWallet] = useState(null);
   const [useWalletBalance, setUseWalletBalance] = useState(false);
   const [step, setStep] = useState(
-    Math.min(normalizeWizardStep(draft?.currentStep || 1), wizardSteps.length),
+    Math.max(
+      minimumStep,
+      Math.min(normalizeWizardStep(draft?.currentStep || minimumStep), wizardSteps.length),
+    ),
   );
 
   useEffect(() => {
@@ -679,6 +815,7 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     (bundle) => bundle.code === form.bundleCode,
   );
   const isBundlePackage = form.packageType === "BUNDLE";
+  const isIncludedBundleSlot = isBundleSlot && !isBundlePackage;
   const selectedCurrency = isBundlePackage
     ? selectedBundle?.currency || "BHD"
     : selectedPlan?.currency || "BHD";
@@ -696,8 +833,8 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     : getTierPrice(selectedPlan, form.durationDays);
   const selectedPlanBenefit = planAdBenefits[form.category];
   const isIncludedWithPlan =
-    !isBundlePackage && Number(selectedPlanBenefit?.remaining || 0) > 0;
-  const effectivePrice = isIncludedWithPlan ? 0 : price;
+    !isBundlePackage && !isIncludedBundleSlot && Number(selectedPlanBenefit?.remaining || 0) > 0;
+  const effectivePrice = isIncludedWithPlan || isIncludedBundleSlot ? 0 : price;
   const vat = Number(((effectivePrice * taxMeta.percentage) / 100).toFixed(3));
   const total = Number((effectivePrice + vat).toFixed(3));
   const launchOfferDuration = isBundlePackage
@@ -741,12 +878,59 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
       ),
     },
   };
+  const activeBundleSlot = bundleSlots[activeBundleSlotIndex] || bundleSlots[0] || null;
+  const completedBundleSlots = bundleSlots.filter((slot) =>
+    isBundleSlotComplete(slot, accountCountryIso),
+  ).length;
+  const incompleteBundleSlots = isBundlePackage
+    ? bundleSlots.length - completedBundleSlots
+    : 0;
+
+  useEffect(() => {
+    if (!selectedBundle) {
+      setBundleSlots([]);
+      setActiveBundleSlotIndex(0);
+      return;
+    }
+
+    setBundleSlots((current) => {
+      if (
+        current.length &&
+        current.every((slot) =>
+          (selectedBundle.items || []).some((item) => item.category === slot.category),
+        )
+      ) {
+        return current;
+      }
+
+      return hydrateBundleSlots({
+        bundle: selectedBundle,
+        draft,
+        fallbackDetails: form.details,
+      });
+    });
+    setActiveBundleSlotIndex(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBundle?.code]);
 
   const setCreative = (device, file) => {
     setForm((current) => ({
       ...current,
       creatives: { ...current.creatives, [device]: file },
     }));
+  };
+
+  const setBundleSlotCreative = (slotIndex, device, file) => {
+    setBundleSlots((current) =>
+      current.map((slot, index) =>
+        index === slotIndex
+          ? {
+              ...slot,
+              creatives: { ...slot.creatives, [device]: file },
+            }
+          : slot,
+      ),
+    );
   };
 
   const setDetailsField = (field, value) => {
@@ -757,6 +941,47 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
         [field]: value,
       },
     }));
+  };
+
+  const setBundleSlotField = (slotIndex, field, value) => {
+    setBundleSlots((current) =>
+      current.map((slot, index) =>
+        index === slotIndex ? { ...slot, [field]: value } : slot,
+      ),
+    );
+  };
+
+  const setBundleSlotDetailsField = (slotIndex, field, value) => {
+    setBundleSlots((current) =>
+      current.map((slot, index) =>
+        index === slotIndex
+          ? {
+              ...slot,
+              details: {
+                ...slot.details,
+                [field]: value,
+              },
+            }
+          : slot,
+      ),
+    );
+  };
+
+  const applyDetailsToAllBundleSlots = () => {
+    const sourceDetails = activeBundleSlot?.details || form.details;
+    setBundleSlots((current) =>
+      current.map((slot) => ({
+        ...slot,
+        details: {
+          ...slot.details,
+          businessName: sourceDetails.businessName,
+          businessCategoryCode: sourceDetails.businessCategoryCode,
+          countryIso: accountCountryIso,
+          callPhone: sourceDetails.callPhone,
+          whatsappPhone: sourceDetails.whatsappPhone,
+        },
+      })),
+    );
   };
 
   const selectPlacement = (category) => {
@@ -796,6 +1021,12 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
 
   const selectBundlePackage = (bundle) => {
     setUseWalletBalance(false);
+    setBundleSlots(hydrateBundleSlots({
+      bundle,
+      draft,
+      fallbackDetails: form.details,
+    }));
+    setActiveBundleSlotIndex(0);
     setForm((current) => ({
       ...current,
       packageType: "BUNDLE",
@@ -809,6 +1040,8 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     if (form.packageType === "BUNDLE") {
       if (!form.bundleCode) return "Choose a promotion bundle.";
       if (!selectedBundle) return "Selected promotion bundle is not available.";
+      if (!price) return "Pricing is not configured for this package.";
+      return "";
     } else if (!form.category) {
       return "Choose advertisement placement.";
     }
@@ -817,7 +1050,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     if (!form.details.businessCategoryCode) return "Business category is required.";
     if (callPhoneError) return callPhoneError;
     if (whatsappPhoneError) return whatsappPhoneError;
-    if (!isIncludedWithPlan && !price) return "Pricing is not configured for this package.";
+    if (!isIncludedWithPlan && !isIncludedBundleSlot && !price) {
+      return "Pricing is not configured for this package.";
+    }
     const missing = devices.find((device) => !form.creatives[device.key] && !draft?.creatives?.[device.key]?.url);
     if (missing) return `${missing.label} creative is required.`;
     return "";
@@ -833,16 +1068,60 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     try {
       setSaving(true);
       setError("");
+      const bundlePayloadSlots = isBundlePackage
+        ? bundleSlots.map((slot) => ({
+            slotIndex: slot.slotIndex,
+            category: slot.category,
+            name: slot.name,
+            redirectTo: slot.redirectTo,
+            details: {
+              ...slot.details,
+              countryIso: accountCountryIso,
+              callPhone: buildPhoneContact(
+                accountCountryIso,
+                getLocalPhoneDigits(slot.details.callPhone, accountCountryIso),
+              ),
+              whatsappPhone: buildPhoneContact(
+                accountCountryIso,
+                getLocalPhoneDigits(slot.details.whatsappPhone, accountCountryIso),
+              ),
+            },
+            creatives: slot.creatives,
+            isComplete: isBundleSlotComplete(slot, accountCountryIso),
+          }))
+        : [];
+      const firstCompleteBundleSlot = bundlePayloadSlots.find((slot) => slot.isComplete);
+      const parentBundleSlot = isBundlePackage ? firstCompleteBundleSlot : null;
       const payload = {
-        ...formWithAccountCountry,
+        ...(isBundlePackage && !parentBundleSlot
+          ? {
+              ...formWithAccountCountry,
+              name: selectedBundle?.name || "Promotion Bundle",
+              category: selectedBundle?.items?.[0]?.category || form.category,
+              details: {},
+              creatives: {},
+            }
+          : parentBundleSlot
+          ? {
+              ...formWithAccountCountry,
+              name: parentBundleSlot.name || selectedBundle?.name || form.name,
+              category: parentBundleSlot.category,
+              redirectTo: parentBundleSlot.redirectTo || form.redirectTo,
+              details: parentBundleSlot.details,
+              creatives: parentBundleSlot.creatives,
+            }
+          : formWithAccountCountry),
         paymentMethod: isIncludedWithPlan
+          ? "card"
+          : isIncludedBundleSlot
           ? "card"
           : useWalletBalance
           ? "wallet"
           : form.paymentMethod,
-        useWalletBalance: isIncludedWithPlan ? false : useWalletBalance,
-        useDealerPlanBenefit: isIncludedWithPlan,
+        useWalletBalance: isIncludedWithPlan || isIncludedBundleSlot ? false : useWalletBalance,
+        useDealerPlanBenefit: isIncludedBundleSlot ? false : isIncludedWithPlan,
         currentStep: isDraft ? step : wizardSteps.length,
+        bundleSlots: bundlePayloadSlots,
       };
       const result = isDraft
         ? await advertisementsApi.saveDraft(payload)
@@ -851,7 +1130,11 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
           : await advertisementsApi.create(payload);
 
       if (result?.payment?.redirectUrl) {
-        window.location.assign(result.payment.redirectUrl);
+        redirectToPaymentUrl(result.payment, {
+          advertisementId:
+            result?.advertisement?._id || result?.payment?.targetId || form._id || "",
+          resumeStep: wizardSteps.length,
+        });
         return;
       }
 
@@ -883,17 +1166,60 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
       return;
     }
 
+    if (step === 1 && isBundlePackage) {
+      setStep(5);
+      return;
+    }
+
     if (step === 2) {
-      const missing = devices.find(
-        (device) => !form.creatives[device.key] && !draft?.creatives?.[device.key]?.url,
-      );
+      const missing = isBundlePackage
+        ? null
+        : devices.find(
+            (device) => !form.creatives[device.key] && !draft?.creatives?.[device.key]?.url,
+          );
       if (missing) {
-        setError(`${missing.label} creative is required.`);
+        setError(
+          isBundlePackage
+            ? `${missing.label} creative is required for advertisement ${activeBundleSlotIndex + 1}.`
+            : `${missing.label} creative is required.`,
+        );
         return;
       }
     }
 
     if (step === 3) {
+      if (isBundlePackage) {
+        if (!activeBundleSlot?.name?.trim()) {
+          setError(`Advertisement ${activeBundleSlotIndex + 1} name is required.`);
+          return;
+        }
+        if (!activeBundleSlot.details?.businessName?.trim()) {
+          setError(`Advertisement ${activeBundleSlotIndex + 1} business name is required.`);
+          return;
+        }
+        if (!activeBundleSlot.details?.businessCategoryCode) {
+          setError(`Advertisement ${activeBundleSlotIndex + 1} business category is required.`);
+          return;
+        }
+        const slotCallError = validateCountryPhone(
+          activeBundleSlot.details?.callPhone,
+          accountCountryIso,
+          "Call phone number",
+        );
+        const slotWhatsappError = validateCountryPhone(
+          activeBundleSlot.details?.whatsappPhone,
+          accountCountryIso,
+          "WhatsApp number",
+        );
+        if (slotCallError) {
+          setError(slotCallError);
+          return;
+        }
+        if (slotWhatsappError) {
+          setError(slotWhatsappError);
+          return;
+        }
+      } else {
       if (!form.name.trim()) {
         setError("Advertisement name is required.");
         return;
@@ -914,10 +1240,16 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
         setError(whatsappPhoneError);
         return;
       }
+      }
     }
 
-    if (step === 4 && !price && !isIncludedWithPlan) {
+    if (step === 4 && !price && !isIncludedWithPlan && !isIncludedBundleSlot) {
       setError("Pricing is not configured for this package.");
+      return;
+    }
+
+    if (isIncludedBundleSlot && step === 4) {
+      await handleSave(false);
       return;
     }
 
@@ -931,7 +1263,7 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
 
   const goPrevious = () => {
     setError("");
-    setStep((current) => Math.max(current - 1, 1));
+    setStep((current) => Math.max(current - 1, minimumStep));
   };
 
   const renderStep = () => {
@@ -1185,6 +1517,64 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     }
 
     if (step === 2) {
+      if (isBundlePackage) {
+        return (
+          <div>
+            <h2 className="text-xl font-black text-slate-950">Upload Bundle Creatives</h2>
+            <p className="mt-1 text-sm font-medium text-slate-500">
+              Fill creatives for each advertisement included in {selectedBundle?.name}.
+            </p>
+            <div className="mt-5 flex gap-2 overflow-x-auto pb-2">
+              {bundleSlots.map((slot, index) => {
+                const complete = devices.every((device) => hasBundleSlotCreative(slot, device.key));
+                return (
+                  <button
+                    key={slot.slotIndex}
+                    type="button"
+                    onClick={() => setActiveBundleSlotIndex(index)}
+                    className={`shrink-0 rounded-xl border px-4 py-2 text-left text-xs font-bold ${
+                      index === activeBundleSlotIndex
+                        ? "border-blue-500 bg-blue-50 text-blue-700"
+                        : "border-slate-200 text-slate-600"
+                    }`}
+                  >
+                    <span className="block">Ad {index + 1}</span>
+                    <span className={complete ? "text-emerald-600" : "text-amber-600"}>
+                      {slot.categoryLabel} - {complete ? "Creative ready" : "Needs creative"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {activeBundleSlot ? (
+              <>
+                <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-sm font-black text-slate-950">
+                    Advertisement {activeBundleSlotIndex + 1}: {activeBundleSlot.categoryLabel}
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-slate-500">
+                    Upload desktop, tablet, and mobile creatives for this slot.
+                  </p>
+                </div>
+                <div className="mt-5 grid gap-4 xl:grid-cols-3">
+                  {devices.map((device) => (
+                    <FileUpload
+                      key={device.key}
+                      label={`${device.label} creative`}
+                      file={activeBundleSlot.creatives?.[device.key]}
+                      existingUrl={activeBundleSlot.existingCreatives?.[device.key]?.url}
+                      onChange={(file) =>
+                        setBundleSlotCreative(activeBundleSlotIndex, device.key, file)
+                      }
+                    />
+                  ))}
+                </div>
+              </>
+            ) : null}
+          </div>
+        );
+      }
+
       return (
         <div>
           <h2 className="text-xl font-black text-slate-950">Upload Your Creative</h2>
@@ -1219,6 +1609,167 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     }
 
     if (step === 3) {
+      if (isBundlePackage) {
+        return (
+          <div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-xl font-black text-slate-950">Bundle Advertisement Settings</h2>
+                <p className="mt-1 text-sm font-medium text-slate-500">
+                  Complete every included advertisement now, or leave some slots for later.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={applyDetailsToAllBundleSlots}
+                disabled={!activeBundleSlot}
+                className="h-10 rounded-xl border border-blue-100 px-4 text-xs font-black text-blue-600 disabled:opacity-40"
+              >
+                Apply Contact To All
+              </button>
+            </div>
+            <div className="mt-5 flex gap-2 overflow-x-auto pb-2">
+              {bundleSlots.map((slot, index) => {
+                const missing = getBundleSlotMissingFields(slot, accountCountryIso);
+                return (
+                  <button
+                    key={slot.slotIndex}
+                    type="button"
+                    onClick={() => setActiveBundleSlotIndex(index)}
+                    className={`shrink-0 rounded-xl border px-4 py-2 text-left text-xs font-bold ${
+                      index === activeBundleSlotIndex
+                        ? "border-blue-500 bg-blue-50 text-blue-700"
+                        : "border-slate-200 text-slate-600"
+                    }`}
+                  >
+                    <span className="block">Ad {index + 1}</span>
+                    <span className={missing.length ? "text-amber-600" : "text-emerald-600"}>
+                      {slot.categoryLabel} - {missing.length ? `${missing.length} missing` : "Complete"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {activeBundleSlot ? (
+              <div className="mt-5 space-y-5">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-sm font-black text-slate-950">
+                    Advertisement {activeBundleSlotIndex + 1}: {activeBundleSlot.categoryLabel}
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-slate-500">
+                    Category is locked from the selected bundle.
+                  </p>
+                </div>
+                <label className="block">
+                  <span className="text-sm font-bold text-slate-950">
+                    Advertisement Name <span className="text-red-500">*</span>
+                  </span>
+                  <input
+                    value={activeBundleSlot.name}
+                    onChange={(event) =>
+                      setBundleSlotField(activeBundleSlotIndex, "name", event.target.value)
+                    }
+                    placeholder="e.g. ABC Auto Care"
+                    className="mt-3 h-14 w-full rounded-2xl border border-slate-200 px-5 text-base font-medium text-slate-950 outline-none focus:border-blue-400"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-bold text-slate-950">Redirect URL</span>
+                  <input
+                    value={activeBundleSlot.redirectTo}
+                    onChange={(event) =>
+                      setBundleSlotField(activeBundleSlotIndex, "redirectTo", event.target.value)
+                    }
+                    placeholder="https://example.com"
+                    className="mt-3 h-14 w-full rounded-2xl border border-slate-200 px-5 text-base font-medium text-slate-950 outline-none focus:border-blue-400"
+                  />
+                </label>
+                <div className="grid gap-5 md:grid-cols-2">
+                  <label className="block">
+                    <span className="text-sm font-bold text-slate-950">
+                      Business Name <span className="text-red-500">*</span>
+                    </span>
+                    <input
+                      value={activeBundleSlot.details?.businessName || ""}
+                      onChange={(event) =>
+                        setBundleSlotDetailsField(activeBundleSlotIndex, "businessName", event.target.value)
+                      }
+                      placeholder="e.g. ABC Auto Care"
+                      className="mt-3 h-14 w-full rounded-2xl border border-slate-200 px-5 text-base font-medium text-slate-950 outline-none focus:border-blue-400"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-bold text-slate-950">
+                      Business Category <span className="text-red-500">*</span>
+                    </span>
+                    <select
+                      value={activeBundleSlot.details?.businessCategoryCode || ""}
+                      onChange={(event) =>
+                        setBundleSlotDetailsField(activeBundleSlotIndex, "businessCategoryCode", event.target.value)
+                      }
+                      className="mt-3 h-14 w-full rounded-2xl border border-slate-200 px-5 text-base font-medium text-slate-950 outline-none focus:border-blue-400"
+                    >
+                      <option value="">Select business category</option>
+                      {businessCategoryOptions.map((category) => (
+                        <option key={category.code} value={category.code}>
+                          {category.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-bold text-slate-950">
+                      Call Number <span className="text-red-500">*</span>
+                    </span>
+                    <div className="mt-3">
+                      <LockedCountryPhoneField
+                        countryIso={accountCountryIso}
+                        error={
+                          activeBundleSlot.details?.callPhone
+                            ? validateCountryPhone(
+                                activeBundleSlot.details.callPhone,
+                                accountCountryIso,
+                                "Call phone number",
+                              )
+                            : ""
+                        }
+                        value={activeBundleSlot.details?.callPhone || ""}
+                        onChange={(value) =>
+                          setBundleSlotDetailsField(activeBundleSlotIndex, "callPhone", value)
+                        }
+                      />
+                    </div>
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-bold text-slate-950">
+                      WhatsApp Number <span className="text-red-500">*</span>
+                    </span>
+                    <div className="mt-3">
+                      <LockedCountryPhoneField
+                        countryIso={accountCountryIso}
+                        error={
+                          activeBundleSlot.details?.whatsappPhone
+                            ? validateCountryPhone(
+                                activeBundleSlot.details.whatsappPhone,
+                                accountCountryIso,
+                                "WhatsApp number",
+                              )
+                            : ""
+                        }
+                        value={activeBundleSlot.details?.whatsappPhone || ""}
+                        onChange={(value) =>
+                          setBundleSlotDetailsField(activeBundleSlotIndex, "whatsappPhone", value)
+                        }
+                      />
+                    </div>
+                  </label>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        );
+      }
+
       return (
         <div>
           <h2 className="text-xl font-black text-slate-950">Advertisement Settings</h2>
@@ -1303,14 +1854,25 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
         <div>
           <h2 className="text-xl font-black text-slate-950">Review Your Advertisement</h2>
           <p className="mt-1 text-sm font-medium text-slate-500">
-            Review all details and see exactly how your ad will appear on GulfInCart.
+            {isIncludedBundleSlot
+              ? "This advertisement slot is included in your promotion bundle. Submit it for admin review when the details are ready."
+              : "Review all details and see exactly how your ad will appear on GulfInCart."}
           </p>
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             {[
               [isBundlePackage ? "Bundle" : "Placement", isBundlePackage ? selectedBundle?.name : selectedPlacement.title],
-              ["Duration", isIncludedWithPlan ? "Until plan expiry" : `${launchOfferDuration} Days`],
+              [
+                "Duration",
+                isIncludedWithPlan ? "Until plan expiry" : `${launchOfferDuration} Days`,
+              ],
+              ...(isBundlePackage
+                ? [
+                    ["Filled Ads", `${completedBundleSlots}/${bundleSlots.length}`],
+                    ["Remaining Later", incompleteBundleSlots],
+                  ]
+                : []),
               ...(freeAdditionalDays > 0 ? [["Launch Offer", `+ ${freeAdditionalDays} Days Free`]] : []),
-              ["Total", formatCurrency(total)],
+              ["Total", isIncludedBundleSlot ? "Included in bundle" : formatCurrency(total)],
               ...(isIncludedWithPlan ? [["Plan Benefit", `${selectedPlanBenefit.remaining} remaining`]] : []),
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl border border-slate-200 p-5">
@@ -1321,6 +1883,33 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
               </div>
             ))}
           </div>
+          {isBundlePackage ? (
+            <div className="mt-5 rounded-2xl border border-slate-200 p-4">
+              <h3 className="text-base font-black text-slate-950">Bundle Advertisements</h3>
+              <div className="mt-3 grid gap-2 md:grid-cols-2">
+                {bundleSlots.map((slot, index) => {
+                  const missing = getBundleSlotMissingFields(slot, accountCountryIso);
+                  return (
+                    <div key={slot.slotIndex} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-black text-slate-950">
+                          Ad {index + 1}: {slot.categoryLabel}
+                        </p>
+                        <span className={`rounded-full px-2 py-1 text-[11px] font-black ${
+                          missing.length ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
+                        }`}>
+                          {missing.length ? "Later" : "Ready"}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs font-medium text-slate-500">
+                        {slot.name || "Untitled advertisement"}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
           <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <h3 className="text-base font-black text-slate-950">Live Placement Preview</h3>
             <div className="mt-4">
@@ -1350,6 +1939,8 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                 ["Duration", isIncludedWithPlan ? "Until plan expiry" : `${launchOfferDuration} Days`],
                 ...(freeAdditionalDays > 0 ? [["Launch Offer", `+ ${freeAdditionalDays} Days Free`]] : []),
                 ...(isBundlePackage ? [
+                  ["Filled Advertisements", `${completedBundleSlots}/${bundleSlots.length}`],
+                  ["Can Fill Later", incompleteBundleSlots],
                   ["Original Price", formatCurrency(selectedBundle?.originalPrice, selectedCurrency)],
                   ["Savings", formatCurrency(selectedBundle?.savings, selectedCurrency)],
                 ] : []),
@@ -1366,6 +1957,11 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
               <span className="font-bold text-blue-600">Total</span>
               <span className="text-2xl font-black text-blue-600">{formatCurrency(total)}</span>
             </div>
+            {isBundlePackage && incompleteBundleSlots > 0 ? (
+              <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
+                {incompleteBundleSlots} advertisement{incompleteBundleSlots === 1 ? "" : "s"} will stay available to fill later from Advertising Manager.
+              </div>
+            ) : null}
             {isIncludedWithPlan ? (
               <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
                 This advertisement will use 1 included {selectedPlacement.title} slot from your dealer plan.
@@ -1419,7 +2015,7 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-3 py-3 sm:px-4">
-      <div className="flex h-[92vh] w-full max-w-[1040px] flex-col overflow-hidden rounded-[20px] bg-white text-[13px] shadow-2xl sm:h-[90vh]">
+      <div className="relative flex h-[92vh] w-full max-w-[1040px] flex-col overflow-hidden rounded-[20px] bg-white text-[13px] shadow-2xl sm:h-[90vh]">
         <header className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 lg:px-5">
           <div className="flex items-center gap-3">
             <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white">
@@ -1486,7 +2082,7 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
           <button
             type="button"
             onClick={goPrevious}
-            disabled={step === 1 || saving}
+            disabled={step <= minimumStep || saving}
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-5 text-xs font-bold text-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ArrowLeft size={16} />
@@ -1523,6 +2119,7 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
 }
 
 export default function AdvertisementsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [stats, setStats] = useState({
     activeCampaigns: 0,
     totalViews: 0,
@@ -1537,6 +2134,7 @@ export default function AdvertisementsPage() {
   const [modalDraft, setModalDraft] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [endAdId, setEndAdId] = useState("");
+  const [reasonAd, setReasonAd] = useState(null);
   const [isEndingAd, setIsEndingAd] = useState(false);
 
   const loadAdvertisements = async () => {
@@ -1558,9 +2156,79 @@ export default function AdvertisementsPage() {
     loadAdvertisements();
   }, []);
 
+  useEffect(() => {
+    const tapId = searchParams.get("tap_id");
+    if (!tapId) return;
+
+    let active = true;
+
+    const verifyPayment = async () => {
+      try {
+        const payment = await advertisementsApi.verifyTapPayment(tapId);
+
+        if (!active) return;
+
+        if (payment?.status === "CAPTURED") {
+          const pendingPayment = getPendingPaymentRedirect();
+
+          setModalDraft({
+            _id:
+              payment?.targetId ||
+              searchParams.get("advertisementId") ||
+              pendingPayment?.advertisementId ||
+              "",
+            currentStep: 6,
+            status: "PENDING",
+            paymentStatus: "PAID",
+          });
+          setShowModal(true);
+          clearPendingPaymentRedirect();
+          await loadAdvertisements();
+        } else {
+          setError(payment?.failureReason || "Payment was not completed.");
+        }
+      } catch (err) {
+        if (active) {
+          setError(
+            err.response?.data?.message ||
+              err.message ||
+              "Unable to verify advertisement payment",
+          );
+        }
+      } finally {
+        if (active) {
+          setSearchParams({}, { replace: true });
+        }
+      }
+    };
+
+    verifyPayment();
+
+    return () => {
+      active = false;
+    };
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId || !ads.length || showModal) return;
+
+    const ad = ads.find((item) => item._id === editId);
+    if (ad?.status === "REJECTED") {
+      setModalDraft(ad);
+      setShowModal(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [ads, searchParams, setSearchParams, showModal]);
+
+  const visibleAds = useMemo(
+    () => ads.filter((ad) => !isPaidBundleSlotDraft(ad)),
+    [ads],
+  );
+
   const filteredAds = useMemo(
     () =>
-      ads.filter((ad) => {
+      visibleAds.filter((ad) => {
         const matchesStatus = status === "ALL" || ad.status === status;
         const haystack = [ad.name, ad.advertisementId, ad.categoryLabel, categories[ad.category]]
           .filter(Boolean)
@@ -1569,7 +2237,11 @@ export default function AdvertisementsPage() {
 
         return matchesStatus && haystack.includes(query.toLowerCase());
       }),
-    [ads, query, status],
+    [query, status, visibleAds],
+  );
+  const remainingBundleGroups = useMemo(
+    () => groupRemainingBundleDrafts(ads),
+    [ads],
   );
 
   const handleEnd = async () => {
@@ -1635,6 +2307,45 @@ export default function AdvertisementsPage() {
         <StatCard icon={Wallet} value={formatCurrency(stats.totalSpent || 0)} label="Total Spent" iconBg="bg-emerald-100 text-emerald-600" />
       </div>
 
+      {remainingBundleGroups.length ? (
+        <div className="space-y-3">
+          {remainingBundleGroups.map((group) => (
+            <div key={group.key} className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-black text-amber-900">
+                    {group.name}: {group.slots.length} paid advertisement slot{group.slots.length === 1 ? "" : "s"} remaining
+                  </h3>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {group.slots.map((slot) => (
+                      <span
+                        key={slot._id}
+                        className="rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-bold text-amber-800"
+                      >
+                        {getBundleSlotLabel(slot)}
+                        {slot.bundleSlotIndex && slot.bundleSlotTotal
+                          ? ` ${slot.bundleSlotIndex}/${slot.bundleSlotTotal}`
+                          : ""}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalDraft(group.slots[0]);
+                    setShowModal(true);
+                  }}
+                  className="h-10 shrink-0 rounded-xl bg-amber-600 px-4 text-sm font-black text-white"
+                >
+                  Complete It
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className="rounded-xl bg-white p-5 shadow-sm sm:p-6">
         <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <h3 className="text-lg font-bold text-slate-950">My Ads</h3>
@@ -1690,9 +2401,20 @@ export default function AdvertisementsPage() {
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-slate-500">
-                    {ad.packageType === "BUNDLE"
-                      ? ad.bundleNameSnapshot || "Promotion Bundle"
-                      : categories[ad.category] || ad.categoryLabel || "Advertisement"} - {ad.durationDays || 0} days
+                    {ad.bundleParentAdvertisement
+                      ? `${ad.bundleNameSnapshot || "Promotion Bundle"} - ${
+                          ad.bundleSlotLabel ||
+                          categories[ad.category] ||
+                          ad.categoryLabel ||
+                          "Advertisement"
+                        }${
+                          ad.bundleSlotIndex && ad.bundleSlotTotal
+                            ? ` (${ad.bundleSlotIndex}/${ad.bundleSlotTotal})`
+                            : ""
+                        }`
+                      : ad.packageType === "BUNDLE"
+                        ? ad.bundleNameSnapshot || "Promotion Bundle"
+                        : categories[ad.category] || ad.categoryLabel || "Advertisement"} - {ad.durationDays || 0} days
                     {ad.freeAdditionalDaysSnapshot ? ` + ${ad.freeAdditionalDaysSnapshot} free` : ""}
                   </p>
                   {ad.rejectionReason ? (
@@ -1712,6 +2434,27 @@ export default function AdvertisementsPage() {
                     >
                       Continue
                     </button>
+                  ) : ad.status === "REJECTED" ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setReasonAd(ad)}
+                        className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-100"
+                      >
+                        View Reason
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModalDraft(ad);
+                          setShowModal(true);
+                        }}
+                        className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
+                      >
+                        <Pencil size={15} />
+                        Edit & Resubmit
+                      </button>
+                    </>
                   ) : (
                     <Link
                       to={`/advertisements/${ad._id}`}
@@ -1777,6 +2520,47 @@ export default function AdvertisementsPage() {
         }}
         onConfirm={handleEnd}
       />
+      {reasonAd ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="text-lg font-black text-slate-950">Rejection Reason</h2>
+            <div className="mt-4 rounded-xl border border-red-100 bg-red-50 p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-red-500">Reason</p>
+              <p className="mt-1 text-sm font-semibold leading-6 text-red-800">
+                {reasonAd.rejectionReason || "-"}
+              </p>
+              {reasonAd.rejectionRemark ? (
+                <>
+                  <p className="mt-4 text-xs font-bold uppercase tracking-wide text-red-500">Admin remark</p>
+                  <p className="mt-1 text-sm font-semibold leading-6 text-red-800">
+                    {reasonAd.rejectionRemark}
+                  </p>
+                </>
+              ) : null}
+            </div>
+            <div className="mt-6 flex flex-col-reverse justify-end gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => setReasonAd(null)}
+                className="h-11 rounded-xl border border-slate-200 px-5 text-sm font-bold text-slate-600 hover:bg-slate-50"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setModalDraft(reasonAd);
+                  setReasonAd(null);
+                  setShowModal(true);
+                }}
+                className="h-11 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white hover:bg-blue-700"
+              >
+                Edit & Resubmit
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
