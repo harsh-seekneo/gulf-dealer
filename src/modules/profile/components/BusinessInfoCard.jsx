@@ -1,4 +1,5 @@
 import { Building2, Car, Globe, Mail, MapPin, Phone, Tag, User } from "lucide-react";
+import { formatPhoneNumber } from "../../../utils/formatPhoneNumber";
 
 function Row({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -18,9 +19,6 @@ function Row({ icon: Icon, label, value }) {
 export default function BusinessInfoCard({ profile }) {
   const vehicleCategories = Array.isArray(profile.vehicleCategories)
     ? profile.vehicleCategories.join(", ")
-    : "";
-  const vehicleBrands = Array.isArray(profile.vehicleBrands)
-    ? profile.vehicleBrands.join(", ")
     : "";
 
   return (
@@ -58,16 +56,16 @@ export default function BusinessInfoCard({ profile }) {
           value={vehicleCategories}
         />
 
-        <Row
+        {/* <Row
           icon={Car}
           label="Vehicle Brands"
           value={vehicleBrands}
-        />
+        /> */}
 
         <Row
           icon={Phone}
           label="Phone"
-          value={profile.phone}
+          value={formatPhoneNumber(profile.phone, profile.country)}
         />
 
         <Row

@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
@@ -22,14 +24,21 @@ const configByFormType = {
   SPECIAL_NUMBER: specialNumberFormConfig,
 };
 
-const Step6Features = () => {
-  const { listing, isSaving, saveStep, goPrevious, saveDraft } = useBulkVehicleWizard();
+const Step6Features = ({ useWizardHook = useBulkVehicleWizard }) => {
+  const { listing, isSaving, saveStep, goPrevious, saveDraft } =
+    useWizardHook();
 
   const categoryId = listing?.category?._id || listing?.category;
   const formType = listing?.category?.vehicleFormType || "CAR";
   const baseConfig = configByFormType[formType] || carFormConfig;
   const { config } = useListingAttributeConfig(categoryId, baseConfig);
   const isSpecialNumber = formType === "SPECIAL_NUMBER";
+
+  /*
+   * Some vehicle configs (e.g. motorcycle) don't define
+   * featureGroups yet. Always fall back to an empty array
+   * so .forEach/.map never run on undefined.
+   */
   const featureGroups = Array.isArray(config?.featureGroups)
     ? config.featureGroups
     : [];
@@ -85,11 +94,7 @@ const Step6Features = () => {
       return;
     }
 
-    try {
-      await saveStep(6, selected);
-    } catch {
-      // Error toast already shown by context.
-    }
+    await saveStep(6, selected);
   };
 
   return (

@@ -1,7 +1,7 @@
 //[DEALER] /Users/personal/Desktop/gulf--dealer/gulf-dealer/src/modules/listings/pages/ListingsPage.jsx
 
 import { useEffect, useState } from "react";
-import { Search, Plus, Filter } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { getDealerStatusApi } from "../../dealer/api/dealerApi";
 import { useNavigate } from "react-router-dom";
 
@@ -21,12 +21,19 @@ const REQUIRED_PROFILE_FIELDS = [
   "email",
 ];
 
+const SELLER_FILTERS = [
+  { key: "all", label: "All" },
+  { key: "individual", label: "Individual Sellers" },
+  { key: "dealer", label: "Dealers" },
+];
+
 function isEnded(label) {
   return Boolean(label) && /expired/i.test(label);
 }
 
 export default function ListingsPage() {
   const [activeTab, setActiveTab] = useState("all");
+  const [sellerFilter, setSellerFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [vehicles, setVehicles] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -53,6 +60,7 @@ export default function ListingsPage() {
 
       const data = await listingsApi.getAll({
         status: selectedTab?.status,
+        sellerType: sellerFilter,
         search: search || undefined,
         page,
       });
@@ -109,6 +117,7 @@ export default function ListingsPage() {
             // backend's raw "active" totalItems.
             const data = await listingsApi.getAll({
               status: tab.status,
+              sellerType: sellerFilter,
               limit: 1000,
             });
 
@@ -119,7 +128,11 @@ export default function ListingsPage() {
             return { key: tab.key, count: items.length };
           }
 
-          const data = await listingsApi.getAll({ status: tab.status, limit: 1 });
+          const data = await listingsApi.getAll({
+            status: tab.status,
+            sellerType: sellerFilter,
+            limit: 1,
+          });
           return { key: tab.key, count: data.pagination?.totalItems || 0 };
         })
       );
@@ -138,13 +151,13 @@ export default function ListingsPage() {
   useEffect(() => {
     setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, search]);
+  }, [activeTab, sellerFilter, search]);
 
   useEffect(() => {
     loadVehicles();
     loadStatusCounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, page]);
+  }, [activeTab, sellerFilter, page]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -276,6 +289,23 @@ export default function ListingsPage() {
         statusCounts={statusCounts}
       />
 
+      <div className="flex w-fit rounded-xl bg-white p-1 shadow-sm">
+        {SELLER_FILTERS.map((filter) => (
+          <button
+            key={filter.key}
+            type="button"
+            onClick={() => setSellerFilter(filter.key)}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              sellerFilter === filter.key
+                ? "bg-slate-900 text-white"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex gap-3">
         <div className="relative flex-1">
           <Search
@@ -292,13 +322,6 @@ export default function ListingsPage() {
             className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-blue-400"
           />
         </div>
-
-        {activeTab === "pending" && (
-          <button className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600">
-            <Filter size={16} />
-            Filter
-          </button>
-        )}
       </div>
 
       {loading ? (

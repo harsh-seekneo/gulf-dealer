@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useRef, useState } from "react";
 
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
@@ -11,6 +13,7 @@ import { specialNumberFormConfig } from "../../config/categoryForms/specialNumbe
 import DynamicField from "../formFields/DynamicField";
 import WizardFooterNav from "../WizardFooterNav";
 import { scrollFirstWizardError } from "../../utils/wizardScroll";
+import FormField from "../FormField";
 import { useListingAttributeConfig } from "../../hooks/useListingAttributeConfig";
 
 const configByFormType = {
@@ -29,8 +32,9 @@ const ELECTRIC_OPTIONAL_FIELDS = new Set(["engineCapacity", "numberOfCylinders"]
 const isElectricFuel = (value) =>
   String(value || "").trim().toLowerCase() === ELECTRIC_OPTION;
 
-const Step5Specs = () => {
-  const { listing, isSaving, saveStep, goPrevious, saveDraft } = useBulkVehicleWizard();
+const Step5Specs = ({ useWizardHook = useBulkVehicleWizard }) => {
+  const { listing, isSaving, saveStep, goPrevious, saveDraft } =
+    useWizardHook();
 
   const categoryId = listing?.category?._id || listing?.category;
   const formType = listing?.category?.vehicleFormType || "CAR";
@@ -70,8 +74,16 @@ const Step5Specs = () => {
       !(shouldRelaxEngineFields && ELECTRIC_OPTIONAL_FIELDS.has(field.name))) ||
     (!shouldRelaxEngineFields && hasFuelType && ELECTRIC_OPTIONAL_FIELDS.has(field.name));
 
+  /*
+   * listing.specs may not be available yet on first render
+   * (e.g. it's still being fetched from the API when this
+   * step mounts). Re-sync the form once real saved data
+   * shows up, so reopening a draft actually shows the
+   * previously entered values instead of a blank form.
+   */
   useEffect(() => {
     if (!listing?.specs) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm(buildInitialForm());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listing?.specs, formType]);
@@ -122,11 +134,7 @@ const Step5Specs = () => {
       return;
     }
 
-    try {
-      await saveStep(5, payload);
-    } catch {
-      // Error toast already shown by context.
-    }
+    await saveStep(5, payload);
   };
 
   return (
@@ -151,11 +159,9 @@ const Step5Specs = () => {
               className={isFullWidth ? "sm:col-span-2" : ""}
             >
               {field.type !== "toggleSwitch" && (
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  {field.label}
-                  {isRequiredField(field) ? <span className="text-red-500"> *</span> : null}
-                </label>
-              )}
+                
+                <FormField label={field.label} required={isRequiredField(field)} error={errors[field.name]}>
+             
               <DynamicField
                 field={field}
                 value={form[field.name]}
@@ -164,9 +170,26 @@ const Step5Specs = () => {
                 form={form}
                 categoryId={categoryId}
               />
-              {errors[field.name] && (
-                <p className="mt-1 text-xs font-medium text-red-600">{errors[field.name]}</p>
+              </FormField>
+               )}
+               {field.type === "toggleSwitch" &&(
+                <>
+               <DynamicField
+                field={field}
+                value={form[field.name]}
+                onChange={(value) => handleChange(field.name, value)}
+                error={errors[field.name]}
+                form={form}
+                categoryId={categoryId}
+              />
+               {errors[field.name] && (
+                <p className="mt-1 text-xs font-medium text-red-600">
+                  {errors[field.name]}
+                </p>
               )}
+</>
+               )}
+            
             </div>
           );
         })}

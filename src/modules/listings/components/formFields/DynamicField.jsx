@@ -1,8 +1,10 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import ColorSwatchField from "./ColorSwatchField";
 import PhoneNumberField from "./PhoneNumberField";
 import ToggleGroupField from "./ToggleGroupField";
-import ToggleSwitchField from "../ToggleSwitchField";
+import ToggleSwitch from "../ToggleSwitch";
 import {
   getBrandOptionsApi,
   getCatalogModelOptionsApi,
@@ -13,9 +15,8 @@ import { GULF_COUNTRY_NAMES } from "../../config/gulfLocations.config";
 
 const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: currentYear - 1979 }, (_, i) => currentYear - i);
-
 const baseInputClass =
-  "h-10 w-full rounded-lg border bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "h-11 w-full min-w-0 rounded-lg border bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:h-10";
 const dynamicFacetFields = new Set([
   "bodyType",
   "equipmentType",
@@ -32,7 +33,9 @@ const getCounterClass = (currentLength, maxLength) => {
 };
 
 const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
-  const errorClass = error ? "border-red-400 ring-2 ring-red-400 ring-offset-1" : "border-slate-300";
+  const errorClass = error
+    ? "border-red-400 ring-2 ring-red-400 ring-offset-1"
+    : "border-slate-300";
   const isDisabled =
     Boolean(field.disabled) ||
     (field.disabledWhen &&
@@ -54,18 +57,29 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
   }, [field.type, categoryId]);
 
   useEffect(() => {
-    if (field.type !== "modelSelect" || !categoryId || !form?.brand) {
-      return;
-    }
-    getCatalogModelOptionsApi({ category: categoryId, brand: form.brand, status: "ACTIVE" })
-      .then((data) => setModelOptions(data || []))
-      .catch(() => setModelOptions([]));
+    if (field.type !== "modelSelect" || !categoryId || !form?.brand) return;
+
+    let isMounted = true;
+
+    getCatalogModelOptionsApi({
+      category: categoryId,
+      brand: form.brand,
+      status: "ACTIVE",
+    })
+      .then((data) => {
+        if (isMounted) setModelOptions(data || []);
+      })
+      .catch(() => {
+        if (isMounted) setModelOptions([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [field.type, categoryId, form?.brand]);
 
   useEffect(() => {
-    if (field.type !== "variantSelect" || !categoryId || !form?.brand || !form?.catalogModel) {
-      return;
-    }
+    if (field.type !== "variantSelect" || !categoryId || !form?.brand || !form?.catalogModel) return;
 
     let isMounted = true;
 
@@ -113,6 +127,13 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
     };
   }, [shouldLoadFacetOptions, categoryId]);
 
+  const visibleModelOptions =
+    field.type === "modelSelect" && categoryId && form?.brand ? modelOptions : [];
+  const visibleVariantOptions =
+    field.type === "variantSelect" && categoryId && form?.brand && form?.catalogModel
+      ? variantOptions
+      : [];
+
   switch (field.type) {
     case "text":
     case "number":
@@ -135,7 +156,7 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value.toUpperCase())}
           maxLength={17}
-          placeholder="Enter 17-digit VIN"
+          placeholder="Enter 17-character  VIN"
           readOnly={field.readOnly}
           className={`${baseInputClass} ${errorClass} font-mono uppercase ${field.readOnly ? "cursor-not-allowed bg-slate-100 text-slate-600" : ""}`}
         />
@@ -178,7 +199,7 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
       );
       }
 
-      case "url":
+    case "url":
       return (
         <input
           type="url"
@@ -238,13 +259,21 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
         });
 
         return (
-          <select value={value ?? ""} onChange={(e) => onChange(e.target.value)} className={`${baseInputClass} ${errorClass}`}>
-            <option value="">Select {field.label.toLowerCase()}</option>
+          <select
+            value={value ?? ""}
+            onChange={(e) => onChange(e.target.value)}
+            className={`${baseInputClass} ${errorClass}`}
+          >
+            <option value="">
+              {field.placeholder || `Select ${field.label ? field.label.toLowerCase() : ""}`}
+            </option>
             {mergedOptions.map((option, idx) => {
               const isObject = typeof option === "object" && option !== null;
               const optVal = isObject ? option.value : option;
               const optLabel = isObject ? option.label : option;
-              const uniqueKey = isObject ? option.value || option.label || idx : `${option}-${idx}`;
+              const uniqueKey = isObject
+                ? option.value || option.label || idx
+                : `${option}-${idx}`;
 
               return (
                 <option key={uniqueKey} value={optVal}>
@@ -258,43 +287,113 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
 
     case "yearSelect":
       return (
-        <select value={value ?? ""} onChange={(e) => onChange(e.target.value)} className={`${baseInputClass} ${errorClass}`}>
+        <select
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${baseInputClass} ${errorClass}`}
+        >
           <option value="">Select year</option>
           {yearOptions.map((year) => (
-            <option key={year} value={year}>{year}</option>
+            <option key={year} value={year}>
+              {year}
+            </option>
           ))}
         </select>
       );
 
     case "countrySelect":
       return (
-        <select value={value ?? ""} onChange={(e) => onChange(e.target.value)} className={`${baseInputClass} ${errorClass}`}>
+        <select
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${baseInputClass} ${errorClass}`}
+        >
           <option value="">Select country</option>
           {GULF_COUNTRY_NAMES.map((country) => (
-            <option key={country} value={country}>{country}</option>
+            <option key={country} value={country}>
+              {country}
+            </option>
           ))}
         </select>
       );
 
     case "brandSelect":
       return (
-        <select value={value ?? ""} onChange={(e) => onChange(e.target.value)} disabled={!categoryId} className={`${baseInputClass} ${errorClass} disabled:bg-slate-100`}>
+        <select
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={!categoryId}
+          className={`${baseInputClass} ${errorClass} disabled:bg-slate-100`}
+        >
           <option value="">Select brand</option>
           {brandOptions.map((brand) => (
-            <option key={brand._id} value={brand._id}>{brand.name}</option>
+            <option key={brand._id} value={brand._id}>
+              {brand.name}
+            </option>
           ))}
         </select>
       );
 
     case "modelSelect":
       return (
-        <select value={value ?? ""} onChange={(e) => onChange(e.target.value)} disabled={!form?.brand} className={`${baseInputClass} ${errorClass} disabled:bg-slate-100`}>
+        <select
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={!form?.brand}
+          className={`${baseInputClass} ${errorClass} disabled:bg-slate-100`}
+        >
           <option value="">Select model</option>
-          {(categoryId && form?.brand ? modelOptions : []).map((model) => (
-            <option key={model._id} value={model._id}>{model.name}</option>
+          {visibleModelOptions.map((model) => (
+            <option key={model._id} value={model._id}>
+              {model.name}
+            </option>
           ))}
         </select>
       );
+
+    case "yesNoSelect":
+      return (
+        <select
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${baseInputClass} ${errorClass}`}
+        >
+          <option value="">Select</option>
+          <option value="true">Yes</option>
+          <option value="false">No</option>
+        </select>
+      );
+
+    case "toggle2":
+    case "toggle3":
+      return (
+        <ToggleGroupField
+          value={value}
+          onChange={onChange}
+          options={field.options}
+          error={error}
+        />
+      );
+
+    case "colorSwatch":
+      return (
+        <ColorSwatchField
+          value={value}
+          onChange={onChange}
+          swatches={field.swatches}
+          error={error}
+        />
+      );
+
+    case "toggleSwitch":
+  return (
+    <ToggleSwitch
+      checked={Boolean(value)}
+      onChange={onChange}
+      label={field.label}
+      description={field.description}
+    />
+  );
 
     case "variantSelect":
       return (
@@ -305,38 +404,12 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
           className={`${baseInputClass} ${errorClass} disabled:bg-slate-100`}
         >
           <option value="">Select variant</option>
-          {(categoryId && form?.brand && form?.catalogModel ? variantOptions : []).map((variant) => (
+          {visibleVariantOptions.map((variant) => (
             <option key={variant._id} value={variant.name}>
               {variant.name}
             </option>
           ))}
         </select>
-      );
-
-    case "yesNoSelect":
-      return (
-        <select value={value ?? ""} onChange={(e) => onChange(e.target.value)} className={`${baseInputClass} ${errorClass}`}>
-          <option value="">Select</option>
-          <option value="true">Yes</option>
-          <option value="false">No</option>
-        </select>
-      );
-
-    case "toggle2":
-    case "toggle3":
-      return <ToggleGroupField value={value} onChange={onChange} options={field.options} error={error} />;
-
-    case "colorSwatch":
-      return <ColorSwatchField value={value} onChange={onChange} swatches={field.swatches} error={error} />;
-
-    case "toggleSwitch":
-      return (
-        <ToggleSwitchField
-          checked={Boolean(value)}
-          onChange={onChange}
-          label={field.label}
-          description={field.description}
-        />
       );
 
     default:

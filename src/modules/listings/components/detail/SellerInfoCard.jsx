@@ -1,3 +1,5 @@
+import { formatPhoneNumber } from "../../../../utils/formatPhoneNumber";
+
 const SellerInfoCard = ({ listing }) => {
   const location = listing?.location;
 
@@ -21,13 +23,13 @@ const SellerInfoCard = ({ listing }) => {
         <div className="flex min-h-9 items-center justify-between gap-5 border-b border-[#f1f4f8] py-1.5">
           <span className="text-xs font-semibold text-[#8897ad]">Phone</span>
           <span className="text-right text-xs font-black text-[#202a3b]">
-            {location?.showPhoneNumber ? `${listing?.owner?.countryCode || ""} ${listing?.owner?.phone || ""}` : "Hidden"}
+            {location?.showPhoneNumber ? formatPhoneNumber(listing?.owner?.phone, listing?.owner?.countryCode) : "Hidden"}
           </span>
         </div>
         <div className="flex min-h-9 items-center justify-between gap-5 border-b border-[#f1f4f8] py-1.5">
           <span className="text-xs font-semibold text-[#8897ad]">WhatsApp</span>
           <span className="text-right text-xs font-black text-[#202a3b]">
-            {location?.showWhatsappNumber ? `${listing?.owner?.countryCode || ""} ${listing?.owner?.phone || ""}` : "Hidden"}
+            {location?.showWhatsappNumber ? formatPhoneNumber(listing?.owner?.phone, listing?.owner?.countryCode) : "Hidden"}
           </span>
         </div>
         <div className="flex min-h-9 items-center justify-between gap-5 border-b border-[#f1f4f8] py-1.5">

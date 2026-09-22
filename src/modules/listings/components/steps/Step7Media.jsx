@@ -1,10 +1,11 @@
+"use client";
+
 import { useRef, useState } from "react";
 import { FileText, ImagePlus, Trash2, Upload, Video, X } from "lucide-react";
 
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
 import { uploadListingVideoMultipartApi } from "../../api/vehicleListingApi";
 import WizardFooterNav from "../WizardFooterNav";
-
 import { carFormConfig } from "../../config/categoryForms/carForm.config";
 import { commercialFormConfig } from "../../config/categoryForms/commercialForm.config";
 import { heavyEquipmentFormConfig } from "../../config/categoryForms/heavyEquipmentForm.config";
@@ -24,8 +25,9 @@ const configByFormType = {
   SPECIAL_NUMBER: specialNumberFormConfig,
 };
 
-const Step7Media = () => {
-  const { listing, isSaving, saveMedia, goPrevious, saveDraft } = useBulkVehicleWizard();
+const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
+  const { listing, isSaving, saveMedia, goPrevious, saveDraft } =
+    useWizardHook();
 
   const maxPhotos = listing?.planLimitsSnapshot?.maxPhotosSnapshot ?? null;
   const maxVideos = listing?.planLimitsSnapshot?.maxVideosSnapshot ?? 0;
@@ -47,7 +49,7 @@ const Step7Media = () => {
   const hasSecondaryGallery = Boolean(config.hasSecondaryGallery);
   const secondaryGalleryLabel = config.secondaryGalleryLabel || "Additional Images";
 
-  const [existingSecondaryImages] = useState(
+  const [existingSecondaryImages, setExistingSecondaryImages] = useState(
     listing?.media?.secondaryImages || []
   );
   const [newSecondaryImageFiles, setNewSecondaryImageFiles] = useState([]);
@@ -55,12 +57,15 @@ const Step7Media = () => {
   const [isDraggingSecondaryImages, setIsDraggingSecondaryImages] = useState(false);
 
   const [existingImages, setExistingImages] = useState(listing?.media?.images || []);
-  const [existingFeaturedImage, setExistingFeaturedImage] = useState(listing?.media?.featuredImage || null);
+  const [existingFeaturedImage, setExistingFeaturedImage] = useState(
+    listing?.media?.featuredImage || null
+  );
   const [existingVideo, setExistingVideo] = useState(listing?.media?.video || null);
-  const [existingBrochure, setExistingBrochure] = useState(listing?.media?.brochure || null);
 
   const [featuredFile, setFeaturedFile] = useState(null);
-  const [featuredPreview, setFeaturedPreview] = useState(listing?.media?.featuredImage?.url || "");
+  const [featuredPreview, setFeaturedPreview] = useState(
+    listing?.media?.featuredImage?.url || ""
+  );
 
   const [newImageFiles, setNewImageFiles] = useState([]);
   const [newImagePreviews, setNewImagePreviews] = useState([]);
@@ -70,7 +75,7 @@ const Step7Media = () => {
   const [videoName, setVideoName] = useState(existingVideo ? "Uploaded video" : "");
   const [videoUploadProgress, setVideoUploadProgress] = useState(null);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
-
+  const [existingBrochure, setExistingBrochure] = useState(listing?.media?.brochure || null);
   const [brochureFile, setBrochureFile] = useState(null);
   const [brochureName, setBrochureName] = useState(existingBrochure ? "Uploaded brochure" : "");
 
@@ -98,10 +103,13 @@ const Step7Media = () => {
 
   const addImageFiles = (files) => {
     const fileArray = Array.from(files);
-    const remainingSlots = maxPhotos !== null ? maxPhotos - totalCurrentPhotos : fileArray.length;
+    const remainingSlots =
+      maxPhotos !== null ? maxPhotos - totalCurrentPhotos : fileArray.length;
 
     if (remainingSlots <= 0) {
-      setErrorMessage(`Your plan allows a maximum of ${maxPhotos} photos. Remove some to add more.`);
+      setErrorMessage(
+        `Your plan allows a maximum of ${maxPhotos} photos. Remove some to add more.`
+      );
       setMediaErrors((previous) => ({ ...previous, images: "Photo limit reached" }));
       return;
     }
@@ -109,30 +117,25 @@ const Step7Media = () => {
     const filesToAdd = fileArray.slice(0, remainingSlots);
 
     if (fileArray.length > filesToAdd.length) {
-      setErrorMessage(`Only ${filesToAdd.length} photo(s) added — your plan's limit of ${maxPhotos} photos was reached.`);
+      setErrorMessage(
+        `Only ${filesToAdd.length} photo(s) added — your plan's limit of ${maxPhotos} photos was reached.`
+      );
     } else {
       setErrorMessage("");
       setMediaErrors((previous) => ({ ...previous, images: "" }));
     }
 
     setNewImageFiles((previous) => [...previous, ...filesToAdd]);
-    setNewImagePreviews((previous) => [...previous, ...filesToAdd.map((file) => URL.createObjectURL(file))]);
+    setNewImagePreviews((previous) => [
+      ...previous,
+      ...filesToAdd.map((file) => URL.createObjectURL(file)),
+    ]);
   };
 
   const handleImagesDrop = (event) => {
     event.preventDefault();
     setIsDraggingImages(false);
     addImageFiles(event.dataTransfer.files);
-  };
-
-  const removeExistingImage = (key) => {
-    setExistingImages((previous) => previous.filter((image) => image.key !== key));
-    setRemovedImageKeys((previous) => [...previous, key]);
-  };
-
-  const removeNewImage = (index) => {
-    setNewImageFiles((previous) => previous.filter((_, i) => i !== index));
-    setNewImagePreviews((previous) => previous.filter((_, i) => i !== index));
   };
 
   const addSecondaryImageFiles = (files) => {
@@ -153,6 +156,16 @@ const Step7Media = () => {
   const removeNewSecondaryImage = (index) => {
     setNewSecondaryImageFiles((previous) => previous.filter((_, i) => i !== index));
     setNewSecondaryImagePreviews((previous) => previous.filter((_, i) => i !== index));
+  };
+
+  const removeExistingImage = (key) => {
+    setExistingImages((previous) => previous.filter((image) => image.key !== key));
+    setRemovedImageKeys((previous) => [...previous, key]);
+  };
+
+  const removeNewImage = (index) => {
+    setNewImageFiles((previous) => previous.filter((_, i) => i !== index));
+    setNewImagePreviews((previous) => previous.filter((_, i) => i !== index));
   };
 
   const handleVideoSelect = (file) => {
@@ -181,16 +194,9 @@ const Step7Media = () => {
 
   const handleBrochureSelect = (file) => {
     if (!file) return;
-
-    if (file.type !== "application/pdf") {
-      setErrorMessage("Brochure must be a PDF file.");
-      return;
-    }
-
     setBrochureFile(file);
     setBrochureName(file.name);
     setExistingBrochure(null);
-    setErrorMessage("");
   };
 
   const removeBrochure = () => {
@@ -212,14 +218,26 @@ const Step7Media = () => {
 
     const formData = new FormData();
 
-    if (featuredFile) formData.append("featuredImage", featuredFile);
-    newImageFiles.forEach((file) => formData.append("images", file));
-    newSecondaryImageFiles.forEach((file) => formData.append("secondaryImages", file));
-    if (allowBrochure && brochureFile) formData.append("brochure", brochureFile);
+    if (featuredFile) {
+      formData.append("featuredImage", featuredFile);
+    }
+
+    newImageFiles.forEach((file) => {
+      formData.append("images", file);
+    });
+
+    newSecondaryImageFiles.forEach((file) => {
+      formData.append("secondaryImages", file);
+    });
+
+    if (allowBrochure && brochureFile) {
+      formData.append("brochure", brochureFile);
+    }
+
     formData.append("removedImageKeys", JSON.stringify(removedImageKeys));
 
-    try {
-      if (videoFile) {
+    if (videoFile) {
+      try {
         setIsVideoUploading(true);
         setVideoUploadProgress(0);
         await uploadListingVideoMultipartApi({
@@ -227,19 +245,20 @@ const Step7Media = () => {
           file: videoFile,
           onProgress: setVideoUploadProgress,
         });
+      } catch (error) {
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          "Unable to upload video. Please try again.";
+        setErrorMessage(message);
+        setMediaErrors((previous) => ({ ...previous, video: message }));
+        return;
+      } finally {
+        setIsVideoUploading(false);
       }
-
-      await saveMedia(formData);
-    } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Unable to upload media. Please try again.";
-      setErrorMessage(message);
-      setMediaErrors((previous) => ({ ...previous, video: message }));
-    } finally {
-      setIsVideoUploading(false);
     }
+
+    await saveMedia(formData);
   };
 
   return (
@@ -276,11 +295,15 @@ const Step7Media = () => {
                 : "border-slate-200"
             }`}
           >
-            <img src={featuredPreview} alt="Featured" className="h-full w-full object-cover" />
+            <img
+              src={featuredPreview}
+              alt="Featured"
+              className="h-full w-full object-cover"
+            />
             <button
               type="button"
               onClick={() => featuredInputRef.current?.click()}
-              className="absolute inset-0 flex items-center justify-center bg-slate-950/0 text-transparent transition-all duration-200 hover:bg-slate-950/40 hover:text-white"
+              className="absolute inset-0 flex items-center justify-center bg-slate-950/35 text-sm font-semibold text-white transition-all duration-200 hover:bg-slate-950/40 sm:bg-slate-950/0 sm:text-transparent sm:hover:text-white"
             >
               Click to change
             </button>
@@ -304,8 +327,12 @@ const Step7Media = () => {
 
       <div className="mt-6">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-medium text-slate-700">{imageLabel} (max {maxPhotos ?? "∞"})</p>
-          <span className="text-xs font-medium text-slate-500">{totalCurrentPhotos}/{maxPhotos ?? "∞"} uploaded</span>
+          <p className="text-sm font-medium text-slate-700">
+            {imageLabel} (max {maxPhotos ?? "∞"})
+          </p>
+          <span className="text-xs font-medium text-slate-500">
+            {totalCurrentPhotos}/{maxPhotos ?? "∞"} uploaded
+          </span>
         </div>
 
         <input
@@ -318,7 +345,10 @@ const Step7Media = () => {
         />
 
         <div
-          onDragOver={(e) => { e.preventDefault(); setIsDraggingImages(true); }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDraggingImages(true);
+          }}
           onDragLeave={() => setIsDraggingImages(false)}
           onDrop={handleImagesDrop}
           onClick={() => imagesInputRef.current?.click()}
@@ -326,8 +356,8 @@ const Step7Media = () => {
             mediaErrors.images
               ? "border-red-400 text-red-500 ring-2 ring-red-400 ring-offset-1"
               : isDraggingImages
-                ? "border-blue-500 bg-blue-50"
-                : "border-slate-300 text-slate-400 hover:border-blue-400 hover:bg-blue-50/50"
+              ? "border-blue-500 bg-blue-50"
+              : "border-slate-300 text-slate-400 hover:border-blue-400 hover:bg-blue-50/50"
           }`}
         >
           <Upload size={20} />
@@ -338,12 +368,15 @@ const Step7Media = () => {
         {(existingImages.length > 0 || newImagePreviews.length > 0) && (
           <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
             {existingImages.map((image) => (
-              <div key={image.key} className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200">
+              <div
+                key={image.key}
+                className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200"
+              >
                 <img src={image.url} alt={imageAlt} className="h-full w-full object-cover" />
                 <button
                   type="button"
                   onClick={() => removeExistingImage(image.key)}
-                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-950/70 text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                  className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-slate-950/70 text-white opacity-100 transition-opacity duration-150 sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100"
                 >
                   <X size={13} />
                 </button>
@@ -351,12 +384,15 @@ const Step7Media = () => {
             ))}
 
             {newImagePreviews.map((preview, index) => (
-              <div key={preview} className="group relative aspect-square overflow-hidden rounded-lg border border-blue-200">
+              <div
+                key={preview}
+                className="group relative aspect-square animate-[fadeIn_0.3s_ease] overflow-hidden rounded-lg border border-blue-200"
+              >
                 <img src={preview} alt="New upload" className="h-full w-full object-cover" />
                 <button
                   type="button"
                   onClick={() => removeNewImage(index)}
-                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-950/70 text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                  className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-slate-950/70 text-white opacity-100 transition-opacity duration-150 sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100"
                 >
                   <X size={13} />
                 </button>
@@ -390,7 +426,9 @@ const Step7Media = () => {
             onDrop={handleSecondaryImagesDrop}
             onClick={() => secondaryImagesInputRef.current?.click()}
             className={`flex h-24 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed transition-all duration-200 ${
-              isDraggingSecondaryImages ? "border-blue-500 bg-blue-50" : "border-slate-300 text-slate-400 hover:border-blue-400 hover:bg-blue-50/50"
+              isDraggingSecondaryImages
+                ? "border-blue-500 bg-blue-50"
+                : "border-slate-300 text-slate-400 hover:border-blue-400 hover:bg-blue-50/50"
             }`}
           >
             <Upload size={18} />
@@ -412,7 +450,7 @@ const Step7Media = () => {
                   <button
                     type="button"
                     onClick={() => removeNewSecondaryImage(index)}
-                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-950/70 text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                    className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-slate-950/70 text-white opacity-100 transition-opacity duration-150 sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100"
                   >
                     <X size={13} />
                   </button>
@@ -425,7 +463,11 @@ const Step7Media = () => {
 
       <div className="mt-6">
         <p className="mb-2 text-sm font-medium text-slate-700">
-          {videoLabel} {!videoAllowed && <span className="text-xs font-normal text-slate-400">(not included in your current plan)</span>}
+          {videoLabel} {!videoAllowed && (
+            <span className="text-xs font-normal text-slate-400">
+              (not included in your current plan)
+            </span>
+          )}
         </p>
 
         <input
@@ -437,15 +479,19 @@ const Step7Media = () => {
         />
 
         {videoName ? (
-          <div className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
-            <div className="flex items-center gap-2 text-sm text-slate-700">
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3">
+            <div className="flex min-w-0 items-center gap-2 text-sm text-slate-700">
               <Video size={17} className="text-blue-600" />
-              {videoName}
+              <span className="min-w-0 truncate">{videoName}</span>
               {videoUploadProgress !== null && videoUploadProgress < 100
                 ? ` (${videoUploadProgress}%)`
                 : ""}
             </div>
-            <button type="button" onClick={removeVideo} className="text-slate-400 transition-colors hover:text-red-600">
+            <button
+              type="button"
+              onClick={removeVideo}
+              className="text-slate-400 transition-colors hover:text-red-600"
+            >
               <Trash2 size={16} />
             </button>
           </div>
@@ -454,15 +500,19 @@ const Step7Media = () => {
             type="button"
             onClick={() => videoAllowed && videoInputRef.current?.click()}
             disabled={!videoAllowed}
-            className={`flex w-full items-center gap-2 rounded-xl border-2 border-dashed px-4 py-3 text-sm font-medium text-blue-600 transition-colors duration-200 hover:border-blue-400 hover:bg-blue-50/50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:border-slate-300 disabled:hover:bg-transparent ${
+            className={`flex w-full flex-col items-start gap-1.5 rounded-xl border-2 border-dashed px-4 py-3 text-sm font-medium text-blue-600 transition-colors duration-200 hover:border-blue-400 hover:bg-blue-50/50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:border-slate-300 disabled:hover:bg-transparent sm:flex-row sm:items-center sm:gap-2 ${
               mediaErrors.video
                 ? "border-red-400 ring-2 ring-red-400 ring-offset-1"
                 : "border-slate-300"
             }`}
           >
-            <Video size={17} />
-            {videoUploadLabel}
-            <span className="ml-auto text-xs font-normal text-slate-400">MP4, MOV up to 100MB, 1 video max</span>
+            <span className="flex items-center gap-2">
+              <Video size={17} />
+              {videoUploadLabel}
+            </span>
+            <span className="text-xs font-normal text-slate-400 sm:ml-auto">
+              MP4, MOV up to 100MB, 1 video max
+            </span>
           </button>
         )}
       </div>
@@ -482,10 +532,10 @@ const Step7Media = () => {
         />
 
         {brochureName ? (
-          <div className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
-            <div className="flex items-center gap-2 text-sm text-slate-700">
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3">
+            <div className="flex min-w-0 items-center gap-2 text-sm text-slate-700">
               <FileText size={17} className="text-blue-600" />
-              {brochureName}
+              <span className="min-w-0 truncate">{brochureName}</span>
             </div>
             <button type="button" onClick={removeBrochure} className="text-slate-400 transition-colors hover:text-red-600">
               <Trash2 size={16} />
@@ -495,11 +545,13 @@ const Step7Media = () => {
           <button
             type="button"
             onClick={() => brochureInputRef.current?.click()}
-            className="flex w-full items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 px-4 py-3 text-sm font-medium text-blue-600 transition-colors duration-200 hover:border-blue-400 hover:bg-blue-50/50"
+            className="flex w-full flex-col items-start gap-1.5 rounded-xl border-2 border-dashed border-slate-300 px-4 py-3 text-sm font-medium text-blue-600 transition-colors duration-200 hover:border-blue-400 hover:bg-blue-50/50 sm:flex-row sm:items-center sm:gap-2"
           >
-            <FileText size={17} />
-            Upload a vehicle brochure
-            <span className="ml-auto text-xs font-normal text-slate-400">PDF up to 10MB</span>
+            <span className="flex items-center gap-2">
+              <FileText size={17} />
+              Upload a vehicle brochure
+            </span>
+            <span className="text-xs font-normal text-slate-400 sm:ml-auto">PDF up to 10MB</span>
           </button>
         )}
       </div>

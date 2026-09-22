@@ -8,6 +8,8 @@ import Step6Features from "./steps/Step6Features";
 import Step7Media from "./steps/Step7Media";
 import Step8Location from "./steps/Step8Location";
 import Step9Pricing from "./steps/Step9Pricing";
+import Step10Review from "./steps/Step10Review";
+import Step11Done from "./steps/Step11Done";
 
 const stepComponents = {
   1: Step1Category,
@@ -18,6 +20,8 @@ const stepComponents = {
   7: Step7Media,
   8: Step8Location,
   9: Step9Pricing,
+  10: Step10Review,
+  11: Step11Done,
 };
 
 const BulkVehicleWizard = () => {
@@ -27,7 +31,8 @@ const BulkVehicleWizard = () => {
 
   return (
     <div key={currentStep} className="animate-[stepFadeIn_0.25s_ease-out]">
-      <StepComponent />
+      sjdjsadadvahav
+      <StepComponent useWizardHook={useBulkVehicleWizard} />
     </div>
   );
 };

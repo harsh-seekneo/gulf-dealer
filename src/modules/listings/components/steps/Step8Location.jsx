@@ -1,3 +1,5 @@
+"use client";
+
 import { useMemo, useRef, useState } from "react";
 
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
@@ -8,7 +10,7 @@ import {
   getNormalizedLocationState,
 } from "../../config/gulfLocations.config";
 import FormField from "../FormField";
-import ToggleSwitchField from "../ToggleSwitchField";
+import ToggleSwitch from "../ToggleSwitch";
 import WizardFooterNav from "../WizardFooterNav";
 import MapLinkPreview from "../MapLinkPreview";
 import { carFormConfig } from "../../config/categoryForms/carForm.config";
@@ -18,6 +20,7 @@ import { motorbikeFormConfig } from "../../config/categoryForms/motorbikeForm.co
 import { buggyFormConfig } from "../../config/categoryForms/buggyForm.config";
 import { caravanFormConfig } from "../../config/categoryForms/caravanForm.config";
 import { specialNumberFormConfig } from "../../config/categoryForms/specialNumberForm.config";
+import SellerAutoInfo from "../detail/SellerAutoInfo";
 import { scrollFirstWizardError } from "../../utils/wizardScroll";
 import useAuth from "../../../auth/hooks/useAuth";
 
@@ -34,8 +37,9 @@ const configByFormType = {
 const inputClass =
   "h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100";
 
-const Step8Location = () => {
-  const { listing, isSaving, saveStep, goPrevious, saveDraft } = useBulkVehicleWizard();
+const Step8Location = ({ useWizardHook = useBulkVehicleWizard }) => {
+  const { listing, isSaving, saveStep, goPrevious, saveDraft } =
+    useWizardHook();
   const { user } = useAuth();
 
   const formType = listing?.category?.vehicleFormType || "CAR";
@@ -63,8 +67,12 @@ const Step8Location = () => {
   const [governorate, setGovernorate] = useState(normalizedState);
   const [city, setCity] = useState(normalizedCity);
   const [area, setArea] = useState(existingLocation.area || "");
-  const [showPhoneNumber, setShowPhoneNumber] = useState(existingLocation.showPhoneNumber ?? true);
-  const [showWhatsappNumber, setShowWhatsappNumber] = useState(existingLocation.showWhatsappNumber ?? true);
+  const [showPhoneNumber, setShowPhoneNumber] = useState(
+    existingLocation.showPhoneNumber ?? true
+  );
+  const [showWhatsappNumber, setShowWhatsappNumber] = useState(
+    existingLocation.showWhatsappNumber ?? true
+  );
   const [mapsLink, setMapsLink] = useState(existingLocation.mapsLink || existingLocation.googleMapsUrl || "");
 
   const [errors, setErrors] = useState({});
@@ -109,7 +117,7 @@ const Step8Location = () => {
     if (!selectedCity) nextErrors.city = "City is required";
     if (hasAreaField && !area) nextErrors.area = "Area is required";
     if (mapsLink && !/^https?:\/\/.+/i.test(mapsLink.trim())) {
-      nextErrors.mapsLink = "Enter a valid Google Maps link";
+      nextErrors.mapsLink = "Enter a valid Maps link";
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -118,25 +126,29 @@ const Step8Location = () => {
       return;
     }
 
-    try {
-      await saveStep(8, {
-        country: selectedCountry,
-        governorate: selectedGovernorate,
-        city: selectedCity,
-        area: hasAreaField ? area : undefined,
-        mapsLink: mapsLink.trim() || undefined,
-        showPhoneNumber,
-        showWhatsappNumber,
-      });
-    } catch {
-      // Error toast already shown by context.
-    }
+    await saveStep(8, {
+      country: selectedCountry,
+      governorate: selectedGovernorate,
+      city: selectedCity,
+      area: hasAreaField ? area : undefined,
+      mapsLink: mapsLink.trim() || undefined,
+      showPhoneNumber,
+      showWhatsappNumber,
+    });
   };
 
   return (
     <div>
       <h2 className="text-lg font-bold text-slate-950">Seller &amp; Location</h2>
-      <p className="mt-1 text-sm text-slate-500">Tell buyers where the vehicle is located.</p>
+      <p className="mt-1 text-sm text-slate-500">
+        Tell buyers where the vehicle is located.
+      </p>
+
+      {formType === "SPECIAL_NUMBER" && (
+        <div className="mt-5">
+          <SellerAutoInfo />
+        </div>
+      )}
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <div ref={(node) => { fieldRefs.current.country = node; }}>
@@ -149,7 +161,9 @@ const Step8Location = () => {
           >
             <option value="">Select country</option>
             {GULF_COUNTRIES.map((item) => (
-              <option key={item.name} value={item.name}>{item.name}</option>
+              <option key={item.name} value={item.name}>
+                {item.name}
+              </option>
             ))}
           </select>
         </FormField>
@@ -157,10 +171,17 @@ const Step8Location = () => {
 
         <div ref={(node) => { fieldRefs.current.governorate = node; }}>
         <FormField label="State / Governorate" required error={errors.governorate}>
-          <select value={selectedGovernorate} onChange={(e) => handleGovernorateChange(e.target.value)} disabled={!selectedCountry} className={inputClass}>
+          <select
+            value={selectedGovernorate}
+            onChange={(e) => handleGovernorateChange(e.target.value)}
+            disabled={!selectedCountry}
+            className={inputClass}
+          >
             <option value="">Select state / governorate</option>
             {governorateOptions.map((item) => (
-              <option key={item.name} value={item.name}>{item.name}</option>
+              <option key={item.name} value={item.name}>
+                {item.name}
+              </option>
             ))}
           </select>
         </FormField>
@@ -168,10 +189,17 @@ const Step8Location = () => {
 
         <div className={hasAreaField ? "" : "sm:col-span-2"} ref={(node) => { fieldRefs.current.city = node; }}>
         <FormField label="City" required error={errors.city}>
-          <select value={selectedCity} onChange={(e) => handleCityChange(e.target.value)} disabled={!selectedGovernorate} className={inputClass}>
+          <select
+            value={selectedCity}
+            onChange={(e) => handleCityChange(e.target.value)}
+            disabled={!selectedGovernorate}
+            className={inputClass}
+          >
             <option value="">Select city</option>
             {cityOptions.map((item) => (
-              <option key={item} value={item}>{item}</option>
+              <option key={item} value={item}>
+                {item}
+              </option>
             ))}
           </select>
         </FormField>
@@ -197,7 +225,7 @@ const Step8Location = () => {
       </div>
 
       <div ref={(node) => { fieldRefs.current.mapsLink = node; }} className="mt-4">
-        <FormField label="Google Maps Link" error={errors.mapsLink}>
+        <FormField label="Maps Link" error={errors.mapsLink}>
           <input
             type="url"
             value={mapsLink}
@@ -213,13 +241,13 @@ const Step8Location = () => {
       </div>
 
       <div className="mt-5 divide-y divide-slate-100 rounded-xl border border-slate-200 px-4">
-        <ToggleSwitchField
+        <ToggleSwitch
           label="Show Phone Number"
           description="Buyers can call you directly"
           checked={showPhoneNumber}
           onChange={setShowPhoneNumber}
         />
-        <ToggleSwitchField
+        <ToggleSwitch
           label="Show WhatsApp Number"
           description="Buyers can message you on WhatsApp"
           checked={showWhatsappNumber}

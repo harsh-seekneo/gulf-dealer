@@ -144,7 +144,7 @@ export default function LeadsPage() {
             ) : (
               <Download size={18} />
             )}
-            {exporting ? "Exporting..." : "Export CRM"}
+            {exporting ? "Exporting..." : "Export Leads"}
           </button>
         </div>
       </div>

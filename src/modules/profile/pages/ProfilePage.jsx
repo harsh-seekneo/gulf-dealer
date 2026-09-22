@@ -333,7 +333,7 @@ function ProfileForm({ initialValues, locks = {}, submitLabel, onSaved }) {
         </Field>
       </div>
 
-      <div className="sm:col-span-2">
+      {/* <div className="sm:col-span-2">
         <Field label="Vehicle Brands">
           <input
             className={fieldClass}
@@ -352,7 +352,7 @@ function ProfileForm({ initialValues, locks = {}, submitLabel, onSaved }) {
             placeholder="e.g. Toyota, Nissan, BMW"
           />
         </Field>
-      </div>
+      </div> */}
 
       <Field label="WhatsApp">
         <input
@@ -536,6 +536,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [uploading, setUploading] = useState("");
+  const [tourVideoProgress, setTourVideoProgress] = useState(0);
   const [error, setError] = useState("");
 
   /* -------------------------------------------------------
@@ -594,6 +595,54 @@ export default function ProfilePage() {
     } catch (err) {
       setError(
         err.response?.data?.message || "Upload failed. Please try again."
+      );
+    } finally {
+      setUploading("");
+    }
+  };
+
+  const handleGalleryUpload = async (files) => {
+    const imageFiles = Array.from(files || []);
+
+    if (!imageFiles.length) return;
+
+    const validationError = imageFiles.map(validateFile).find(Boolean);
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setUploading("showroomGallery");
+    setError("");
+
+    try {
+      const data = await profileApi.uploadShowroomGallery(imageFiles);
+      setProfile(data);
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Gallery upload failed. Please try again."
+      );
+    } finally {
+      setUploading("");
+    }
+  };
+
+  const handleTourVideoUpload = async (file) => {
+    if (!file) return;
+
+    setUploading("showroomTourVideo");
+    setTourVideoProgress(0);
+    setError("");
+
+    try {
+      const data = await profileApi.uploadTourVideo(file, setTourVideoProgress);
+      setProfile(data);
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Tour video upload failed. Please try again."
       );
     } finally {
       setUploading("");
@@ -861,6 +910,71 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Showroom Media</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Upload public showroom photos and an optional tour video.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <label className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+              {uploading === "showroomGallery" ? "Uploading..." : "Add Photos"}
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                disabled={uploading === "showroomGallery"}
+                onChange={(event) => {
+                  handleGalleryUpload(event.target.files);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+
+            <label className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+              {uploading === "showroomTourVideo"
+                ? `Uploading ${tourVideoProgress}%`
+                : "Upload Tour Video"}
+              <input
+                type="file"
+                accept="video/mp4,video/quicktime,video/webm"
+                className="hidden"
+                disabled={uploading === "showroomTourVideo"}
+                onChange={(event) => {
+                  handleTourVideoUpload(event.target.files?.[0]);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+          </div>
+        </div>
+
+        {Array.isArray(profile.showroomGallery) && profile.showroomGallery.length ? (
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+            {profile.showroomGallery.map((image, index) => (
+              <img
+                key={image.key || image.url || index}
+                src={image.url || image}
+                alt={`Showroom ${index + 1}`}
+                className="aspect-[4/3] w-full rounded-xl border border-slate-100 object-cover"
+              />
+            ))}
+          </div>
+        ) : null}
+
+        {profile.showroomTourVideo?.url ? (
+          <video
+            src={profile.showroomTourVideo.url}
+            controls
+            className="mt-5 aspect-video w-full max-w-3xl rounded-xl bg-black"
+          />
+        ) : null}
       </div>
 
       {/* ===================================================

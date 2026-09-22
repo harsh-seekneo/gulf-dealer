@@ -1,14 +1,17 @@
+"use client";
+
 import { useRef, useState } from "react";
 
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
 import { getServiceCountryCurrencyByName, RENTAL_PERIODS } from "../../config/gulfLocations.config";
 import FormField from "../FormField";
-import ToggleSwitchField from "../ToggleSwitchField";
+import ToggleSwitch from "../ToggleSwitch";
 import WizardFooterNav from "../WizardFooterNav";
 import { scrollElementIntoWizardView } from "../../utils/wizardScroll";
 
-const Step9Pricing = () => {
-  const { listing, isSaving, saveStep, goPrevious, saveDraft } = useBulkVehicleWizard();
+const Step9Pricing = ({ useWizardHook = useBulkVehicleWizard }) => {
+  const { listing, isSaving, saveStep, goPrevious, saveDraft } =
+    useWizardHook();
 
   const existingPricing = listing?.pricing || {};
   const selectedCurrency =
@@ -20,18 +23,20 @@ const Step9Pricing = () => {
   const accuracyLabel = isSpecialNumber ? "plate information" : "vehicle information";
 
   const [price, setPrice] = useState(
-    existingPricing.price !== null && existingPricing.price !== undefined ? String(existingPricing.price) : ""
+    existingPricing.price !== null && existingPricing.price !== undefined
+      ? String(existingPricing.price)
+      : ""
   );
   const [selectedRentalPeriods, setSelectedRentalPeriods] = useState(() =>
-    RENTAL_PERIODS.filter(({ key }) => Number(existingPricing.rentalPrices?.[key]) > 0)
-      .map(({ key }) => key)
-      .concat(
-        listingType === "RENT" &&
-          !RENTAL_PERIODS.some(({ key }) => Number(existingPricing.rentalPrices?.[key]) > 0) &&
-          Number(existingPricing.price) > 0
-          ? ["daily"]
-          : []
-      )
+    RENTAL_PERIODS.filter(
+      ({ key }) => Number(existingPricing.rentalPrices?.[key]) > 0
+    ).map(({ key }) => key).concat(
+      listingType === "RENT" &&
+        !RENTAL_PERIODS.some(({ key }) => Number(existingPricing.rentalPrices?.[key]) > 0) &&
+        Number(existingPricing.price) > 0
+        ? ["daily"]
+        : []
+    )
   );
   const [rentalPrices, setRentalPrices] = useState(() =>
     RENTAL_PERIODS.reduce((result, { key }) => {
@@ -41,7 +46,7 @@ const Step9Pricing = () => {
           ? String(existingPricing.rentalPrices[key])
           : key === "daily" && listingType === "RENT" && Number(existingPricing.price) > 0
             ? String(existingPricing.price)
-            : "";
+          : "";
       return result;
     }, {})
   );
@@ -103,16 +108,12 @@ const Step9Pricing = () => {
         return;
       }
 
-      try {
-        await saveStep(9, {
-          price: Object.values(nextRentalPrices)[0],
-          rentalPrices: nextRentalPrices,
-          currency: selectedCurrency,
-          isNegotiable,
-        });
-      } catch {
-        // Error toast already shown by context.
-      }
+      await saveStep(9, {
+        price: Object.values(nextRentalPrices)[0],
+        rentalPrices: nextRentalPrices,
+        currency: selectedCurrency,
+        isNegotiable,
+      });
       return;
     }
 
@@ -130,22 +131,20 @@ const Step9Pricing = () => {
       return;
     }
 
-    try {
-      await saveStep(9, {
-        price: numericPrice,
-        rentalPrices: {},
-        currency: selectedCurrency,
-        isNegotiable,
-      });
-    } catch {
-      // Error toast already shown by context.
-    }
+    await saveStep(9, {
+      price: numericPrice,
+      rentalPrices: {},
+      currency: selectedCurrency,
+      isNegotiable,
+    });
   };
 
   return (
     <div>
       <h2 className="text-lg font-bold text-slate-950">Pricing</h2>
-      <p className="mt-1 text-sm text-slate-500">Set a competitive price to attract serious buyers.</p>
+      <p className="mt-1 text-sm text-slate-500">
+        Set a competitive price to attract serious buyers.
+      </p>
 
       <div ref={priceFieldRef} className="mt-5">
         {listingType === "RENT" ? (
@@ -198,7 +197,13 @@ const Step9Pricing = () => {
           </FormField>
         ) : (
           <FormField label={`Listing Price (${selectedCurrency})`} required error={error}>
-            <div className={`flex h-11 items-center overflow-hidden rounded-lg border ${error ? "border-red-400" : "border-slate-300"} focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100`}>
+            <div
+              className={`flex h-11 items-center overflow-hidden rounded-lg border ${
+                error
+                  ? "border-red-400 ring-2 ring-red-400 ring-offset-1"
+                  : "border-slate-300"
+              } focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100`}
+            >
               <span className="border-r border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500">
                 {selectedCurrency}
               </span>
@@ -216,7 +221,7 @@ const Step9Pricing = () => {
       </div>
 
       <div className="mt-5 rounded-xl border border-slate-200 px-4">
-        <ToggleSwitchField
+        <ToggleSwitch
           label="Price Negotiable"
           description="Buyers can negotiate the listed price"
           checked={isNegotiable}
@@ -225,7 +230,12 @@ const Step9Pricing = () => {
       </div>
 
       {isBulkListing && (
-        <div ref={acceptanceFieldRef} className={`mt-5 rounded-xl border p-3 transition-all duration-200 ${acceptanceError ? "border-red-400 ring-2 ring-red-400 ring-offset-1" : "border-slate-200"}`}>
+        <div
+          ref={acceptanceFieldRef}
+          className={`mt-5 rounded-xl border p-3 transition-all duration-200 ${
+            acceptanceError ? "border-red-400 ring-2 ring-red-400 ring-offset-1" : "border-slate-200"
+          }`}
+        >
           <label className="flex cursor-pointer items-start gap-2.5">
             <input
               type="checkbox"

@@ -17,8 +17,6 @@ export default function ComparePlansTable({ plans = [] }) {
       { label: "Maximum Videos", key: "maxVideos" },
       { label: "Video", key: "hasVehicleVideo" },
       { label: "Visibility", key: "visibility" },
-      { label: "Featured Listing", key: "hasFeaturedListing" },
-      { label: "Auto Refresh", key: "hasAutomaticListingRefresh" },
       { label: "WhatsApp Enquiries", key: "hasWhatsappPhoneEnquiries" },
       { label: "Admin Approval", key: "requiresAdminApproval" },
     ];

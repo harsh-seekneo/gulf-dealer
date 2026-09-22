@@ -138,6 +138,24 @@ export const formatListingPrice = ({
   return `${currency} ${numericPrice.toLocaleString("en-US")}${listingType === "RENT" ? " / day" : ""}`;
 };
 
+export const formatServicePrice = (
+  value,
+  {
+    currency,
+    listingType,
+    rentalPrices,
+    fallback = "Price on request",
+    emptyFallback = fallback,
+  } = {}
+) =>
+  formatListingPrice({
+    price: value,
+    rentalPrices,
+    listingType,
+    currency,
+    emptyFallback,
+  });
+
 export const getServiceCityNamesByCountry = (countryName) =>
   GULF_COUNTRIES.find((country) => country.name === countryName)?.governorates.flatMap(
     (governorate) => governorate.cities

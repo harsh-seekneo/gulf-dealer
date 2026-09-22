@@ -1,7 +1,9 @@
+"use client";
+
 import { useEffect, useRef, useState } from "react";
 
-import useAuth from "../../../auth/hooks/useAuth";
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
+import useAuth from "../../../auth/hooks/useAuth";
 import { carFormConfig } from "../../config/categoryForms/carForm.config";
 import { commercialFormConfig } from "../../config/categoryForms/commercialForm.config";
 import { heavyEquipmentFormConfig } from "../../config/categoryForms/heavyEquipmentForm.config";
@@ -44,8 +46,9 @@ const getInfoTitle = (formType, config) => {
   return `${config.label} Information`;
 };
 
-const Step4VehicleInfo = () => {
-  const { listing, isSaving, saveStep, goPrevious, saveDraft } = useBulkVehicleWizard();
+const Step4VehicleInfo = ({ useWizardHook = useBulkVehicleWizard }) => {
+  const { listing, isSaving, saveStep, goPrevious, saveDraft } =
+    useWizardHook();
   const { user } = useAuth();
 
   const categoryId = listing?.category?._id || listing?.category;
@@ -69,10 +72,13 @@ const Step4VehicleInfo = () => {
       user?.whatsapp || user?.whatsappNumber || user?.phone || ""
     }`.trim();
   const accountEmail = user?.email || dealerProfile.email || "";
+  const visibleVehicleInfoFields = config.vehicleInfoFields.filter(
+    (field) => !field.dealerOnly
+  );
 
   const buildInitialForm = () => {
     const initial = {};
-    config.vehicleInfoFields.forEach((field) => {
+    visibleVehicleInfoFields.forEach((field) => {
       if (field.type === "brandSelect") {
         initial[field.name] = existingInfo.brand?._id || existingInfo.brand || "";
       } else if (field.type === "modelSelect") {
@@ -102,7 +108,7 @@ const Step4VehicleInfo = () => {
   const shouldHideField = (field) =>
     (isElectric && ELECTRIC_DEPENDENT_FIELDS.has(field.name)) ||
     !matchesFieldCondition(form, field.showWhen);
-  const visibleVehicleInfoFields = config.vehicleInfoFields.filter(
+  const activeVehicleInfoFields = visibleVehicleInfoFields.filter(
     (field) => !shouldHideField(field)
   );
   const isRequiredField = (field) =>
@@ -152,7 +158,7 @@ const Step4VehicleInfo = () => {
   const validate = () => {
     const nextErrors = {};
 
-    visibleVehicleInfoFields.forEach((field) => {
+    activeVehicleInfoFields.forEach((field) => {
       if (isRequiredField(field) && !form[field.name]) {
         nextErrors[field.name] = `${field.label} is required`;
       }
@@ -174,13 +180,11 @@ const Step4VehicleInfo = () => {
 
     setErrors(nextErrors);
 
-    if (Object.keys(nextErrors).length > 0) {
-      scrollFirstWizardError(
-        fieldRefs,
-        visibleVehicleInfoFields.map((field) => field.name),
-        nextErrors
-      );
-    }
+    scrollFirstWizardError(
+      fieldRefs,
+      activeVehicleInfoFields.map((field) => field.name),
+      nextErrors
+    );
 
     return Object.keys(nextErrors).length === 0;
   };
@@ -189,11 +193,12 @@ const Step4VehicleInfo = () => {
     if (!validate()) return;
 
     const payload = { ...form, sellerName: accountSellerName || form.sellerName || "" };
-    config.vehicleInfoFields.forEach((field) => {
+    delete payload.companyName;
+    visibleVehicleInfoFields.forEach((field) => {
       if (shouldHideField(field)) payload[field.name] = null;
     });
     if (payload.whatsappAvailable) payload.whatsappNumber = payload.mobileNumber;
-    config.vehicleInfoFields.forEach((field) => {
+    visibleVehicleInfoFields.forEach((field) => {
       if (field.type === "phone" && payload[field.name]) {
         payload[field.name] = normalizePhoneContact(payload[field.name]);
       }
@@ -204,20 +209,18 @@ const Step4VehicleInfo = () => {
     if (payload.mileage !== undefined && payload.mileage !== "" && payload.mileage !== null) payload.mileage = Number(payload.mileage);
     if (payload.vinNumber) payload.vinNumber = String(payload.vinNumber).trim().toUpperCase();
 
-    try {
-      await saveStep(4, payload);
-    } catch {
-      // Error toast already shown by context.
-    }
+    await saveStep(4, payload);
   };
 
   return (
     <div>
       <h2 className="text-lg font-bold text-slate-950">{infoTitle}</h2>
-      <p className="mt-1 text-sm text-slate-500">Provide accurate details to attract buyers.</p>
+      <p className="mt-1 text-sm text-slate-500">
+        Provide accurate details to attract buyers.
+      </p>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        {visibleVehicleInfoFields.map((field) => {
+        {activeVehicleInfoFields.map((field) => {
           const renderField =
             field.name === "sellerName" ? { ...field, readOnly: true } : field;
           const isFullWidth = field.span === 2;
@@ -225,7 +228,9 @@ const Step4VehicleInfo = () => {
           return (
             <div
               key={field.name}
-              ref={(el) => (fieldRefs.current[field.name] = el)}
+              ref={(node) => {
+                fieldRefs.current[field.name] = node;
+              }}
               className={isFullWidth ? "sm:col-span-2" : ""}
             >
               {field.type === "toggleSwitch" ? (
@@ -239,7 +244,9 @@ const Step4VehicleInfo = () => {
                     categoryId={categoryId}
                   />
                   {errors[field.name] ? (
-                    <p className="mt-1 text-xs font-medium text-red-600">{errors[field.name]}</p>
+                    <p className="mt-1 text-xs font-medium text-red-600">
+                      {errors[field.name]}
+                    </p>
                   ) : null}
                 </>
               ) : (

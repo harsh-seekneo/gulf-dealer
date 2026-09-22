@@ -29,6 +29,26 @@ function getDaysColorClass(label, tab) {
   return "text-slate-500";
 }
 
+const SOURCE_LABELS = {
+  DEALER_BUSINESS: "Dealer",
+  USER_BULK: "Bulk",
+  USER_INDIVIDUAL: "Individual",
+  ADMIN: "Admin",
+};
+
+function getListingSourceLabel(listing) {
+  const rawSource =
+    listing?.sourceName ||
+    listing?.importSource ||
+    listing?.source?.name ||
+    listing?.source ||
+    listing?.listingSource ||
+    (listing?.createdByAdmin ? "ADMIN" : "");
+
+  const normalized = String(rawSource || "").trim();
+  return SOURCE_LABELS[normalized] || normalized || "Unknown";
+}
+
 export default function ListingsTable({
   tab,
   vehicles,
@@ -67,8 +87,8 @@ export default function ListingsTable({
       <table className="w-full min-w-[800px] text-sm">
         <thead className="bg-slate-50 text-left text-slate-500">
           <tr>
-            <th className="w-10 px-4 py-3"></th>
             <th className="px-2 py-3 font-semibold">Vehicle</th>
+            <th className="px-2 py-3 font-semibold">Source</th>
 
             {showPrice && <th className="px-2 py-3 font-semibold">Price</th>}
 
@@ -79,7 +99,7 @@ export default function ListingsTable({
                   tab === "active" || tab === "sold" ? "text-red-500" : ""
                 }`}
               >
-                Days
+               Days Remaining
               </th>
             )}
 
@@ -90,7 +110,7 @@ export default function ListingsTable({
 
             <th className="px-2 py-3 font-semibold">Actions</th>
 
-            {showFeatured && <th className="px-2 py-3 font-semibold">Featured Listing</th>}
+            
             {showSoldBadge && <th className="px-2 py-3 font-semibold">Status</th>}
           </tr>
         </thead>
@@ -107,9 +127,9 @@ export default function ListingsTable({
                 onClick={() => onRowClick(v)}
                 className="cursor-pointer transition-colors duration-150 hover:bg-slate-50"
               >
-                <td className="px-4 py-4" onClick={(event) => event.stopPropagation()}>
+                {/* <td className="px-4 py-4" onClick={(event) => event.stopPropagation()}>
                   <input type="checkbox" className="h-4 w-4 rounded border-slate-300" />
-                </td>
+                </td> */}
 
                 <td className="px-2 py-4">
                   <div className="flex items-center gap-3">
@@ -130,6 +150,12 @@ export default function ListingsTable({
                       </p>
                     </div>
                   </div>
+                </td>
+
+                <td className="px-2 py-4">
+                  <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
+                    Source: {getListingSourceLabel(v)}
+                  </span>
                 </td>
 
                 {showPrice && (
@@ -193,20 +219,7 @@ export default function ListingsTable({
                   </div>
                 </td>
 
-                {showFeatured && (
-                  <td className="px-2 py-4" onClick={(event) => event.stopPropagation()}>
-                    {canFeature ? (
-                      <button
-                        onClick={() => onToggleFeatured(v)}
-                        className="text-sm font-semibold text-blue-600 hover:underline"
-                      >
-                        Add as Featured
-                      </button>
-                    ) : (
-                      <span className="text-sm text-slate-300">Add as Featured</span>
-                    )}
-                  </td>
-                )}
+               
 
                 {showSoldBadge && (
                   <td className="px-2 py-4">

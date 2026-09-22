@@ -2,12 +2,14 @@ import { useRef, useState } from "react";
 import { FileText, Lock, Upload } from "lucide-react";
 
 const statusClasses = {
+APPROVED: "bg-emerald-100 text-emerald-700",
   PENDING: "bg-amber-100 text-amber-700",
   VERIFIED: "bg-emerald-100 text-emerald-700",
   REJECTED: "bg-red-100 text-red-700",
 };
 
 const statusLabels = {
+  APPROVED: "Approved",
   PENDING: "Pending Review",
   VERIFIED: "Verified",
   REJECTED: "Rejected",

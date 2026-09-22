@@ -18,6 +18,7 @@ import {
 import { createBulkDraftListingApi } from "../api/bulkListingApi";
 import {
   getListingWizardFormType,
+  getStepPosition,
   getWizardStepSequence,
 } from "../config/wizardSteps.config";
 
@@ -124,7 +125,7 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
       ? activeStepSequence.find((step) => step > requestedStep) ||
         activeStepSequence[activeStepSequence.length - 1]
       : requestedStep;
-  const currentStepPosition = activeStepSequence.indexOf(currentStep) + 1;
+  const currentStepPosition = getStepPosition(currentStep, listingFormType);
 
   const goToStepIndex = useCallback(
     (index) => {
@@ -139,10 +140,13 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
   const goNext = useCallback(async () => {
     const index = activeStepSequence.indexOf(currentStep);
 
-    if (index === activeStepSequence.length - 1) {
+    if (currentStep === 10) {
       try {
-        await submitSingleBulkListingApi(listing._id);
+        const submittedListing = await submitSingleBulkListingApi(listing._id);
+        setListing(submittedListing || listing);
         showToast("Vehicle submitted for admin review", "success");
+        updateUrl((submittedListing || listing)._id, 11);
+        scrollWizardToTop();
       } catch (error) {
         const message =
           error.response?.data?.message ||
@@ -150,13 +154,13 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
           "Listing saved as draft, but couldn't be submitted for review yet.";
         showToast(message, "error");
       }
-
-      navigate(`/vehicles?subscriptionId=${subscriptionId}`);
       return;
     }
 
+    if (index === activeStepSequence.length - 1) return;
+
     goToStepIndex(index + 1);
-  }, [activeStepSequence, currentStep, goToStepIndex, navigate, subscriptionId, listing, showToast]);
+  }, [activeStepSequence, currentStep, goToStepIndex, listing, showToast, updateUrl]);
 
   const goPrevious = useCallback(() => {
     const index = activeStepSequence.indexOf(currentStep);
@@ -236,6 +240,10 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
     saveStep,
     saveMedia,
     saveDraft,
+    submitListing: goNext,
+    updateListingPreview: (patch) => {
+      setListing((previous) => (previous ? { ...previous, ...patch } : previous));
+    },
     subscriptionId,
   };
 

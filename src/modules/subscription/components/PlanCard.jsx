@@ -94,17 +94,6 @@ export default function PlanCard({ plan, isCurrent, onSelect }) {
           • Visibility: {plan.visibility}
         </li>
 
-        {plan.hasFeaturedListing && (
-          <li className={isPremium ? "text-slate-300" : "text-slate-600"}>
-            • Featured Listing
-          </li>
-        )}
-
-        {plan.hasAutomaticListingRefresh && (
-          <li className={isPremium ? "text-slate-300" : "text-slate-600"}>
-            • Auto Refresh
-          </li>
-        )}
 
         {plan.hasVehicleVideo && (
           <li className={isPremium ? "text-slate-300" : "text-slate-600"}>
@@ -131,7 +120,7 @@ export default function PlanCard({ plan, isCurrent, onSelect }) {
             : "bg-blue-50 text-blue-700 hover:bg-blue-100"
         }`}
       >
-        {isCurrent ? "Current Plan" : isPremium ? "Upgrade Plan" : "Choose Plan"}
+        {isCurrent ? "Current Plan" : isPremium ? "Manage Plan" : "Choose Plan"}
       </button>
     </div>
   );

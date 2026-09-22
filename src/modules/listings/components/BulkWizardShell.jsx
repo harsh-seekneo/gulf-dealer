@@ -3,25 +3,23 @@ import { Car, Loader2, X } from "lucide-react";
 
 import { useBulkVehicleWizard } from "../context/BulkVehicleWizardContext";
 import WizardStepper from "./WizardStepper";
-import { getWizardSteps } from "../config/wizardSteps.config";
+import { getStepLabel } from "../config/wizardSteps.config";
 
 const BulkWizardShell = ({ children }) => {
   const {
+    currentStep,
     currentStepPosition,
     totalSteps,
     listingFormType,
     isInitializing,
     initError,
+    goToStep,
     saveDraft,
   } = useBulkVehicleWizard();
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const progressPercent = Math.round((currentStepPosition / totalSteps) * 100);
-  const stepLabels = getWizardSteps(listingFormType).map((step, index) => ({
-    position: index + 1,
-    label: step.label,
-  }));
 
   if (isInitializing) {
     return (
@@ -67,7 +65,7 @@ const BulkWizardShell = ({ children }) => {
                 <p className="text-sm font-bold text-slate-950">Add Vehicle</p>
                 <p className="text-xs text-slate-500">
                   Step {currentStepPosition} of {totalSteps} —{" "}
-                  {stepLabels.find((s) => s.position === currentStepPosition)?.label}
+                  {getStepLabel(currentStep, listingFormType)}
                 </p>
               </div>
             </div>
@@ -95,7 +93,11 @@ const BulkWizardShell = ({ children }) => {
           </div>
 
           <div className="mt-4">
-            <WizardStepper steps={stepLabels} currentStep={currentStepPosition} />
+            <WizardStepper
+              currentStep={currentStep}
+              formType={listingFormType}
+              onStepClick={goToStep}
+            />
           </div>
         </div>
 

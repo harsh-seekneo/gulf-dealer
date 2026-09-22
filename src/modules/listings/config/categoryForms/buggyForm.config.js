@@ -19,7 +19,7 @@ export const buggyFormConfig = {
     { name: "brand", label: "Brand", type: "brandSelect", required: true },
     { name: "catalogModel", label: "Model", type: "modelSelect", required: true },
     { name: "variantTrim", label: "Variant / Trim", type: "variantSelect" },
-    { name: "manufacturingYear", label: "Manufacturing Year", type: "yearSelect", required: true },
+    { name: "manufacturingYear", label: "Model Year", type: "yearSelect", required: true },
     { name: "bodyType", label: "Vehicle Type", type: "select", required: true },
     { name: "mileage", label: "Odometer", type: "number", required: true, placeholder: "e.g. 3200" },
     { name: "mileageMetric", label: "Mileage Metric", type: "toggle2", options: [
@@ -40,15 +40,15 @@ export const buggyFormConfig = {
 
   engineSectionTitle: "Technical Specifications",
   specsFields: [
-    { name: "engineCapacity", label: "Engine Capacity (CC)", type: "text", placeholder: "e.g. 925" },
+    { name: "engineCapacity", label: "Engine Capacity (cc)", type: "text", placeholder: "e.g. 925" },
     { name: "engineType", label: "Engine Type", type: "select", options: ["2-Stroke", "4-Stroke", "Electric"] },
     { name: "horsepower", label: "Horsepower (HP)", type: "number", placeholder: "e.g. 181" },
     { name: "topSpeed", label: "Top Speed (km/h)", type: "text", placeholder: "e.g. 120" },
     { name: "transmission", label: "Transmission", type: "select", required: true, options: ["Automatic", "CVT", "Manual", "Semi-Automatic"] },
-    { name: "driveType", label: "Drive Type", type: "select", options: ["2WD", "4WD", "AWD", "Selectable 2WD / 4WD"] },
+    { name: "driveType", label: "Drive Type", type: "select",required:true, options: ["2WD", "4WD", "AWD", "Selectable 2WD / 4WD"] },
     { name: "fuelType", label: "Fuel Type", type: "select", required: true, options: ["Diesel", "Electric", "Hybrid", "Petrol"] },
-    { name: "fuelTankCapacity", label: "Fuel Tank Capacity", type: "text", placeholder: "e.g. 40 L" },
-    { name: "groundClearance", label: "Ground Clearance", type: "text", placeholder: "e.g. 355 mm" },
+    { name: "fuelTankCapacity", label: "Fuel Tank Capacity (L)", type: "text", placeholder: "e.g. 40 L" },
+    { name: "groundClearance", label: "Ground Clearance (mm)", type: "text", placeholder: "e.g. 355 mm" },
     { name: "weight", label: "Weight (kg)", type: "number", placeholder: "e.g. 725" },
     { name: "seatingCapacity", label: "Seating Capacity", type: "select", required: true, options: ["1 Seater", "2 Seater", "3 Seater", "4 Seater", "5 Seater", "6 Seater"] },
     { name: "insuranceValid", label: "Insurance Covered", type: "toggleSwitch", fullWidth: true },

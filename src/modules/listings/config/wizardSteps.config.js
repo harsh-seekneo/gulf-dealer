@@ -7,6 +7,8 @@ export const WIZARD_STEPS = [
   { step: 7, label: "Media" },
   { step: 8, label: "Location" },
   { step: 9, label: "Pricing" },
+  { step: 10, label: "Review" },
+  { step: 11, label: "Done" },
 ];
 
 export const SPECIAL_NUMBER_FORM_TYPE = "SPECIAL_NUMBER";
@@ -34,3 +36,12 @@ export const getWizardSteps = (formType) =>
 
 export const getWizardStepSequence = (formType) =>
   getWizardSteps(formType).map((item) => item.step);
+
+export const getStepLabel = (step, formType) => {
+  return getWizardSteps(formType).find((item) => item.step === step)?.label || "";
+};
+
+export const getStepPosition = (step, formType) => {
+  const index = getWizardStepSequence(formType).indexOf(step);
+  return index === -1 ? 1 : index + 1;
+};
