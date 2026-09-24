@@ -55,12 +55,82 @@ const statusConfig = {
 };
 
 const EDITABLE_STATUSES = ["DRAFT", "PENDING_REVIEW", "REJECTED"];
+const ELECTRIC_DEPENDENT_FIELDS = new Set(["engineCapacity", "numberOfCylinders"]);
 
 const formatLocation = (location = {}) =>
   [location.city, location.governorate, location.country].filter(Boolean).join(", ");
 
 const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 const formatPlanAmount = (value) => `BHD ${Number(value || 0).toFixed(2)}`;
+
+const isBlankValue = (value) =>
+  value === undefined ||
+  value === null ||
+  String(value).trim() === "" ||
+  (Array.isArray(value) && value.length === 0);
+
+const isElectricFuel = (value) =>
+  String(value || "").trim().toLowerCase() === "electric";
+
+const matchesFieldCondition = (form, condition) =>
+  !condition ||
+  (typeof condition.value === "string"
+    ? String(form?.[condition.field] || "").toLowerCase() === condition.value.toLowerCase()
+    : form?.[condition.field] === condition.value);
+
+const getMissingConfiguredRequired = ({ config, listing, vehicleInfoFields }) => {
+  const vehicleInfo = listing?.vehicleInfo || {};
+  const specs = listing?.specs || {};
+  const features = listing?.features || {};
+  const specsContext = { ...vehicleInfo, ...specs };
+  const selectedFuelType = specsContext.fuelType;
+  const isElectric = isElectricFuel(selectedFuelType);
+  const hasFuelType = !isBlankValue(selectedFuelType);
+
+  const missingVehicleInfo = vehicleInfoFields.filter(
+    (field) =>
+      matchesFieldCondition(vehicleInfo, field.showWhen) &&
+      field.required &&
+      !(field.requiredUnless && matchesFieldCondition(vehicleInfo, field.requiredUnless)) &&
+      isBlankValue(vehicleInfo[field.name])
+  );
+
+  const missingSpecs = config.specsFields.filter((field) => {
+    if (!matchesFieldCondition(specsContext, field.showWhen)) return false;
+    if (isElectric && ELECTRIC_DEPENDENT_FIELDS.has(field.name)) return false;
+
+    const isRequired =
+      (field.required &&
+        !(field.requiredUnless && matchesFieldCondition(specsContext, field.requiredUnless))) ||
+      (!isElectric && hasFuelType && ELECTRIC_DEPENDENT_FIELDS.has(field.name));
+
+    return isRequired && isBlankValue(specs[field.name]);
+  });
+
+  const missingFeatures = config.featureGroups.filter(
+    (group) => group.required && isBlankValue(features[group.key])
+  );
+
+  return [...missingVehicleInfo, ...missingSpecs, ...missingFeatures];
+};
+
+const getPlanLimitMessage = (listing) => {
+  const limits = listing?.planLimitsSnapshot || {};
+  const maxPhotos = limits.maxPhotosSnapshot;
+  const maxVideos = limits.maxVideosSnapshot;
+  const photoCount = listing?.media?.images?.length || 0;
+  const hasVideo = Boolean(listing?.media?.video);
+
+  if (maxPhotos !== null && maxPhotos !== undefined && photoCount > maxPhotos) {
+    return `Your plan allows a maximum of ${maxPhotos} photos. Please remove extra photos before submitting.`;
+  }
+
+  if (hasVideo && (maxVideos === null || maxVideos === undefined || maxVideos === 0)) {
+    return "Your current plan does not include video uploads. Please remove the video before submitting.";
+  }
+
+  return "";
+};
 
 const MediaLightbox = ({
   activeIndex,
@@ -670,6 +740,23 @@ const ListingDetailPage = () => {
   const [isTogglingSold, setIsTogglingSold] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResubmitting, setIsResubmitting] = useState(false);
+  const formType = listing?.category?.vehicleFormType || "CAR";
+  const categoryId = listing?.category?._id || listing?.category;
+  const baseConfig = configByFormType[formType] || carFormConfig;
+  const { config } = useListingAttributeConfig(categoryId, baseConfig);
+  const editableVehicleInfoFields = (config.vehicleInfoFields || []).filter(
+    (field) => !field.dealerOnly
+  );
+  const mergeConfiguredDisplayField = (field, configuredFields) => {
+    const configuredField = configuredFields.find((item) => item.name === field.name);
+
+    return {
+      ...configuredField,
+      ...field,
+      label: configuredField?.label || field.label,
+      type: configuredField?.type || field.type,
+    };
+  };
 
   const fetchListing = async () => {
     try {
@@ -710,6 +797,27 @@ const ListingDetailPage = () => {
   };
 
   const handleSubmitForReview = async () => {
+    const planLimitMessage = getPlanLimitMessage(listing);
+
+    if (planLimitMessage) {
+      showToast(planLimitMessage, "error");
+      return;
+    }
+
+    const missingRequired = getMissingConfiguredRequired({
+      config,
+      listing,
+      vehicleInfoFields: editableVehicleInfoFields,
+    });
+
+    if (missingRequired.length) {
+      showToast(
+        `Please complete ${missingRequired[0].label || "the required field"} before submitting.`,
+        "error"
+      );
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -738,11 +846,6 @@ const ListingDetailPage = () => {
     }
   };
 
-  const formType = listing?.category?.vehicleFormType || "CAR";
-  const categoryId = listing?.category?._id || listing?.category;
-  const baseConfig = configByFormType[formType] || carFormConfig;
-  const { config } = useListingAttributeConfig(categoryId, baseConfig);
-
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -765,9 +868,11 @@ const ListingDetailPage = () => {
   const vehicleInfo = listing.vehicleInfo || {};
   const specs = listing.specs || {};
   const features = listing.features || {};
-  const electricDependentFields = new Set(["engineCapacity", "numberOfCylinders"]);
   const isElectricListing =
     String(vehicleInfo?.fuelType || specs?.fuelType || "").trim().toLowerCase() === "electric";
+  const selectedCurrency =
+    listing.pricing?.currency ||
+    getServiceCountryCurrencyByName(listing?.location?.country);
   const displaySpecsFields = [
     { name: "mileage", label: "Mileage", type: "number" },
     { name: "transmission", label: "Transmission", type: "text" },
@@ -782,7 +887,9 @@ const ListingDetailPage = () => {
     { name: "interiorColor", label: "Interior Color", type: "text" },
     { name: "vehicleClass", label: "Vehicle Class", type: "text" },
     { name: "insuranceValid", label: "Insurance Covered", type: "toggleSwitch" },
-  ].filter((field) => !isElectricListing || !electricDependentFields.has(field.name));
+  ]
+    .map((field) => mergeConfiguredDisplayField(field, config.specsFields || []))
+    .filter((field) => !isElectricListing || !ELECTRIC_DEPENDENT_FIELDS.has(field.name));
   const displayVehicleInfo = {
     ...vehicleInfo,
     category: listing.category?.name || listing.category?.label || config.label,
@@ -813,7 +920,7 @@ const ListingDetailPage = () => {
     { name: "condition", label: "Condition", type: "text" },
     { name: "priceNegotiable", label: "Price Negotiable", type: "yesNoSelect" },
     { name: "location", label: "Location", type: "text" },
-  ];
+  ].map((field) => mergeConfiguredDisplayField(field, editableVehicleInfoFields));
 
   return (
     <div className="mx-auto max-w-[910px] space-y-[16px] py-4">
@@ -838,6 +945,27 @@ const ListingDetailPage = () => {
         onEditMedia={() => navigate(`/listings/add-vehicle?listingId=${listingId}&step=7`)}
         onSubmitForReview={handleSubmitForReview}
         onResubmit={() => {
+          const planLimitMessage = getPlanLimitMessage(listing);
+
+          if (planLimitMessage) {
+            showToast(planLimitMessage, "error");
+            return;
+          }
+
+          const missingRequired = getMissingConfiguredRequired({
+            config,
+            listing,
+            vehicleInfoFields: editableVehicleInfoFields,
+          });
+
+          if (missingRequired.length) {
+            showToast(
+              `Please complete ${missingRequired[0].label || "the required field"} before resubmitting.`,
+              "error"
+            );
+            return;
+          }
+
           setIsResubmitting(true);
           setShowResubmitModal(true);
         }}
@@ -850,7 +978,7 @@ const ListingDetailPage = () => {
         <EditableFieldSection
           title={formType === "SPECIAL_NUMBER" ? "Plate Info" : "Vehicle Information"}
           step={4}
-          fields={config.vehicleInfoFields.filter((field) => field.name !== "description")}
+          fields={editableVehicleInfoFields.filter((field) => field.name !== "description")}
           displayFields={displayVehicleInfoFields}
           displaySourceData={displayVehicleInfo}
           sourceData={vehicleInfo}
@@ -879,7 +1007,7 @@ const ListingDetailPage = () => {
         <EditableFieldSection
           title="Description"
           step={4}
-          fields={config.vehicleInfoFields.filter((field) => field.name === "description")}
+          fields={editableVehicleInfoFields.filter((field) => field.name === "description")}
           sourceData={vehicleInfo}
           categoryId={categoryId}
           listingId={listingId}

@@ -44,6 +44,12 @@ const isElectricFuel = (value) =>
 
 const ELECTRIC_DEPENDENT_FIELDS = new Set(["engineCapacity", "numberOfCylinders"]);
 
+const matchesFieldCondition = (form, condition) =>
+  !condition ||
+  (typeof condition.value === "string"
+    ? String(form?.[condition.field] || "").toLowerCase() === condition.value.toLowerCase()
+    : form?.[condition.field] === condition.value);
+
 const toIdValue = (value) => {
   if (!value || typeof value !== "object") return value ?? "";
   return value._id || value.id || "";
@@ -107,11 +113,15 @@ const EditableFieldSection = ({
   const [form, setForm] = useState(buildInitialForm);
   const isElectric = isElectricFuel(form?.fuelType || sourceData?.fuelType || visibleSourceData?.fuelType);
   const hasFuelType = String(form?.fuelType || sourceData?.fuelType || visibleSourceData?.fuelType || "").trim() !== "";
-  const isHiddenField = (field) => isElectric && ELECTRIC_DEPENDENT_FIELDS.has(field.name);
+  const isHiddenField = (field, values = form) =>
+    (isElectric && ELECTRIC_DEPENDENT_FIELDS.has(field.name)) ||
+    !matchesFieldCondition(values, field.showWhen);
   const isRequiredField = (field) =>
-    (Boolean(field.required) && !(isElectric && ELECTRIC_DEPENDENT_FIELDS.has(field.name))) ||
+    (Boolean(field.required) &&
+      !(field.requiredUnless && matchesFieldCondition(form, field.requiredUnless)) &&
+      !(isElectric && ELECTRIC_DEPENDENT_FIELDS.has(field.name))) ||
     (!isElectric && hasFuelType && ELECTRIC_DEPENDENT_FIELDS.has(field.name));
-  const visibleFields = baseVisibleFields.filter((field) => !isHiddenField(field));
+  const visibleFields = baseVisibleFields.filter((field) => !isHiddenField(field, visibleSourceData));
   const editingFields = fields.filter((field) => !isHiddenField(field));
   const missingRequiredCount = editingFields.filter(
     (field) => isRequiredField(field) && isBlank(sourceData?.[field.name])
