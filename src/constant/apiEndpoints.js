@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
     DRAFT: "/dealer/draft",
 
     PROFILE: "/dealer/profile",
+    DELETE_PROFILE: "/dealer/profile",
 
     LOGO: "/dealer/profile/logo",
     COVER_BANNER: "/dealer/profile/cover-banner",

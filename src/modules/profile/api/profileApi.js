@@ -50,6 +50,14 @@ export const profileApi = {
     return res.data.data;
   },
 
+  deleteProfile: async (payload = {}) => {
+    const res = await apiClient.delete(API_ENDPOINTS.DEALER.DELETE_PROFILE, {
+      data: payload,
+    });
+
+    return res.data.data;
+  },
+
   uploadDocument: async (file, name = "Document") => {
     if (!file) {
       throw new Error("Document is required");

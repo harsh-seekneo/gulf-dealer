@@ -45,12 +45,6 @@ export default function BusinessInfoCard({ profile }) {
         />
 
         <Row
-          icon={Building2}
-          label="Business Type"
-          value={profile.businessType}
-        />
-
-        <Row
           icon={Car}
           label="Vehicle Categories"
           value={vehicleCategories}

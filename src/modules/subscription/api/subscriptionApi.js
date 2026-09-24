@@ -24,15 +24,32 @@ export const subscriptionApi = {
     };
   },
 
+  async getRenewalReview(planId) {
+    const { data } = await apiClient.get("/dealer/renewal-review", {
+      params: { planId },
+    });
+    return data.data;
+  },
+
   /**
    * Select subscription plan
    * POST /api/v1/dealer/submit
    */
-  async choosePlan({ dealerId, planId, durationDays }) {
+  async choosePlan({
+    dealerId,
+    planId,
+    durationDays,
+    renewalMode = false,
+    selectedListingIds = [],
+    selectedAdvertisementIdsByType = {},
+  }) {
     const { data } = await apiClient.post("/dealer/submit", {
       dealerId,
       planId,
       durationDays,
+      renewalMode,
+      selectedListingIds,
+      selectedAdvertisementIdsByType,
     });
 
     return data.data;

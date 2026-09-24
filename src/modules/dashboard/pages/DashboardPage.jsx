@@ -14,6 +14,11 @@ import {
   CalendarDays,
   RotateCcw,
   Star,
+  BookOpenCheck,
+  ClipboardList,
+  PackageCheck,
+  MegaphoneIcon,
+  RefreshCcw,
 } from "lucide-react";
 
 import StatCard from "../../../components/ui/StatCard";
@@ -113,6 +118,148 @@ const AdPlacementUsage = ({ placements = [] }) => (
       })}
     </div>
   </div>
+);
+
+const dealerGuideItems = [
+  {
+    title: "Use Your Dealer Dashboard",
+    icon: ClipboardList,
+    body: [
+      <>
+        Once your Dealer Page is active, manage your vehicle listings,
+        advertisements, leads, Dealer Page and subscription directly from your{" "}
+        <strong className="font-extrabold text-slate-900">Dealer Dashboard</strong>.
+      </>,
+    ],
+  },
+  {
+    title: "Use Your Included Listings First",
+    icon: PackageCheck,
+    body: [
+      <>
+        Your Dealer Page includes{" "}
+        <strong className="font-extrabold text-slate-900">50, 100 or 200 listings</strong>,
+        depending on your package. Always use these included listings first.
+      </>,
+      "Once your Dealer Package listing allowance is fully used, you can purchase Individual or Bulk Listing packages for additional vehicles. These additional listings will still appear under your company.",
+    ],
+  },
+  {
+    title: "Your Monthly Listing Allowance",
+    icon: Car,
+    body: [
+      "Once a listing goes live, it counts as one used listing for that subscription period.",
+      <>
+        If the vehicle is{" "}
+        <strong className="font-extrabold text-slate-900">
+          sold or the listing is deleted early, the space is not returned
+        </strong>{" "}
+        during the same period.
+      </>,
+      "Example: If you use all 200 listings and 10 vehicles are sold, you cannot replace those 10 using the same Dealer Package allowance. You can purchase additional Individual/Bulk listings if required.",
+    ],
+  },
+  {
+    title: "Advertisements",
+    icon: MegaphoneIcon,
+    body: [
+      <>
+        Use the advertisement spaces included with your Dealer Package first. You can
+        purchase{" "}
+        <strong className="font-extrabold text-slate-900">
+          additional advertisement spaces separately
+        </strong>{" "}
+        whenever you need more promotion.
+      </>,
+      "Once an included advertisement goes live, that advertisement entitlement is considered used for that subscription period, even if you end it early.",
+    ],
+  },
+  {
+    title: "Featured Dealer",
+    icon: Star,
+    body: [
+      <>
+        Featured Dealer is an optional add-on that promotes your{" "}
+        <strong className="font-extrabold text-slate-900">
+          business in the Featured Dealers section on the GulfInCart homepage
+        </strong>
+        . It does not make your individual vehicle listings featured.
+      </>,
+    ],
+  },
+  {
+    title: "Renewal & Changing Your Package",
+    icon: RefreshCcw,
+    body: [
+      <>
+        Every renewal gives you a{" "}
+        <strong className="font-extrabold text-slate-900">
+          fresh listing and advertisement allowance
+        </strong>{" "}
+        according to the package you select.
+      </>,
+      "Before renewal, choose which existing listings and advertisements you want to continue. Anything you continue will count toward the new period's allowance.",
+      "You can renew the same package, upgrade or downgrade. If you choose a smaller package, you will need to select which listings you want to continue within the new package limit. Additional listings can be continued by purchasing Individual or Bulk Listing packages.",
+    ],
+    important:
+      "Your current package remains active until its expiry date. Any package change takes effect from the next subscription period.",
+  },
+];
+
+const DealerGuideSection = () => (
+  <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-blue-600">
+          <BookOpenCheck size={16} />
+          Dealer Guide
+        </p>
+        <h2 className="mt-2 text-xl font-bold text-slate-900">How It Works</h2>
+        <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
+          A quick reference for using your dealer package, listings, advertisements,
+          renewals and add-ons.
+        </p>
+      </div>
+      <span className="inline-flex w-fit items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+        GulfInCart Dealer Guide
+      </span>
+    </div>
+
+    <div className="mt-5 grid gap-4 lg:grid-cols-2">
+      {dealerGuideItems.map((item, index) => {
+        const Icon = item.icon;
+
+        return (
+          <article
+            key={item.title}
+            className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-4"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                <Icon size={18} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-extrabold text-slate-900">
+                  {index + 1}. {item.title}
+                </h3>
+                <div className="mt-2 space-y-2 text-sm leading-6 text-slate-600">
+                  {item.body.map((paragraph, paragraphIndex) => (
+                    <p key={`${item.title}-${paragraphIndex}`}>{paragraph}</p>
+                  ))}
+                  {item.important ? (
+                    <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 font-semibold text-amber-800">
+                      <span className="font-extrabold">Important:</span>{" "}
+                      {item.important}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  </section>
 );
 
 export default function DashboardPage() {
@@ -371,6 +518,9 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Dealer Guide */}
+      <DealerGuideSection />
 
       {/* Statistics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

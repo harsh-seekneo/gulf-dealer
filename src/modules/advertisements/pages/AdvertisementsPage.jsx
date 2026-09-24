@@ -721,6 +721,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
   const [error, setError] = useState("");
   const [wallet, setWallet] = useState(null);
   const [useWalletBalance, setUseWalletBalance] = useState(false);
+  const [purchaseMode, setPurchaseMode] = useState(
+    draft?.paymentMethod === "DEALER_PLAN" ? "BENEFIT" : "PAID",
+  );
   const [step, setStep] = useState(
     Math.max(
       minimumStep,
@@ -832,8 +835,12 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     ? getBundlePrice(selectedBundle)
     : getTierPrice(selectedPlan, form.durationDays);
   const selectedPlanBenefit = planAdBenefits[form.category];
+  const hasSelectedPlanBenefit = Number(selectedPlanBenefit?.remaining || 0) > 0;
   const isIncludedWithPlan =
-    !isBundlePackage && !isIncludedBundleSlot && Number(selectedPlanBenefit?.remaining || 0) > 0;
+    purchaseMode === "BENEFIT" &&
+    !isBundlePackage &&
+    !isIncludedBundleSlot &&
+    hasSelectedPlanBenefit;
   const effectivePrice = isIncludedWithPlan || isIncludedBundleSlot ? 0 : price;
   const vat = Number(((effectivePrice * taxMeta.percentage) / 100).toFixed(3));
   const total = Number((effectivePrice + vat).toFixed(3));
@@ -842,6 +849,7 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     : form.durationDays;
   const launchOfferActive =
     !isBundlePackage &&
+    !isIncludedWithPlan &&
     isLaunchOfferActiveForDuration(
       promotionSettings.launchOffer,
       launchOfferDuration,
@@ -885,6 +893,13 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
   const incompleteBundleSlots = isBundlePackage
     ? bundleSlots.length - completedBundleSlots
     : 0;
+  const availableDealerBenefits = placementMeta
+    .map((placement) => ({
+      placement,
+      plan: plans.find((item) => item.category === placement.category),
+      status: getBenefitStatus(planAdBenefits, placement.category),
+    }))
+    .filter(({ status }) => status.isAvailable);
 
   useEffect(() => {
     if (!selectedBundle) {
@@ -984,32 +999,20 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     );
   };
 
-  const selectPlacement = (category) => {
-    const plan = plans.find((item) => item.category === category);
-    const benefitStatus = getBenefitStatus(planAdBenefits, category);
-
-    if (benefitStatus.isAvailable) {
-      setUseWalletBalance(false);
-    }
-
+  const selectDealerPlanBenefit = (category) => {
+    setUseWalletBalance(false);
+    setPurchaseMode("BENEFIT");
     setForm((current) => ({
       ...current,
       packageType: "INDIVIDUAL",
       bundleCode: "",
       category,
-      durationDays: benefitStatus.isAvailable
-        ? 30
-        : getMostPopularDuration(plan?.pricingTiers),
+      durationDays: 30,
     }));
   };
 
   const selectIndividualPackage = (category, durationDays) => {
-    const benefitStatus = getBenefitStatus(planAdBenefits, category);
-
-    if (benefitStatus.isAvailable) {
-      setUseWalletBalance(false);
-    }
-
+    setPurchaseMode("PAID");
     setForm((current) => ({
       ...current,
       packageType: "INDIVIDUAL",
@@ -1021,6 +1024,7 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
 
   const selectBundlePackage = (bundle) => {
     setUseWalletBalance(false);
+    setPurchaseMode("PAID");
     setBundleSlots(hydrateBundleSlots({
       bundle,
       draft,
@@ -1297,82 +1301,92 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                     {promotionSettings.launchOffer?.description || "30 Days + 15 Days FREE"}
                   </p>
                   <p className="mt-1 text-xs font-semibold text-emerald-700">
-                    Only individual 30-day ads. Bundles are excluded.
+                    Only paid individual 30-day ads. Dealer plan benefits and bundles are excluded.
                   </p>
                 </div>
               ) : null}
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {placementMeta.map((placement) => {
-              const plan = plans.find((item) => item.category === placement.category);
-              const startingPrice = getTierPrice(plan, 7);
-              const active = form.packageType === "INDIVIDUAL" && form.category === placement.category;
-              const benefitStatus = getBenefitStatus(planAdBenefits, placement.category);
+          {availableDealerBenefits.length ? (
+            <div className="rounded-[18px] border border-emerald-200 bg-emerald-50/70 p-4 shadow-sm">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h3 className="text-base font-black text-slate-950">
+                    Use Dealer Plan Benefit
+                  </h3>
+                  <p className="mt-1 text-xs font-semibold text-emerald-700">
+                    Included advertisements run until your dealer plan expiry date.
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-emerald-700">
+                  Launch offer does not apply
+                </span>
+              </div>
 
-              return (
-                <button
-                  key={placement.category}
-                  type="button"
-                  onClick={() => selectPlacement(placement.category)}
-                  className={`group relative overflow-hidden rounded-[18px] border bg-white p-3 text-left shadow-sm transition ${
-                    active
-                      ? "border-blue-600 ring-2 ring-blue-100"
-                      : "border-slate-200 hover:border-blue-200 hover:shadow-md"
-                  }`}
-                >
-                  {active ? (
-                    <span className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-white shadow-sm">
-                      <Check size={15} strokeWidth={3} />
-                    </span>
-                  ) : null}
-                  <div className="overflow-hidden rounded-xl bg-slate-50 p-1.5">
-                    <div className="h-20 overflow-hidden rounded-lg bg-white ring-1 ring-slate-100 sm:h-24">
-                      <img
-                        src={placement.previewImageUrl}
-                        alt={`${placement.title} preview`}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <h3 className="text-sm font-black text-slate-950">
-                      {placement.title}
-                    </h3>
-                    <span className={`rounded-full px-2 py-1 text-[11px] font-bold ${placement.labelClass}`}>
-                      {placement.label}
-                    </span>
-                    <span className={`rounded-full border px-2 py-1 text-[11px] font-bold ${benefitStatus.className}`}>
-                      {benefitStatus.label}
-                    </span>
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-2.5">
-                    <div>
-                      <p className="text-xs font-semibold text-slate-400">Starting from</p>
-                      <p className="text-base font-black text-blue-600">
-                        {benefitStatus.isAvailable ? "Included" : formatCurrency(startingPrice)}
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {availableDealerBenefits.map(({ placement, plan, status }) => {
+                  const active =
+                    isIncludedWithPlan &&
+                    form.packageType === "INDIVIDUAL" &&
+                    form.category === placement.category;
+
+                  return (
+                    <button
+                      key={placement.category}
+                      type="button"
+                      onClick={() => selectDealerPlanBenefit(placement.category)}
+                      className={`relative rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
+                        active
+                          ? "border-emerald-500 ring-2 ring-emerald-100"
+                          : "border-emerald-100 hover:border-emerald-300"
+                      }`}
+                    >
+                      {active ? (
+                        <span className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-white">
+                          <Check size={15} strokeWidth={3} />
+                        </span>
+                      ) : null}
+                      <h4 className="pr-8 text-sm font-black text-slate-950">
+                        {placement.title}
+                      </h4>
+                      <p className="mt-1 text-xs font-bold text-emerald-700">
+                        {status.remaining} remaining
                       </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs font-semibold text-slate-400">Dimensions</p>
-                      <p className="text-xs font-bold text-slate-700">{placement.dimensions}</p>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                      <div className="mt-4 space-y-2 text-xs">
+                        <div className="flex justify-between gap-3">
+                          <span className="text-slate-500">Valid until</span>
+                          <span className="text-right font-bold text-slate-950">
+                            {formatDate(status.benefit?.subscriptionEndsAt)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-slate-500">Cost</span>
+                          <span className="font-black text-emerald-700">
+                            {formatCurrency(0, plan?.currency || selectedCurrency)}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
 
           <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h3 className="text-base font-black text-slate-950">Duration & Price</h3>
+                <h3 className="text-base font-black text-slate-950">
+                  Purchase Additional Advertisement
+                </h3>
                 <p className="mt-1 text-xs font-semibold text-slate-500">
-                  Click any price in the table to select the placement and duration.
+                  Select a paid placement duration. Dealer plan benefits are not shown in this table.
                 </p>
               </div>
-              <span className="text-xs font-bold text-slate-400">All prices include applicable VAT rules</span>
+              <span className="text-xs font-bold text-slate-400">
+                Launch offer applies only to eligible paid ads
+              </span>
             </div>
 
             <div className="mt-4 overflow-x-auto">
@@ -1400,7 +1414,6 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                 <tbody>
                   {placementMeta.map((placement) => {
                     const plan = plans.find((item) => item.category === placement.category);
-                    const benefitStatus = getBenefitStatus(planAdBenefits, placement.category);
 
                     return (
                       <tr key={placement.category} className="border-b border-slate-100">
@@ -1410,13 +1423,11 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                             <span className="text-xs font-semibold text-slate-500">
                               {placement.dimensions}
                             </span>
-                            <span className={`w-fit rounded-full border px-2 py-0.5 text-[11px] font-bold ${benefitStatus.className}`}>
-                              {benefitStatus.label}
-                            </span>
                           </div>
                         </td>
                         {durationOptions.map((days) => {
                           const active =
+                            purchaseMode === "PAID" &&
                             form.packageType === "INDIVIDUAL" &&
                             form.category === placement.category &&
                             Number(form.durationDays) === days;
@@ -1433,9 +1444,7 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                                     : "border-slate-200 bg-white text-slate-800 hover:border-blue-200 hover:text-blue-700"
                                 }`}
                               >
-                                {benefitStatus.isAvailable
-                                  ? "Included"
-                                  : formatCurrency(optionPrice, plan?.currency || selectedCurrency)}
+                                {formatCurrency(optionPrice, plan?.currency || selectedCurrency)}
                               </button>
                             </td>
                           );
@@ -1865,6 +1874,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                 "Duration",
                 isIncludedWithPlan ? "Until plan expiry" : `${launchOfferDuration} Days`,
               ],
+              ...(isIncludedWithPlan
+                ? [["Valid Until", formatDate(selectedPlanBenefit?.subscriptionEndsAt)]]
+                : []),
               ...(isBundlePackage
                 ? [
                     ["Filled Ads", `${completedBundleSlots}/${bundleSlots.length}`],
@@ -1937,6 +1949,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                 ["Advertisement", form.name || selectedPlacement.title],
                 [isBundlePackage ? "Bundle" : "Placement", isBundlePackage ? selectedBundle?.name : selectedPlacement.title],
                 ["Duration", isIncludedWithPlan ? "Until plan expiry" : `${launchOfferDuration} Days`],
+                ...(isIncludedWithPlan
+                  ? [["Valid Until", formatDate(selectedPlanBenefit?.subscriptionEndsAt)]]
+                  : []),
                 ...(freeAdditionalDays > 0 ? [["Launch Offer", `+ ${freeAdditionalDays} Days Free`]] : []),
                 ...(isBundlePackage ? [
                   ["Filled Advertisements", `${completedBundleSlots}/${bundleSlots.length}`],

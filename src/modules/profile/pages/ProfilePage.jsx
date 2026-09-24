@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   BadgeCheck,
   Building2,
   Camera,
   Car,
   Pencil,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
@@ -13,6 +15,9 @@ import BusinessInfoCard from "../components/BusinessInfoCard";
 import VerificationDocumentsCard from "../components/VerificationDocumentsCard";
 import WorkingHoursCard from "../components/WorkingHoursCard";
 import Breadcrumb from "../../../components/ui/Breadcrumb";
+import ConfirmModal from "../../../components/ui/ConfirmModal";
+import { useToast } from "../../../context/ToastContext";
+import useAuth from "../../auth/hooks/useAuth";
 import { profileApi } from "../api/profileApi";
 import { GULF_COUNTRIES } from "../../listings/config/gulfLocations.config";
 
@@ -22,7 +27,6 @@ const EMPTY_FORM = {
   phone: "",
   email: "",
   category: "",
-  businessType: "",
   vehicleCategories: [],
   vehicleBrands: [],
   vehicleBrandsText: "",
@@ -61,12 +65,6 @@ const VEHICLE_CATEGORY_OPTIONS = [
   "Caravans",
 ];
 
-const BUSINESS_TYPE_OPTIONS = [
-  "Individual Dealer",
-  "Multi-Brand Dealer",
-  "Authorized Dealer",
-];
-
 const fieldClass =
   "mt-2 h-11 w-full rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-400";
 
@@ -85,7 +83,6 @@ const buildFormValues = (profile = {}) => ({
   phone: profile.phone || "",
   email: profile.email || "",
   category: profile.category || "",
-  businessType: profile.businessType || "",
   vehicleCategories: Array.isArray(profile.vehicleCategories)
     ? profile.vehicleCategories
     : [],
@@ -241,7 +238,9 @@ function ProfileForm({ initialValues, locks = {}, submitLabel, onSaved }) {
     setError("");
 
     try {
-      await profileApi.updateProfile(form);
+      const payload = { ...form };
+      delete payload.businessType;
+      await profileApi.updateProfile(payload);
       await onSaved();
     } catch (err) {
       setError(
@@ -305,19 +304,6 @@ function ProfileForm({ initialValues, locks = {}, submitLabel, onSaved }) {
         >
           <option value="">Select Business Category</option>
           {BUSINESS_CATEGORY_OPTIONS.map((option) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
-      </Field>
-
-      <Field label="Business Type">
-        <select
-          className={fieldClass}
-          value={form.businessType}
-          onChange={update("businessType")}
-        >
-          <option value="">Select Business Type</option>
-          {BUSINESS_TYPE_OPTIONS.map((option) => (
             <option key={option} value={option}>{option}</option>
           ))}
         </select>
@@ -532,9 +518,14 @@ function EditProfileModal({ profile, onClose, onSaved }) {
 ------------------------------------------------------- */
 
 export default function ProfilePage() {
+  const navigate = useNavigate();
+  const { refreshUser } = useAuth();
+  const { showToast } = useToast();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [uploading, setUploading] = useState("");
   const [tourVideoProgress, setTourVideoProgress] = useState(0);
   const [error, setError] = useState("");
@@ -661,6 +652,28 @@ export default function ProfilePage() {
       setError(
         err.response?.data?.message || "Failed to save working hours."
       );
+    }
+  };
+
+  const handleDeleteDealerProfile = async () => {
+    setIsDeleting(true);
+    setError("");
+
+    try {
+      await profileApi.deleteProfile({
+        reason: "Deleted by dealer from dealer dashboard",
+      });
+      showToast("Dealer profile deleted successfully.", "success");
+      setIsDeleteOpen(false);
+      await refreshUser();
+      navigate("/unauthorized", { replace: true });
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          "Unable to delete dealer profile. Please try again."
+      );
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -998,6 +1011,32 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-red-900">
+              Delete dealer profile
+            </h3>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-red-700">
+              This will delete your dealer profile and permanently remove dealer listings
+              and advertisements. Your user account will stay active.
+            </p>
+            <p className="mt-2 text-sm font-semibold text-red-800">
+              To delete your full account, go to My Profile &gt; Security.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsDeleteOpen(true)}
+            className="flex w-fit items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700"
+          >
+            <Trash2 size={17} />
+            Delete Dealer Profile
+          </button>
+        </div>
+      </div>
+
       {/* ===================================================
           EDIT MODAL
       =================================================== */}
@@ -1009,6 +1048,17 @@ export default function ProfilePage() {
           onSaved={load}
         />
       ) : null}
+
+      <ConfirmModal
+        isOpen={isDeleteOpen}
+        title="Delete dealer profile?"
+        message="This will soft delete your dealer profile and permanently delete dealer listings and advertisements. Your user account will remain active."
+        confirmText="Delete Profile"
+        cancelText="Keep Profile"
+        isLoading={isDeleting}
+        onClose={() => setIsDeleteOpen(false)}
+        onConfirm={handleDeleteDealerProfile}
+      />
     </div>
   );
 }
