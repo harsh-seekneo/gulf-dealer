@@ -1022,7 +1022,7 @@ export default function ProfilePage() {
               and advertisements. Your user account will stay active.
             </p>
             <p className="mt-2 text-sm font-semibold text-red-800">
-              To delete your full account, go to My Profile &gt; Security.
+              To delete your full account, go to User side &gt; My Profile..
             </p>
           </div>
 
