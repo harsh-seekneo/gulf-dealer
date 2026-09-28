@@ -209,6 +209,11 @@ export default function AdDetailPage() {
             <span className={`rounded-full px-3 py-1 text-xs font-bold ${getStatusClass(ad.status)}`}>
               {ad.status}
             </span>
+            {ad?.filledByAdmin?.isFilled ? (
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
+                Filled by admin
+              </span>
+            ) : null}
           </div>
           <p className="mt-1 text-sm text-slate-500">{ad.advertisementId}</p>
         </div>

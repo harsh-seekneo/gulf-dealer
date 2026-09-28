@@ -59,6 +59,12 @@ const ListingHeaderStats = ({ listing }) => {
             Featured
           </span>
         )}
+
+        {listing?.filledByAdmin?.isFilled && (
+          <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+            Filled by admin
+          </span>
+        )}
       </div>
 
       <h1 className="mt-2 text-2xl font-bold text-slate-950">

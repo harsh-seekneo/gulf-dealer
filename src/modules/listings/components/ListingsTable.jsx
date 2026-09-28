@@ -144,6 +144,11 @@ export default function ListingsTable({
                     />
                     <div>
                       <p className="font-semibold text-slate-900">{v.vehicleInfo?.title}</p>
+                      {v.filledByAdmin?.isFilled && (
+                        <span className="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                          Filled by admin
+                        </span>
+                      )}
                       <p className="text-xs text-slate-400">
                         {v.vehicleInfo?.manufacturingYear} • {v.vehicleInfo?.mileage?.toLocaleString() || 0} km •{" "}
                         {v.vehicleInfo?.fuelType || v.specs?.fuelType || "—"}
