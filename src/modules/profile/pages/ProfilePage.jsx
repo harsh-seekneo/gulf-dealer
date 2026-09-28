@@ -119,6 +119,24 @@ const validateFile = (file) => {
   return "";
 };
 
+const validateDocumentFile = (file) => {
+  if (!file) return "Choose a file first.";
+
+  const allowedTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+  const allowedExtensions = ["pdf", "png", "jpg", "jpeg"];
+  const extension = file.name?.split(".").pop()?.toLowerCase();
+
+  if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(extension)) {
+    return "Please select a PDF, JPG, JPEG or PNG file.";
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    return "Document must be 5 MB or smaller.";
+  }
+
+  return "";
+};
+
 /* -------------------------------------------------------
    FORM FIELD
 ------------------------------------------------------- */
@@ -559,7 +577,8 @@ export default function ProfilePage() {
   ------------------------------------------------------- */
 
   const handleUpload = async (type, file) => {
-    const validationError = validateFile(file);
+    const validationError =
+      type === "document" ? validateDocumentFile(file) : validateFile(file);
 
     if (validationError) {
       setError(validationError);

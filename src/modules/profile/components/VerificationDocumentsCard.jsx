@@ -43,6 +43,7 @@ export default function VerificationDocumentsCard({
       setUploading(false);
     }
   };
+  const helperText = "Accepted formats: PDF, JPG, JPEG, PNG. Max size: 5 MB.";
 
   return (
     <div className="rounded-xl bg-white p-5 shadow-sm sm:p-6">
@@ -87,6 +88,8 @@ export default function VerificationDocumentsCard({
           Trade License Certificate is required.
         </p>
       )}
+
+      <p className="mt-3 text-xs font-medium text-slate-400">{helperText}</p>
 
       <input
         ref={fileInputRef}

@@ -551,7 +551,7 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
               <FileText size={17} />
               Upload a vehicle brochure
             </span>
-            <span className="text-xs font-normal text-slate-400 sm:ml-auto">PDF up to 10MB</span>
+            <span className="text-xs font-normal text-slate-400 sm:ml-auto">PDF up to 20MB</span>
           </button>
         )}
       </div>
