@@ -38,13 +38,7 @@ const clearTourVideoUploadSession = (file) => {
 export const profileApi = {
   getProfile: async () => {
     const res = await apiClient.get(API_ENDPOINTS.DEALER.PROFILE);
-    const data = res.data.data;
-
-    if (Array.isArray(data)) {
-      return data;
-    }
-
-    return data?.documents || [];
+    return res.data.data || {};
   },
 
   updateProfile: async (payload) => {

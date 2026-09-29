@@ -1,6 +1,6 @@
 //[DEALER] /Users/personal/Desktop/gulf--dealer/gulf-dealer/src/modules/dashboard/pages/DashboardPage.jsx
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -19,6 +19,7 @@ import {
   PackageCheck,
   MegaphoneIcon,
   RefreshCcw,
+  ChevronDown,
 } from "lucide-react";
 
 import StatCard from "../../../components/ui/StatCard";
@@ -59,12 +60,13 @@ const UsageLimit = ({ label, used = 0, limit }) => {
 
   if (!Number.isFinite(numericLimit) || numericLimit <= 0) {
     return (
-      <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
-        <p className="mt-1 text-sm font-extrabold text-slate-900">
-          {numericUsed.toLocaleString()} / Unlimited
-        </p>
-      </div>
+      // <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
+      //   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
+      //   <p className="mt-1 text-sm font-extrabold text-slate-900">
+      //     {numericUsed.toLocaleString()} / Unlimited
+      //   </p>
+      // </div>
+      <></>
     );
   }
 
@@ -105,7 +107,7 @@ const AdPlacementUsage = ({ placements = [] }) => (
             <div className="flex items-center justify-between gap-3 text-sm">
               <span className="font-semibold text-slate-700">{placement.label}</span>
               <span className="font-extrabold text-slate-900">
-                {used.toLocaleString()} / {hasLimit ? limit.toLocaleString() : "Unlimited"}
+                {used.toLocaleString()} / {hasLimit ? limit.toLocaleString() : "NAN"}
               </span>
             </div>
             {hasLimit ? (
@@ -206,61 +208,88 @@ const dealerGuideItems = [
   },
 ];
 
-const DealerGuideSection = () => (
-  <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-blue-600">
-          <BookOpenCheck size={16} />
-          Dealer Guide
-        </p>
-        <h2 className="mt-2 text-xl font-bold text-slate-900">How It Works</h2>
-        <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
-          A quick reference for using your dealer package, listings, advertisements,
-          renewals and add-ons.
-        </p>
+const DealerGuideSection = () => {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={open}
+        aria-controls={panelId}
+        className="flex w-full items-center justify-between gap-4 rounded-xl p-4 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:p-5"
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+            <BookOpenCheck size={18} />
+          </div>
+          <div className="min-w-0">
+            <h2 className="truncate text-base font-bold text-slate-900">
+              Dealer Guide: How It Works
+            </h2>
+            <p className="truncate text-sm text-slate-500">
+              Listings, advertisements, renewals and add-ons
+            </p>
+          </div>
+        </div>
+
+        <span className="flex shrink-0 items-center gap-2 text-sm font-semibold text-blue-700">
+          <span className="hidden sm:inline">{open ? "Hide guide" : "Show guide"}</span>
+          <ChevronDown
+            size={18}
+            className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          />
+        </span>
+      </button>
+
+      <div
+        id={panelId}
+        className={`grid transition-[grid-template-rows,visibility] duration-300 ease-out motion-reduce:transition-none ${
+          open ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="grid gap-4 border-t border-slate-100 p-4 sm:p-5 lg:grid-cols-2">
+            {dealerGuideItems.map((item, index) => {
+              const Icon = item.icon;
+
+              return (
+                <article
+                  key={item.title}
+                  className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                      <Icon size={18} />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-extrabold text-slate-900">
+                        {index + 1}. {item.title}
+                      </h3>
+                      <div className="mt-2 space-y-2 text-sm leading-6 text-slate-600">
+                        {item.body.map((paragraph, paragraphIndex) => (
+                          <p key={`${item.title}-${paragraphIndex}`}>{paragraph}</p>
+                        ))}
+                        {item.important ? (
+                          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 font-semibold text-amber-800">
+                            <span className="font-extrabold">Important:</span>{" "}
+                            {item.important}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
       </div>
-      <span className="inline-flex w-fit items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
-        GulfInCart Dealer Guide
-      </span>
-    </div>
-
-    <div className="mt-5 grid gap-4 lg:grid-cols-2">
-      {dealerGuideItems.map((item, index) => {
-        const Icon = item.icon;
-
-        return (
-          <article
-            key={item.title}
-            className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-4"
-          >
-            <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
-                <Icon size={18} />
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-sm font-extrabold text-slate-900">
-                  {index + 1}. {item.title}
-                </h3>
-                <div className="mt-2 space-y-2 text-sm leading-6 text-slate-600">
-                  {item.body.map((paragraph, paragraphIndex) => (
-                    <p key={`${item.title}-${paragraphIndex}`}>{paragraph}</p>
-                  ))}
-                  {item.important ? (
-                    <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 font-semibold text-amber-800">
-                      <span className="font-extrabold">Important:</span>{" "}
-                      {item.important}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </article>
-        );
-      })}
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -382,6 +411,8 @@ export default function DashboardPage() {
       {/* Breadcrumb */}
       <Breadcrumb items={[{ label: "Dashboard" }]} />
 
+      
+
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-4">
         {quickActions.map((action) => (
@@ -406,6 +437,8 @@ export default function DashboardPage() {
           </button>
         ))}
       </div>
+
+      <DealerGuideSection />
 
       {/* Current Plan */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -520,7 +553,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Dealer Guide */}
-      <DealerGuideSection />
+      
 
       {/* Statistics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
