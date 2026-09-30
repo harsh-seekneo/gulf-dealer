@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import CurrentPlanBanner from "../components/CurrentPlanBanner";
 import PlanCard from "../components/PlanCard";
 import ComparePlansTable from "../components/ComparePlansTable";
@@ -7,17 +7,9 @@ import { subscriptionApi } from "../api/subscriptionApi";
 import { getDealerStatusApi } from "../../dealer/api/dealerApi";
 import ConfirmModal from "../../../components/ui/ConfirmModal";
 import {
-  handleTapReturnInPaymentWindow,
-  closePreparedPaymentWindow,
-  openPaymentWindow,
-  preparePaymentWindow,
-  subscribeTapPaymentReturn,
+  redirectToPaymentUrl,
 } from "../../payment/paymentPopup";
 import { useToast } from "../../../context/ToastContext";
-
-const wait = (ms) => new Promise((resolve) => {
-  window.setTimeout(resolve, ms);
-});
 
 const getPlanListingLimit = (plan) => Number(plan?.activeListingCount || 0);
 
@@ -52,6 +44,7 @@ const getSelectedActionLabel = (selectedPlan) => {
 
 export default function SubscriptionPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const [currentPlan, setCurrentPlan] = useState(null);
   const [plans, setPlans] = useState([]);
@@ -84,6 +77,7 @@ export default function SubscriptionPage() {
 
         showToast("Subscription payment completed.", "success");
         await loadData();
+        navigate("/dashboard", { replace: true });
       } catch (error) {
         showToast(
           error.response?.data?.message || "Unable to verify payment",
@@ -94,23 +88,13 @@ export default function SubscriptionPage() {
 
     const tapId = searchParams.get("tap_id");
 
-    if (tapId && handleTapReturnInPaymentWindow(tapId)) {
-      return;
-    }
-
-    const unsubscribe = subscribeTapPaymentReturn((returnedTapId) => {
-      void verifyPayment(returnedTapId);
-    });
-
     if (tapId) {
       void verifyPayment(tapId).finally(() => {
         setSearchParams({});
       });
     }
-
-    return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, setSearchParams, showToast]);
+  }, [navigate, searchParams, setSearchParams, showToast]);
 
   const loadData = async () => {
     try {
@@ -245,28 +229,6 @@ export default function SubscriptionPage() {
     });
   };
 
-  const waitForPaymentCompletion = async (paymentId) => {
-    if (!paymentId) {
-      return null;
-    }
-
-    const maxAttempts = 45;
-
-    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const payment = await subscriptionApi.getPaymentStatus(paymentId);
-
-      if (["CAPTURED", "FAILED", "CANCELLED", "EXPIRED"].includes(payment.status)) {
-        return payment;
-      }
-
-      // Poll a little faster so successful Tap returns surface promptly without
-      // changing the existing retry count or terminal status handling.
-      await wait(1000);
-    }
-
-    return null;
-  };
-
   const confirmSelectPlan = async () => {
     if (!selectedPlan?.plan) return;
 
@@ -281,8 +243,6 @@ export default function SubscriptionPage() {
       console.error("No pricing tier found.");
       return;
     }
-
-    const paymentWindow = preparePaymentWindow();
 
     try {
       setIsSwitchingPlan(true);
@@ -301,34 +261,18 @@ export default function SubscriptionPage() {
       });
 
       if (payment?.payment?.redirectUrl) {
-        const openedInPopup = openPaymentWindow(payment.payment.redirectUrl, paymentWindow);
-        if (!openedInPopup) {
-          showToast("Secure payment opened in this tab because the popup was blocked.", "info");
-        }
         setSelectedPlan(null);
-        const completedPayment = await waitForPaymentCompletion(payment.payment.id);
-
-        if (completedPayment?.status === "CAPTURED") {
-          showToast("Subscription payment completed.", "success");
-          closePreparedPaymentWindow(paymentWindow);
-          await loadData();
-        } else if (completedPayment) {
-          showToast(
-            completedPayment.failureReason || "Payment was not completed.",
-            "error"
-          );
-        } else {
-          showToast("Payment is still pending. Please refresh after completion.", "info");
-        }
-
+        redirectToPaymentUrl(payment.payment, {
+          returnTo: "/dashboard",
+          source: "dealer-subscription",
+        });
         return;
       }
 
-      closePreparedPaymentWindow(paymentWindow);
       setSelectedPlan(null);
       await loadData();
+      navigate("/dashboard", { replace: true });
     } catch (err) {
-      closePreparedPaymentWindow(paymentWindow);
       console.error(err);
       showToast(
         err.response?.data?.message || "Unable to start dealer subscription payment.",
@@ -426,9 +370,10 @@ export default function SubscriptionPage() {
       {renewalReview && renewalSummary && (
         <div
           data-renewal-review
-          className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4"
         >
-          <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-h-[92vh] w-full max-w-7xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+          <div className="sticky top-0 z-10 -mx-5 -mt-5 flex flex-col gap-3 border-b border-slate-200 bg-white px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
                 {renewalActionLabel} Review
@@ -637,6 +582,7 @@ export default function SubscriptionPage() {
                 {renewalActionLabel}
               </button>
             </div>
+          </div>
           </div>
         </div>
       )}

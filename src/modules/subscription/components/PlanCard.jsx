@@ -21,6 +21,16 @@ export default function PlanCard({ plan, isCurrent, actionLabel, onSelect }) {
         {plan.planName}
       </span>
 
+      {isCurrent && (
+        <span
+          className={`mb-3 inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ${
+            isPremium ? "bg-white/15 text-white" : "bg-emerald-50 text-emerald-700"
+          }`}
+        >
+          Current Plan
+        </span>
+      )}
+
       {/* Price */}
       <p
         className={`text-3xl font-bold ${
