@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import CurrentPlanBanner from "../components/CurrentPlanBanner";
 import PlanCard from "../components/PlanCard";
 import ComparePlansTable from "../components/ComparePlansTable";
@@ -19,6 +19,37 @@ const wait = (ms) => new Promise((resolve) => {
   window.setTimeout(resolve, ms);
 });
 
+const getPlanListingLimit = (plan) => Number(plan?.activeListingCount || 0);
+
+const getPlanActionLabel = ({ plan, currentPlan }) => {
+  const currentPlanId =
+    currentPlan?.plan?._id ||
+    currentPlan?.planId ||
+    currentPlan?.plan ||
+    "";
+
+  if (String(currentPlanId) === String(plan?._id)) {
+    return "Renew Plan";
+  }
+
+  const currentLimit = Number(
+    currentPlan?.activeListingCount ||
+      currentPlan?.plan?.activeListingCount ||
+      currentPlan?.plan?.listingLimit ||
+      0
+  );
+  const nextLimit = getPlanListingLimit(plan);
+
+  if (nextLimit > currentLimit) return "Upgrade Plan";
+  if (currentLimit && nextLimit < currentLimit) return "Downgrade Plan";
+  return "Choose Plan";
+};
+
+const getSelectedActionLabel = (selectedPlan) => {
+  if (!selectedPlan?.renewalMode) return "Continue to Payment";
+  return selectedPlan.actionLabel || "Renew Plan";
+};
+
 export default function SubscriptionPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
@@ -29,6 +60,7 @@ export default function SubscriptionPage() {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isSwitchingPlan, setIsSwitchingPlan] = useState(false);
   const [renewalPlan, setRenewalPlan] = useState(null);
+  const [renewalActionLabel, setRenewalActionLabel] = useState("Renew Plan");
   const [renewalReview, setRenewalReview] = useState(null);
   const [renewalSelection, setRenewalSelection] = useState({
     selectedListingIds: [],
@@ -99,12 +131,13 @@ export default function SubscriptionPage() {
   };
 
   const handleSelectPlan = async (plan) => {
+    const actionLabel = getPlanActionLabel({ plan, currentPlan });
     const hasRenewableSubscription =
       ["ACTIVE", "EXPIRED"].includes(currentPlan?.status) &&
       currentPlan?.endDate;
 
     if (!hasRenewableSubscription) {
-      setSelectedPlan({ plan, renewalMode: false });
+      setSelectedPlan({ plan, renewalMode: false, actionLabel });
       return;
     }
 
@@ -112,6 +145,7 @@ export default function SubscriptionPage() {
       setIsLoadingRenewalReview(true);
       const review = await subscriptionApi.getRenewalReview(plan._id);
       setRenewalPlan(plan);
+      setRenewalActionLabel(actionLabel);
       setRenewalReview(review);
       setRenewalSelection({
         selectedListingIds: [],
@@ -267,7 +301,10 @@ export default function SubscriptionPage() {
       });
 
       if (payment?.payment?.redirectUrl) {
-        openPaymentWindow(payment.payment.redirectUrl, paymentWindow);
+        const openedInPopup = openPaymentWindow(payment.payment.redirectUrl, paymentWindow);
+        if (!openedInPopup) {
+          showToast("Secure payment opened in this tab because the popup was blocked.", "info");
+        }
         setSelectedPlan(null);
         const completedPayment = await waitForPaymentCompletion(payment.payment.id);
 
@@ -293,6 +330,10 @@ export default function SubscriptionPage() {
     } catch (err) {
       closePreparedPaymentWindow(paymentWindow);
       console.error(err);
+      showToast(
+        err.response?.data?.message || "Unable to start dealer subscription payment.",
+        "error"
+      );
     } finally {
       setIsSwitchingPlan(false);
     }
@@ -304,6 +345,7 @@ export default function SubscriptionPage() {
     setSelectedPlan({
       plan: renewalPlan,
       renewalMode: true,
+      actionLabel: renewalActionLabel,
       selectedListingIds: renewalSelection.selectedListingIds,
       selectedAdvertisementIdsByType:
         renewalSelection.selectedAdvertisementIdsByType,
@@ -312,6 +354,7 @@ export default function SubscriptionPage() {
 
   const closeRenewalReview = () => {
     setRenewalPlan(null);
+    setRenewalActionLabel("Renew Plan");
     setRenewalReview(null);
     setRenewalSelection({
       selectedListingIds: [],
@@ -340,9 +383,12 @@ export default function SubscriptionPage() {
           </p>
         </div>
 
-        <button className="text-lg font-semibold text-slate-900 hover:text-blue-600">
+        <Link
+          to="/subscription/billing"
+          className="text-lg font-semibold text-slate-900 hover:text-blue-600"
+        >
           View Billing History
-        </button>
+        </Link>
       </div>
 
       <CurrentPlanBanner plan={currentPlan} />
@@ -357,11 +403,14 @@ export default function SubscriptionPage() {
 
           const isCurrent = currentPlanId === plan._id;
 
+          const actionLabel = getPlanActionLabel({ plan, currentPlan });
+
           return (
             <PlanCard
               key={plan._id}
               plan={plan}
               isCurrent={isCurrent}
+              actionLabel={actionLabel}
               onSelect={handleSelectPlan}
             />
           );
@@ -382,7 +431,7 @@ export default function SubscriptionPage() {
           <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
-                Renewal Review
+                {renewalActionLabel} Review
               </p>
               <h2 className="mt-1 text-2xl font-bold text-slate-900">
                 You are changing from {renewalReview.currentPackage} to {renewalSummary.newPackage}.
@@ -512,30 +561,80 @@ export default function SubscriptionPage() {
             </section>
           </div>
 
-          <div className="mt-6 rounded-lg bg-slate-950 p-4 text-white">
-            <p className="text-sm font-semibold">Renewal Summary</p>
-            <p className="mt-2 text-sm text-slate-200">
-              {renewalSummary.newPackage} | {renewalSummary.listingsContinuing} listings continuing |
-              {" "}{renewalSummary.newListingSpacesAvailable} new listing spaces available |
-              {" "}{renewalSummary.ads.map((item) => `${item.continuing} ${item.label} continuing | ${item.available} spaces available`).join(" | ")} |
-              {" "}{renewalSummary.listingsEnding + renewalSummary.ads.reduce((sum, item) => sum + item.ending, 0)} listings/ads ending
-            </p>
-            <div className="mt-4 flex flex-wrap gap-3">
+          <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-5">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-wide text-blue-700">
+                  {renewalActionLabel} Summary
+                </p>
+                <h3 className="mt-1 text-xl font-black text-slate-950">
+                  {renewalSummary.newPackage}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Selected items will continue under the new plan after payment.
+                  Anything not selected remains expired and will not be visible.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
+                  <p className="text-xs font-bold uppercase text-slate-400">Continuing</p>
+                  <p className="mt-1 text-2xl font-black text-slate-950">
+                    {renewalSummary.listingsContinuing +
+                      renewalSummary.ads.reduce((sum, item) => sum + item.continuing, 0)}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
+                  <p className="text-xs font-bold uppercase text-slate-400">New Spaces</p>
+                  <p className="mt-1 text-2xl font-black text-slate-950">
+                    {renewalSummary.newListingSpacesAvailable +
+                      renewalSummary.ads.reduce((sum, item) => sum + item.available, 0)}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
+                  <p className="text-xs font-bold uppercase text-slate-400">Ending</p>
+                  <p className="mt-1 text-2xl font-black text-red-600">
+                    {renewalSummary.listingsEnding +
+                      renewalSummary.ads.reduce((sum, item) => sum + item.ending, 0)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <div className="rounded-lg border border-blue-100 bg-white p-4">
+                <p className="text-xs font-bold uppercase text-slate-400">Vehicle Listings</p>
+                <p className="mt-1 text-sm font-bold text-slate-900">
+                  {renewalSummary.listingsContinuing} continue, {renewalSummary.newListingSpacesAvailable} spaces left
+                </p>
+                <p className="mt-1 text-xs text-red-600">{renewalSummary.listingsEnding} ending</p>
+              </div>
+              {renewalSummary.ads.map((item) => (
+                <div key={item.category} className="rounded-lg border border-blue-100 bg-white p-4">
+                  <p className="text-xs font-bold uppercase text-slate-400">{item.label}</p>
+                  <p className="mt-1 text-sm font-bold text-slate-900">
+                    {item.continuing} continue, {item.available} spaces left
+                  </p>
+                  <p className="mt-1 text-xs text-red-600">{item.ending} ending</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={() => {
                   document.querySelector("[data-renewal-review]")?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="rounded-lg border border-white/40 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10"
+                className="rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
               >
                 Review Listings & Ads
               </button>
               <button
                 type="button"
                 onClick={continueToRenewalPayment}
-                className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-slate-100"
+                className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
               >
-                Continue to Renewal
+                {renewalActionLabel}
               </button>
             </div>
           </div>
@@ -546,13 +645,13 @@ export default function SubscriptionPage() {
 
       <ConfirmModal
         isOpen={Boolean(selectedPlan)}
-        title={selectedPlan?.renewalMode ? "Continue to Renewal" : "Switch subscription plan"}
+        title={selectedPlan?.renewalMode ? getSelectedActionLabel(selectedPlan) : "Confirm subscription plan"}
         message={
           selectedPlan?.renewalMode
-            ? `Renew ${selectedPlan?.plan?.planName || "this package"} with ${selectedPlan?.selectedListingIds?.length || 0} listings continuing? The new package becomes effective after your current subscription ends.`
+            ? `${getSelectedActionLabel(selectedPlan)} for ${selectedPlan?.plan?.planName || "this package"} with ${selectedPlan?.selectedListingIds?.length || 0} listings continuing?`
             : `Switch to ${selectedPlan?.plan?.planName || "this plan"}? Your dealer subscription will be updated.`
         }
-        confirmText={selectedPlan?.renewalMode ? "Continue to Payment" : "Switch Plan"}
+        confirmText={selectedPlan?.renewalMode ? getSelectedActionLabel(selectedPlan) : "Continue to Payment"}
         variant="primary"
         isLoading={isSwitchingPlan}
         onClose={() => {

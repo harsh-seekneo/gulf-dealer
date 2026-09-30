@@ -86,7 +86,7 @@ export default function DealerLayout() {
       return;
     }
 
-    if (location.pathname !== "/subscription") {
+    if (!location.pathname.startsWith("/subscription")) {
       if (!toastShownRef.current) {
         showToast(
           "Your business subscription has expired. Please renew, upgrade, or choose a plan to continue.",
@@ -108,7 +108,7 @@ export default function DealerLayout() {
   const subscriptionLocked =
     subscriptionChecked &&
     !hasActiveSubscription &&
-    location.pathname !== "/subscription";
+    !location.pathname.startsWith("/subscription");
 
   return (
     <div className="flex min-h-screen items-start bg-slate-50">

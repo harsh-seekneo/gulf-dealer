@@ -76,6 +76,11 @@ export const subscriptionApi = {
     const { data } = await apiClient.get(`/payments/${paymentId}/status`);
     return data.data;
   },
+
+  async getBillingHistory() {
+    const { data } = await apiClient.get("/dealer/billing-history");
+    return data.data || [];
+  },
 };
 
 export const getUsableSubscriptionsApi = async (category) => {

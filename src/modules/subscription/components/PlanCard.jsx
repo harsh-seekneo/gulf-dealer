@@ -1,6 +1,6 @@
 import { isPremiumPlan } from "../utils/planHelpers";
 
-export default function PlanCard({ plan, isCurrent, onSelect }) {
+export default function PlanCard({ plan, isCurrent, actionLabel, onSelect }) {
   const tier = plan.pricingTiers?.[0];
   const price = plan.basePrice ?? tier?.basePrice ?? tier?.price ?? 0;
   const isPremium = isPremiumPlan(plan);
@@ -111,16 +111,13 @@ export default function PlanCard({ plan, isCurrent, onSelect }) {
       {/* Button */}
       <button
         onClick={() => onSelect(plan)}
-        disabled={isCurrent}
         className={`mt-6 w-full rounded-lg py-2.5 text-sm font-semibold ${
-          isCurrent
-            ? "cursor-not-allowed bg-slate-100 text-slate-400"
-            : isPremium
+          isPremium
             ? "bg-white text-slate-950 hover:bg-slate-100"
             : "bg-blue-50 text-blue-700 hover:bg-blue-100"
         }`}
       >
-        {isCurrent ? "Current Plan" : isPremium ? "Manage Plan" : "Choose Plan"}
+        {actionLabel || (isCurrent ? "Renew Plan" : isPremium ? "Manage Plan" : "Choose Plan")}
       </button>
     </div>
   );
