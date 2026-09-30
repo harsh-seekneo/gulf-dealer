@@ -45,6 +45,12 @@ const devices = [
   { key: "mobile", label: "Mobile", icon: Smartphone },
 ];
 
+const AD_SELLER_FILTERS = [
+  { key: "all", label: "All" },
+  { key: "individual", label: "Individual Sellers" },
+  { key: "dealer", label: "Dealers" },
+];
+
 const durationOptions = [7, 15, 30, 60, 90];
 
 const fallbackBusinessCategoryOptions = [
@@ -360,6 +366,22 @@ const getStatusClass = (status) => {
   if (status === "DRAFT") return "bg-slate-100 text-slate-600";
   return "bg-slate-100 text-slate-500";
 };
+
+const getAdSellerType = (ad = {}) => {
+  if (
+    ad.sellerType === "dealer" ||
+    ad.advertisementSource === "DEALER_DASHBOARD" ||
+    ad.paymentMethod === "DEALER_PLAN" ||
+    ad.dealerSubscription
+  ) {
+    return "dealer";
+  }
+
+  return "individual";
+};
+
+const getAdSourceLabel = (ad) =>
+  ad?.sourceLabel || (getAdSellerType(ad) === "dealer" ? "Dealer" : "Individual");
 
 const getTierPrice = (plan, durationDays) =>
   Number(
@@ -2746,6 +2768,7 @@ export default function AdvertisementsPage() {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
+  const [sellerFilter, setSellerFilter] = useState("all");
   const [modalDraft, setModalDraft] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [endAdId, setEndAdId] = useState("");
@@ -2847,19 +2870,26 @@ export default function AdvertisementsPage() {
     () =>
       visibleAds.filter((ad) => {
         const matchesStatus = status === "ALL" || ad.status === status;
+        const matchesSeller =
+          sellerFilter === "all" || getAdSellerType(ad) === sellerFilter;
         const haystack = [
           ad.name,
           ad.advertisementId,
           ad.categoryLabel,
           categories[ad.category],
+          getAdSourceLabel(ad),
         ]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
 
-        return matchesStatus && haystack.includes(query.toLowerCase());
+        return (
+          matchesStatus &&
+          matchesSeller &&
+          haystack.includes(query.toLowerCase())
+        );
       }),
-    [query, status, visibleAds],
+    [query, sellerFilter, status, visibleAds],
   );
   const remainingBundleGroups = useMemo(
     () => groupRemainingBundleDrafts(ads),
@@ -2967,6 +2997,23 @@ export default function AdvertisementsPage() {
           label="Total Spent"
           iconBg="bg-emerald-100 text-emerald-600"
         />
+      </div>
+
+      <div className="flex w-fit rounded-xl bg-white p-1 shadow-sm">
+        {AD_SELLER_FILTERS.map((filter) => (
+          <button
+            key={filter.key}
+            type="button"
+            onClick={() => setSellerFilter(filter.key)}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              sellerFilter === filter.key
+                ? "bg-slate-900 text-white"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
       </div>
 
       {remainingBundleGroups.length ? (
@@ -3077,6 +3124,9 @@ export default function AdvertisementsPage() {
                       className={`rounded-full px-2.5 py-1 text-xs font-bold ${getStatusClass(ad.status)}`}
                     >
                       {ad.status}
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
+                      Source: {getAdSourceLabel(ad)}
                     </span>
                     {ad?.filledByAdmin?.isFilled ? (
                       <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">
