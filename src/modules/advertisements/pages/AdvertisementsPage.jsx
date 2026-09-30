@@ -323,7 +323,9 @@ const getBundleSlotPositionLabel = (ad) =>
 const redirectToUserAdvertisementDraft = (draft) => {
   if (!draft?._id) return;
   const baseUrl = USER_APP_URL.replace(/\/$/, "");
-  window.location.assign(`${baseUrl}/profile/advertisements?edit=${draft._id}`);
+  window.location.assign(
+    `${baseUrl}/profile/advertisements?edit=${draft._id}&bundleSlot=1`,
+  );
 };
 
 const groupRemainingBundleDrafts = (ads = []) => {
