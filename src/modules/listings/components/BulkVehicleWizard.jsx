@@ -31,7 +31,6 @@ const BulkVehicleWizard = () => {
 
   return (
     <div key={currentStep} className="animate-[stepFadeIn_0.25s_ease-out]">
-      sjdjsadadvahav
       <StepComponent useWizardHook={useBulkVehicleWizard} />
     </div>
   );

@@ -92,6 +92,10 @@ export const advertisementsApi = {
     const res = await apiClient.post(`/dealer/advertisements/${id}/submit`, formData);
     return res.data.data;
   },
+  deleteDraft: async (id) => {
+    const res = await apiClient.delete(`/dealer/advertisements/${id}/draft`);
+    return res.data.data;
+  },
   getById: async (id) => {
     const res = await apiClient.get(`/dealer/advertisements/${id}`);
     return res.data.data;

@@ -335,7 +335,7 @@ const Step1Category = ({ useWizardHook = useBulkVehicleWizard }) => {
                 group
                 flex
                 min-w-0
-                min-h-[96px]
+                min-h-[90px]
                 flex-col
                 items-start
                 rounded-xl
@@ -364,7 +364,7 @@ const Step1Category = ({ useWizardHook = useBulkVehicleWizard }) => {
               <div
                 className={`
                   flex
-                  h-9
+                  h-8
                   w-11
                   shrink-0
                   overflow-hidden

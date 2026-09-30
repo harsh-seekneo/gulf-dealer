@@ -99,12 +99,11 @@ export default function SubscriptionPage() {
   };
 
   const handleSelectPlan = async (plan) => {
-    const hasActiveSubscription =
-      currentPlan?.status === "ACTIVE" &&
-      currentPlan?.endDate &&
-      new Date(currentPlan.endDate) > new Date();
+    const hasRenewableSubscription =
+      ["ACTIVE", "EXPIRED"].includes(currentPlan?.status) &&
+      currentPlan?.endDate;
 
-    if (!hasActiveSubscription) {
+    if (!hasRenewableSubscription) {
       setSelectedPlan({ plan, renewalMode: false });
       return;
     }

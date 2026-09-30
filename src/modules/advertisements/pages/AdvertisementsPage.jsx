@@ -28,6 +28,7 @@ import {
   getPendingPaymentRedirect,
   redirectToPaymentUrl,
 } from "../../payment/paymentPopup";
+import { profileApi } from "../../profile/api/profileApi";
 import { advertisementsApi } from "../api/advertisementsApi";
 
 const categories = {
@@ -53,21 +54,33 @@ const fallbackBusinessCategoryOptions = [
   { code: "BUGGY_ATV_DEALERS", label: "Buggy / ATV Dealers" },
   { code: "CARAVAN_MOTORHOME_DEALERS", label: "Caravan / Motorhome Dealers" },
   { code: "VEHICLE_RENTAL_COMPANIES", label: "Vehicle Rental Companies" },
-  { code: "HEAVY_EQUIPMENT_RENTAL_COMPANIES", label: "Heavy Equipment Rental Companies" },
+  {
+    code: "HEAVY_EQUIPMENT_RENTAL_COMPANIES",
+    label: "Heavy Equipment Rental Companies",
+  },
   { code: "SPARE_PARTS_ACCESSORIES", label: "Spare Parts & Accessories" },
   { code: "TYRE_SHOPS", label: "Tyre Shops" },
   { code: "BATTERY_SHOPS", label: "Battery Shops" },
   { code: "GARAGES_AUTO_REPAIR", label: "Garages / Auto Repair" },
   { code: "VEHICLE_SERVICE_CENTRES", label: "Vehicle Service Centres" },
   { code: "CAR_WASH_DETAILING", label: "Car Wash & Detailing" },
-  { code: "CAR_CARE_POLISHING_CERAMIC", label: "Car Care / Polishing / Ceramic Coating" },
+  {
+    code: "CAR_CARE_POLISHING_CERAMIC",
+    label: "Car Care / Polishing / Ceramic Coating",
+  },
   { code: "AUTO_ELECTRICAL_SERVICES", label: "Auto Electrical Services" },
   { code: "VEHICLE_AC_SERVICES", label: "Vehicle AC Services" },
   { code: "VEHICLE_INSURANCE", label: "Vehicle Insurance" },
   { code: "VEHICLE_FINANCE_AUTO_LOANS", label: "Vehicle Finance / Auto Loans" },
   { code: "TOWING_ROADSIDE_ASSISTANCE", label: "Towing & Roadside Assistance" },
-  { code: "VEHICLE_RECOVERY_TRANSPORT", label: "Vehicle Recovery / Transport Services" },
-  { code: "CAR_MODIFICATION_ACCESSORIES", label: "Car Modification & Accessories" },
+  {
+    code: "VEHICLE_RECOVERY_TRANSPORT",
+    label: "Vehicle Recovery / Transport Services",
+  },
+  {
+    code: "CAR_MODIFICATION_ACCESSORIES",
+    label: "Car Modification & Accessories",
+  },
   { code: "OTHER_AUTOMOTIVE_BUSINESS", label: "Other Automotive Business" },
 ];
 
@@ -90,7 +103,8 @@ const mobileNationalMaxLengths = {
 };
 
 const getCountryPhoneMeta = (countryIso = "BH") =>
-  gccCountries.find((country) => country.iso2 === countryIso) || gccCountries[0];
+  gccCountries.find((country) => country.iso2 === countryIso) ||
+  gccCountries[0];
 
 const getCallingCode = (countryIso) => getCountryPhoneMeta(countryIso).dial;
 
@@ -115,6 +129,38 @@ const getLocalPhoneDigits = (value, countryIso) => {
 const buildPhoneContact = (countryIso, phone) =>
   `${getCallingCode(countryIso)} ${normalizePhoneInput(phone, countryIso)}`.trim();
 
+const getProfileBusinessCategoryCode = (profile = {}) => {
+  const category = profile.category || profile.businessCategoryCode || "";
+
+  return fallbackBusinessCategoryOptions.find(
+    (option) => option.code === category || option.label === category,
+  )?.code || "";
+};
+
+const buildDealerProfileDefaults = (profile = {}, user = {}) => {
+  const countryIso = getCountryPhoneMeta(
+    user?.countryIso || profile.countryIso || profile.country || "BH",
+  ).iso2;
+  const phone = profile.phone || user?.phone || "";
+  const whatsapp = profile.whatsapp || user?.whatsapp || user?.phone || phone;
+
+  return {
+    businessName:
+      profile.businessName ||
+      user?.businessName ||
+      user?.dealerProfile?.businessName ||
+      "",
+    businessCategoryCode: getProfileBusinessCategoryCode(profile),
+    countryIso,
+    callPhone: phone
+      ? buildPhoneContact(countryIso, getLocalPhoneDigits(phone, countryIso))
+      : "",
+    whatsappPhone: whatsapp
+      ? buildPhoneContact(countryIso, getLocalPhoneDigits(whatsapp, countryIso))
+      : "",
+  };
+};
+
 const validateCountryPhone = (value, countryIso, label) => {
   const localDigits = getLocalPhoneDigits(value, countryIso);
   const expectedLength = getMobileMaxLength(countryIso);
@@ -127,7 +173,8 @@ const validateCountryPhone = (value, countryIso, label) => {
   return "";
 };
 
-const formatCurrency = (value, currency = "BHD") => `${currency} ${(Number(value) || 0).toFixed(3)}`;
+const formatCurrency = (value, currency = "BHD") =>
+  `${currency} ${(Number(value) || 0).toFixed(3)}`;
 
 const formatCtr = (clicks, views) => {
   const numericViews = Number(views || 0);
@@ -163,6 +210,11 @@ const placementMeta = [
     description:
       "Prime visibility at the very top of the GulfInCart homepage. Seen by every visitor the moment they land on the site.",
     dimensions: "1440 x 200 px",
+    deviceDimensions: {
+      desktop: { width: 1440, height: 200 },
+      tablet: { width: 1024, height: 142 },
+      mobile: { width: 640, height: 89 },
+    },
     previewImageUrl:
       "https://gulfincart-dev.s3.ap-south-1.amazonaws.com/ui/ads-form/homepage-banner-preview.png",
   },
@@ -174,6 +226,11 @@ const placementMeta = [
     description:
       "Displayed inside active vehicle listing pages. Reaches buyers who are already browsing and ready to purchase.",
     dimensions: "728 x 90 px",
+    deviceDimensions: {
+      desktop: { width: 728, height: 90 },
+      tablet: { width: 640, height: 79 },
+      mobile: { width: 320, height: 40 },
+    },
     previewImageUrl:
       "https://gulfincart-dev.s3.ap-south-1.amazonaws.com/ui/ads-form/listingpage-banner-preview.png",
   },
@@ -185,6 +242,11 @@ const placementMeta = [
     description:
       "Featured prominently in category and search results pages. Captures high-volume browse traffic across all categories.",
     dimensions: "300 x 250 px",
+    deviceDimensions: {
+      desktop: { width: 300, height: 250 },
+      tablet: { width: 300, height: 250 },
+      mobile: { width: 300, height: 250 },
+    },
     previewImageUrl:
       "https://gulfincart-dev.s3.ap-south-1.amazonaws.com/ui/ads-form/large-category-ads-preview.png",
   },
@@ -196,10 +258,28 @@ const placementMeta = [
     description:
       "Sidebar and inline card slots across the platform. Ideal for sustained brand presence at an accessible price point.",
     dimensions: "160 x 600 px",
+    deviceDimensions: {
+      desktop: { width: 160, height: 600 },
+      tablet: { width: 112, height: 420 },
+      mobile: { width: 80, height: 300 },
+    },
     previewImageUrl:
       "https://gulfincart-dev.s3.ap-south-1.amazonaws.com/ui/ads-form/small-ad-sapace-preview.png",
   },
 ];
+
+const getDeviceDimensions = (placement, device) =>
+  placement?.deviceDimensions?.[device] ||
+  placement?.deviceDimensions?.desktop ||
+  null;
+
+const getDeviceDimensionLabel = (placement, device) => {
+  const dimensions = getDeviceDimensions(placement, device);
+
+  if (!dimensions) return placement?.dimensions || "-";
+
+  return `${dimensions.width} x ${dimensions.height} px`;
+};
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -219,13 +299,20 @@ const getTitle = (ad) =>
   "Advertisement";
 
 const isPaidBundleSlotDraft = (ad) =>
-  ad?.status === "DRAFT" && ad?.bundleParentAdvertisement && ad?.paymentStatus === "PAID";
+  ad?.status === "DRAFT" &&
+  ad?.bundleParentAdvertisement &&
+  ad?.paymentStatus === "PAID";
 
 const getBundleParentKey = (ad) =>
-  String(ad?.bundleParentAdvertisement?._id || ad?.bundleParentAdvertisement || "");
+  String(
+    ad?.bundleParentAdvertisement?._id || ad?.bundleParentAdvertisement || "",
+  );
 
 const getBundleSlotLabel = (ad) =>
-  ad?.bundleSlotLabel || categories[ad?.category] || ad?.categoryLabel || "Advertisement";
+  ad?.bundleSlotLabel ||
+  categories[ad?.category] ||
+  ad?.categoryLabel ||
+  "Advertisement";
 
 const groupRemainingBundleDrafts = (ads = []) => {
   const groups = new Map();
@@ -245,7 +332,9 @@ const groupRemainingBundleDrafts = (ads = []) => {
   return Array.from(groups.values()).map((group) => ({
     ...group,
     slots: group.slots.sort(
-      (first, second) => Number(first.bundleSlotIndex || 0) - Number(second.bundleSlotIndex || 0),
+      (first, second) =>
+        Number(first.bundleSlotIndex || 0) -
+        Number(second.bundleSlotIndex || 0),
     ),
   }));
 };
@@ -260,8 +349,9 @@ const getStatusClass = (status) => {
 
 const getTierPrice = (plan, durationDays) =>
   Number(
-    plan?.pricingTiers?.find((tier) => tier.durationDays === Number(durationDays))?.price ||
-      0,
+    plan?.pricingTiers?.find(
+      (tier) => tier.durationDays === Number(durationDays),
+    )?.price || 0,
   );
 
 const getMostPopularDuration = (pricingTiers = []) =>
@@ -279,7 +369,8 @@ const getBundleSlotsFromItems = (bundle) => {
       slots.push({
         slotIndex: slots.length + 1,
         category: item.category,
-        categoryLabel: item.categoryLabel || categories[item.category] || "Advertisement",
+        categoryLabel:
+          item.categoryLabel || categories[item.category] || "Advertisement",
         name: "",
         redirectTo: "",
         details: {
@@ -331,17 +422,31 @@ const hydrateBundleSlots = ({ bundle, draft, fallbackDetails }) => {
 };
 
 const hasBundleSlotCreative = (slot, deviceKey) =>
-  Boolean(slot.creatives?.[deviceKey] || slot.existingCreatives?.[deviceKey]?.url);
+  Boolean(
+    slot.creatives?.[deviceKey] || slot.existingCreatives?.[deviceKey]?.url,
+  );
 
 const getBundleSlotMissingFields = (slot, accountCountryIso) => {
   const missing = [];
   if (!slot.name?.trim()) missing.push("name");
   if (!slot.details?.businessName?.trim()) missing.push("business name");
   if (!slot.details?.businessCategoryCode) missing.push("business category");
-  if (validateCountryPhone(slot.details?.callPhone, accountCountryIso, "Call phone number")) {
+  if (
+    validateCountryPhone(
+      slot.details?.callPhone,
+      accountCountryIso,
+      "Call phone number",
+    )
+  ) {
     missing.push("call number");
   }
-  if (validateCountryPhone(slot.details?.whatsappPhone, accountCountryIso, "WhatsApp number")) {
+  if (
+    validateCountryPhone(
+      slot.details?.whatsappPhone,
+      accountCountryIso,
+      "WhatsApp number",
+    )
+  ) {
     missing.push("WhatsApp number");
   }
   devices.forEach((device) => {
@@ -358,11 +463,17 @@ const isBundleSlotComplete = (slot, accountCountryIso) =>
 
 const isLaunchOfferActiveForDuration = (launchOffer, durationDays) => {
   if (!launchOffer?.enabled) return false;
-  if (Number(launchOffer.triggerDurationDays || 30) !== Number(durationDays)) return false;
+  if (Number(launchOffer.triggerDurationDays || 30) !== Number(durationDays))
+    return false;
 
   const now = Date.now();
-  if (launchOffer.validFrom && new Date(launchOffer.validFrom).getTime() > now) return false;
-  if (launchOffer.validUntil && new Date(launchOffer.validUntil).getTime() < now) return false;
+  if (launchOffer.validFrom && new Date(launchOffer.validFrom).getTime() > now)
+    return false;
+  if (
+    launchOffer.validUntil &&
+    new Date(launchOffer.validUntil).getTime() < now
+  )
+    return false;
 
   return Number(launchOffer.freeAdditionalDays || 0) > 0;
 };
@@ -438,7 +549,9 @@ const WizardProgress = ({ step }) => (
   <div className="border-b border-slate-100 px-3 py-2 lg:px-5">
     <div
       className="grid items-start gap-1.5"
-      style={{ gridTemplateColumns: `repeat(${wizardSteps.length}, minmax(0, 1fr))` }}
+      style={{
+        gridTemplateColumns: `repeat(${wizardSteps.length}, minmax(0, 1fr))`,
+      }}
     >
       {wizardSteps.map((item, index) => {
         const stepNumber = index + 1;
@@ -467,7 +580,11 @@ const WizardProgress = ({ step }) => (
             </span>
             <span
               className={`mt-1 hidden text-[10px] font-semibold sm:block ${
-                completed ? "text-emerald-500" : active ? "text-blue-600" : "text-slate-400"
+                completed
+                  ? "text-emerald-500"
+                  : active
+                    ? "text-blue-600"
+                    : "text-slate-400"
               }`}
             >
               {item}
@@ -495,7 +612,9 @@ const CountryFlagMark = ({ countryIso }) => (
   <span
     aria-hidden="true"
     className="h-4 w-6 shrink-0 rounded-sm bg-cover bg-center ring-1 ring-slate-200"
-    style={{ backgroundImage: `url(https://flagcdn.com/w40/${String(countryIso || "BH").toLowerCase()}.png)` }}
+    style={{
+      backgroundImage: `url(https://flagcdn.com/w40/${String(countryIso || "BH").toLowerCase()}.png)`,
+    }}
   />
 );
 
@@ -542,15 +661,24 @@ const LockedCountryPhoneField = ({
           }`}
         />
       </div>
-      <p className={`text-xs font-medium ${error ? "text-red-600" : "text-slate-500"}`}>
+      <p
+        className={`text-xs font-medium ${error ? "text-red-600" : "text-slate-500"}`}
+      >
         {error || `Uses your account country code ${country.dial}.`}
       </p>
     </div>
   );
 };
 
-const FileUpload = ({ file, label, onChange, existingUrl = "" }) => {
+const FileUpload = ({
+  dimensions = "",
+  file,
+  label,
+  onChange,
+  existingUrl = "",
+}) => {
   const previewUrl = getObjectUrl(file) || existingUrl;
+  const dimensionLabel = dimensions || "-";
 
   return (
     <label className="flex min-h-[132px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-center hover:border-blue-300 hover:bg-blue-50/40">
@@ -574,6 +702,9 @@ const FileUpload = ({ file, label, onChange, existingUrl = "" }) => {
       <span className="mt-3 rounded-lg bg-slate-200 px-3 py-1 text-[11px] font-medium text-slate-500">
         JPG - PNG - WEBP - Max 5MB
       </span>
+      <span className="mt-2 text-[11px] font-black uppercase tracking-wide text-blue-600">
+        Required: {dimensionLabel}
+      </span>
       <input
         type="file"
         accept="image/jpeg,image/jpg,image/png,image/webp"
@@ -595,7 +726,9 @@ const SummaryPanel = ({
   selectedBundle,
   freeAdditionalDays,
 }) => {
-  const vat = Number(((Number(price || 0) * taxMeta.percentage) / 100).toFixed(3));
+  const vat = Number(
+    ((Number(price || 0) * taxMeta.percentage) / 100).toFixed(3),
+  );
   const total = Number((Number(price || 0) + vat).toFixed(3));
   const isBundle = packageType === "BUNDLE";
 
@@ -612,17 +745,26 @@ const SummaryPanel = ({
       ) : null}
       <div className="mt-5 space-y-3 text-xs">
         <div className="flex justify-between gap-4">
-          <span className="text-slate-500">{isBundle ? "Bundle" : "Placement"}</span>
+          <span className="text-slate-500">
+            {isBundle ? "Bundle" : "Placement"}
+          </span>
           <span className="text-right font-bold text-slate-950">
-            {isBundle ? selectedBundle?.name || "Promotion Bundle" : placement.title}
+            {isBundle
+              ? selectedBundle?.name || "Promotion Bundle"
+              : placement.title}
           </span>
         </div>
         {isBundle ? (
           <div className="space-y-1 rounded-lg bg-white p-2">
             {(selectedBundle?.items || []).map((item) => (
-              <div key={item.category} className="flex justify-between gap-2 text-[11px]">
+              <div
+                key={item.category}
+                className="flex justify-between gap-2 text-[11px]"
+              >
                 <span className="text-slate-500">{item.categoryLabel}</span>
-                <span className="font-bold text-slate-700">x{item.quantity}</span>
+                <span className="font-bold text-slate-700">
+                  x{item.quantity}
+                </span>
               </div>
             ))}
           </div>
@@ -636,7 +778,9 @@ const SummaryPanel = ({
         {freeAdditionalDays > 0 ? (
           <div className="flex justify-between">
             <span className="text-emerald-600">Launch Offer</span>
-            <span className="font-bold text-emerald-700">+ {freeAdditionalDays} Days Free</span>
+            <span className="font-bold text-emerald-700">
+              + {freeAdditionalDays} Days Free
+            </span>
           </div>
         ) : null}
         {isBundle ? (
@@ -657,18 +801,24 @@ const SummaryPanel = ({
         ) : null}
         <div className="flex justify-between">
           <span className="text-slate-500">Ad Fee</span>
-          <span className="font-bold text-slate-950">{formatCurrency(price, currency)}</span>
+          <span className="font-bold text-slate-950">
+            {formatCurrency(price, currency)}
+          </span>
         </div>
         <div className="flex justify-between">
           <span className="text-slate-400">{taxMeta.label}</span>
-          <span className="text-slate-400">{formatCurrency(vat, currency)}</span>
+          <span className="text-slate-400">
+            {formatCurrency(vat, currency)}
+          </span>
         </div>
       </div>
       <div className="mt-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3">
         <span className="font-bold text-blue-600">Total</span>
-        <span className="text-lg font-black text-blue-600">{formatCurrency(total, currency)}</span>
+        <span className="text-lg font-black text-blue-600">
+          {formatCurrency(total, currency)}
+        </span>
       </div>
-      <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+      {/* <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
         <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Estimated Reach</p>
         <div className="mt-2 flex items-center justify-between text-xs">
           <span className="text-slate-500">Daily impressions</span>
@@ -678,7 +828,7 @@ const SummaryPanel = ({
           <span className="text-slate-500">Avg. CTR</span>
           <span className="font-bold text-blue-600">3.6%</span>
         </div>
-      </div>
+      </div> */}
     </aside>
   );
 };
@@ -696,7 +846,8 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
   const [form, setForm] = useState({
     _id: draft?._id || "",
     name: draft?.name || "",
-    packageType: draft?.packageType || (draft?.bundleCode ? "BUNDLE" : "INDIVIDUAL"),
+    packageType:
+      draft?.packageType || (draft?.bundleCode ? "BUNDLE" : "INDIVIDUAL"),
     bundleCode: draft?.bundleCode || "",
     category: draft?.category || "",
     redirectTo: draft?.redirectTo || "",
@@ -707,7 +858,8 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
       businessCategoryCode: draft?.details?.businessCategoryCode || "",
       countryIso: draft?.details?.countryIso || "",
       callPhone: draft?.details?.callPhone || draft?.details?.phones?.[0] || "",
-      whatsappPhone: draft?.details?.whatsappPhone || draft?.details?.phones?.[1] || "",
+      whatsappPhone:
+        draft?.details?.whatsappPhone || draft?.details?.phones?.[1] || "",
     },
     creatives: { desktop: null, tablet: null, mobile: null },
   });
@@ -727,7 +879,10 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
   const [step, setStep] = useState(
     Math.max(
       minimumStep,
-      Math.min(normalizeWizardStep(draft?.currentStep || minimumStep), wizardSteps.length),
+      Math.min(
+        normalizeWizardStep(draft?.currentStep || minimumStep),
+        wizardSteps.length,
+      ),
     ),
   );
 
@@ -738,24 +893,70 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
       advertisementsApi.getPlans(),
       advertisementsApi.getPromotions(),
       advertisementsApi.getWallet(),
+      profileApi.getProfile(),
     ])
-      .then(([plansResult, promotionsResult, walletResult]) => {
+      .then(([plansResult, promotionsResult, walletResult, profileResult]) => {
         if (!active) return;
         if (plansResult.status === "rejected") throw plansResult.reason;
 
         const data = plansResult.value || [];
-        const activePlans = (data || []).filter((plan) => plan.status === "ACTIVE");
+        const activePlans = (data || []).filter(
+          (plan) => plan.status === "ACTIVE",
+        );
         setPlans(activePlans);
         if (promotionsResult.status === "fulfilled") {
-          setPromotionSettings(promotionsResult.value || {
-            bundles: [],
-            launchOffer: null,
-            promotionsAvailable: false,
-          });
+          setPromotionSettings(
+            promotionsResult.value || {
+              bundles: [],
+              launchOffer: null,
+              promotionsAvailable: false,
+            },
+          );
         }
         if (walletResult.status === "fulfilled") {
           setWallet(walletResult.value || null);
         }
+        const profileDefaults =
+          profileResult.status === "fulfilled"
+            ? buildDealerProfileDefaults(profileResult.value || {}, user || {})
+            : buildDealerProfileDefaults({}, user || {});
+
+        setForm((current) => {
+          const nextDetails = {
+            ...current.details,
+            businessName:
+              current.details.businessName || profileDefaults.businessName,
+            businessCategoryCode:
+              current.details.businessCategoryCode ||
+              profileDefaults.businessCategoryCode,
+            countryIso: current.details.countryIso || profileDefaults.countryIso,
+            callPhone: current.details.callPhone || profileDefaults.callPhone,
+            whatsappPhone:
+              current.details.whatsappPhone || profileDefaults.whatsappPhone,
+          };
+
+          return {
+            ...current,
+            details: nextDetails,
+          };
+        });
+        setBundleSlots((current) =>
+          current.map((slot) => ({
+            ...slot,
+            details: {
+              ...slot.details,
+              businessName:
+                slot.details?.businessName || profileDefaults.businessName,
+              businessCategoryCode:
+                slot.details?.businessCategoryCode ||
+                profileDefaults.businessCategoryCode,
+              countryIso: slot.details?.countryIso || profileDefaults.countryIso,
+              callPhone: slot.details?.callPhone || profileDefaults.callPhone,
+              whatsappPhone:
+                slot.details?.whatsappPhone || profileDefaults.whatsappPhone,
+            },
+          })),
+        );
         if (!form.category && form.packageType !== "BUNDLE" && activePlans[0]) {
           setForm((current) => ({
             ...current,
@@ -766,7 +967,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
       })
       .catch((err) => {
         if (active) {
-          setError(err.response?.data?.message || "Unable to load advertisement plans");
+          setError(
+            err.response?.data?.message || "Unable to load advertisement plans",
+          );
         }
       })
       .finally(() => {
@@ -825,7 +1028,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
   const taxMeta = isBundlePackage
     ? {
         taxName: selectedBundle?.taxName || "VAT",
-        percentage: selectedBundle?.vatEnabled ? Number(selectedBundle.vatPercentage || 0) : 0,
+        percentage: selectedBundle?.vatEnabled
+          ? Number(selectedBundle.vatPercentage || 0)
+          : 0,
         label: selectedBundle?.vatEnabled
           ? `${selectedBundle?.taxName || "VAT"} (${Number(selectedBundle.vatPercentage || 0)}%)`
           : selectedBundle?.taxName || "VAT",
@@ -835,7 +1040,8 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     ? getBundlePrice(selectedBundle)
     : getTierPrice(selectedPlan, form.durationDays);
   const selectedPlanBenefit = planAdBenefits[form.category];
-  const hasSelectedPlanBenefit = Number(selectedPlanBenefit?.remaining || 0) > 0;
+  const hasSelectedPlanBenefit =
+    Number(selectedPlanBenefit?.remaining || 0) > 0;
   const isIncludedWithPlan =
     purchaseMode === "BENEFIT" &&
     !isBundlePackage &&
@@ -859,7 +1065,10 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     : 0;
   const progress = Math.round((step / wizardSteps.length) * 100);
   const walletBalance = Number(wallet?.balance || 0);
-  const walletAmountUsed = useWalletBalance && !isIncludedWithPlan ? Math.min(walletBalance, total) : 0;
+  const walletAmountUsed =
+    useWalletBalance && !isIncludedWithPlan
+      ? Math.min(walletBalance, total)
+      : 0;
   const onlineAmountDue = Math.max(0, total - walletAmountUsed);
   const callPhoneError = validateCountryPhone(
     form.details.callPhone,
@@ -886,7 +1095,8 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
       ),
     },
   };
-  const activeBundleSlot = bundleSlots[activeBundleSlotIndex] || bundleSlots[0] || null;
+  const activeBundleSlot =
+    bundleSlots[activeBundleSlotIndex] || bundleSlots[0] || null;
   const completedBundleSlots = bundleSlots.filter((slot) =>
     isBundleSlotComplete(slot, accountCountryIso),
   ).length;
@@ -912,7 +1122,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
       if (
         current.length &&
         current.every((slot) =>
-          (selectedBundle.items || []).some((item) => item.category === slot.category),
+          (selectedBundle.items || []).some(
+            (item) => item.category === slot.category,
+          ),
         )
       ) {
         return current;
@@ -1025,11 +1237,13 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
   const selectBundlePackage = (bundle) => {
     setUseWalletBalance(false);
     setPurchaseMode("PAID");
-    setBundleSlots(hydrateBundleSlots({
-      bundle,
-      draft,
-      fallbackDetails: form.details,
-    }));
+    setBundleSlots(
+      hydrateBundleSlots({
+        bundle,
+        draft,
+        fallbackDetails: form.details,
+      }),
+    );
     setActiveBundleSlotIndex(0);
     setForm((current) => ({
       ...current,
@@ -1051,13 +1265,17 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     }
     if (!form.name.trim()) return "Advertisement name is required.";
     if (!form.details.businessName.trim()) return "Business name is required.";
-    if (!form.details.businessCategoryCode) return "Business category is required.";
+    if (!form.details.businessCategoryCode)
+      return "Business category is required.";
     if (callPhoneError) return callPhoneError;
     if (whatsappPhoneError) return whatsappPhoneError;
     if (!isIncludedWithPlan && !isIncludedBundleSlot && !price) {
       return "Pricing is not configured for this package.";
     }
-    const missing = devices.find((device) => !form.creatives[device.key] && !draft?.creatives?.[device.key]?.url);
+    const missing = devices.find(
+      (device) =>
+        !form.creatives[device.key] && !draft?.creatives?.[device.key]?.url,
+    );
     if (missing) return `${missing.label} creative is required.`;
     return "";
   };
@@ -1087,14 +1305,19 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
               ),
               whatsappPhone: buildPhoneContact(
                 accountCountryIso,
-                getLocalPhoneDigits(slot.details.whatsappPhone, accountCountryIso),
+                getLocalPhoneDigits(
+                  slot.details.whatsappPhone,
+                  accountCountryIso,
+                ),
               ),
             },
             creatives: slot.creatives,
             isComplete: isBundleSlotComplete(slot, accountCountryIso),
           }))
         : [];
-      const firstCompleteBundleSlot = bundlePayloadSlots.find((slot) => slot.isComplete);
+      const firstCompleteBundleSlot = bundlePayloadSlots.find(
+        (slot) => slot.isComplete,
+      );
       const parentBundleSlot = isBundlePackage ? firstCompleteBundleSlot : null;
       const payload = {
         ...(isBundlePackage && !parentBundleSlot
@@ -1106,23 +1329,25 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
               creatives: {},
             }
           : parentBundleSlot
-          ? {
-              ...formWithAccountCountry,
-              name: parentBundleSlot.name || selectedBundle?.name || form.name,
-              category: parentBundleSlot.category,
-              redirectTo: parentBundleSlot.redirectTo || form.redirectTo,
-              details: parentBundleSlot.details,
-              creatives: parentBundleSlot.creatives,
-            }
-          : formWithAccountCountry),
+            ? {
+                ...formWithAccountCountry,
+                name:
+                  parentBundleSlot.name || selectedBundle?.name || form.name,
+                category: parentBundleSlot.category,
+                redirectTo: parentBundleSlot.redirectTo || form.redirectTo,
+                details: parentBundleSlot.details,
+                creatives: parentBundleSlot.creatives,
+              }
+            : formWithAccountCountry),
         paymentMethod: isIncludedWithPlan
           ? "card"
           : isIncludedBundleSlot
-          ? "card"
-          : useWalletBalance
-          ? "wallet"
-          : form.paymentMethod,
-        useWalletBalance: isIncludedWithPlan || isIncludedBundleSlot ? false : useWalletBalance,
+            ? "card"
+            : useWalletBalance
+              ? "wallet"
+              : form.paymentMethod,
+        useWalletBalance:
+          isIncludedWithPlan || isIncludedBundleSlot ? false : useWalletBalance,
         useDealerPlanBenefit: isIncludedBundleSlot ? false : isIncludedWithPlan,
         currentStep: isDraft ? step : wizardSteps.length,
         bundleSlots: bundlePayloadSlots,
@@ -1136,7 +1361,10 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
       if (result?.payment?.redirectUrl) {
         redirectToPaymentUrl(result.payment, {
           advertisementId:
-            result?.advertisement?._id || result?.payment?.targetId || form._id || "",
+            result?.advertisement?._id ||
+            result?.payment?.targetId ||
+            form._id ||
+            "",
           resumeStep: wizardSteps.length,
         });
         return;
@@ -1179,7 +1407,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
       const missing = isBundlePackage
         ? null
         : devices.find(
-            (device) => !form.creatives[device.key] && !draft?.creatives?.[device.key]?.url,
+            (device) =>
+              !form.creatives[device.key] &&
+              !draft?.creatives?.[device.key]?.url,
           );
       if (missing) {
         setError(
@@ -1194,15 +1424,21 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     if (step === 3) {
       if (isBundlePackage) {
         if (!activeBundleSlot?.name?.trim()) {
-          setError(`Advertisement ${activeBundleSlotIndex + 1} name is required.`);
+          setError(
+            `Advertisement ${activeBundleSlotIndex + 1} name is required.`,
+          );
           return;
         }
         if (!activeBundleSlot.details?.businessName?.trim()) {
-          setError(`Advertisement ${activeBundleSlotIndex + 1} business name is required.`);
+          setError(
+            `Advertisement ${activeBundleSlotIndex + 1} business name is required.`,
+          );
           return;
         }
         if (!activeBundleSlot.details?.businessCategoryCode) {
-          setError(`Advertisement ${activeBundleSlotIndex + 1} business category is required.`);
+          setError(
+            `Advertisement ${activeBundleSlotIndex + 1} business category is required.`,
+          );
           return;
         }
         const slotCallError = validateCountryPhone(
@@ -1224,26 +1460,26 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
           return;
         }
       } else {
-      if (!form.name.trim()) {
-        setError("Advertisement name is required.");
-        return;
-      }
-      if (!form.details.businessName.trim()) {
-        setError("Business name is required.");
-        return;
-      }
-      if (!form.details.businessCategoryCode) {
-        setError("Business category is required.");
-        return;
-      }
-      if (callPhoneError) {
-        setError(callPhoneError);
-        return;
-      }
-      if (whatsappPhoneError) {
-        setError(whatsappPhoneError);
-        return;
-      }
+        if (!form.name.trim()) {
+          setError("Advertisement name is required.");
+          return;
+        }
+        if (!form.details.businessName.trim()) {
+          setError("Business name is required.");
+          return;
+        }
+        if (!form.details.businessCategoryCode) {
+          setError("Business category is required.");
+          return;
+        }
+        if (callPhoneError) {
+          setError(callPhoneError);
+          return;
+        }
+        if (whatsappPhoneError) {
+          setError(whatsappPhoneError);
+          return;
+        }
       }
     }
 
@@ -1280,34 +1516,51 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     }
 
     if (step === 1) {
+      const activeBundles = (promotionSettings.bundles || []).filter(
+        (bundle) => bundle.status === "ACTIVE" && bundle.isValidForSale,
+      );
+      const hasBundles =
+        Boolean(promotionSettings.promotionsAvailable) &&
+        activeBundles.length > 0;
+      const isBundlePackage = form.packageType === "BUNDLE";
+      const activePlacement =
+        placementMeta.find((p) => p.category === form.category) ||
+        placementMeta[0];
+      const activePlan = plans.find(
+        (item) => item.category === activePlacement?.category,
+      );
+
       return (
-        <div className="space-y-6">
-          <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="text-xl font-black text-slate-950">
-                  Choose Advertisement Package
-                </h2>
-                <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-slate-500">
-                  Select the placement and duration together. Pricing, bundles, and offer days are visible before you continue.
-                </p>
-              </div>
-              {isLaunchOfferActiveForDuration(promotionSettings.launchOffer, 30) ? (
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 lg:min-w-[260px]">
-                  <p className="text-xs font-black uppercase tracking-wide text-emerald-600">
-                    Launch Offer
-                  </p>
-                  <p className="mt-1 text-sm font-black text-emerald-900">
-                    {promotionSettings.launchOffer?.description || "30 Days + 15 Days FREE"}
-                  </p>
-                  <p className="mt-1 text-xs font-semibold text-emerald-700">
-                    Only paid individual 30-day ads. Dealer plan benefits and bundles are excluded.
-                  </p>
-                </div>
-              ) : null}
+        <div className="space-y-4">
+          {/* Heading + launch offer chip */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-xl font-black text-slate-950">
+                Choose where your ad appears
+              </h2>
+              <p className="mt-1 text-sm font-medium text-slate-500">
+                Pick a placement, then pick how long it runs.
+              </p>
             </div>
+            {isLaunchOfferActiveForDuration(
+              promotionSettings.launchOffer,
+              30,
+            ) ? (
+              <span className="group relative inline-flex shrink-0">
+                <span className="inline-flex cursor-default items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700">
+                  <Megaphone size={13} />
+                  {promotionSettings.launchOffer?.description ||
+                    "30 Days + 15 Days FREE"}
+                </span>
+                <span className="pointer-events-none absolute right-0 top-full z-20 mt-1.5 w-60 scale-95 rounded-lg bg-slate-900 px-2.5 py-1.5 text-[10px] font-medium leading-4 text-white opacity-0 shadow-lg transition group-hover:scale-100 group-hover:opacity-100">
+                  Only paid individual 30-day ads. Dealer plan benefits and
+                  bundles are excluded.
+                </span>
+              </span>
+            ) : null}
           </div>
 
+          {/* Dealer plan benefits */}
           {availableDealerBenefits.length ? (
             <div className="rounded-[18px] border border-emerald-200 bg-emerald-50/70 p-4 shadow-sm">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -1316,7 +1569,8 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                     Use Dealer Plan Benefit
                   </h3>
                   <p className="mt-1 text-xs font-semibold text-emerald-700">
-                    Included advertisements run until your dealer plan expiry date.
+                    Included advertisements run until your dealer plan expiry
+                    date.
                   </p>
                 </div>
                 <span className="text-xs font-bold text-emerald-700">
@@ -1324,7 +1578,7 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                 </span>
               </div>
 
-              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="mt-3 grid gap-2.5 md:grid-cols-2 xl:grid-cols-4">
                 {availableDealerBenefits.map(({ placement, plan, status }) => {
                   const active =
                     isIncludedWithPlan &&
@@ -1335,25 +1589,27 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                     <button
                       key={placement.category}
                       type="button"
-                      onClick={() => selectDealerPlanBenefit(placement.category)}
-                      className={`relative rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
+                      onClick={() =>
+                        selectDealerPlanBenefit(placement.category)
+                      }
+                      className={`relative rounded-xl border-2 bg-white p-3.5 text-left transition ${
                         active
-                          ? "border-emerald-500 ring-2 ring-emerald-100"
+                          ? "border-emerald-500 shadow-sm shadow-emerald-500/20"
                           : "border-emerald-100 hover:border-emerald-300"
                       }`}
                     >
                       {active ? (
-                        <span className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-white">
-                          <Check size={15} strokeWidth={3} />
+                        <span className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white">
+                          <Check size={13} strokeWidth={3} />
                         </span>
                       ) : null}
                       <h4 className="pr-8 text-sm font-black text-slate-950">
                         {placement.title}
                       </h4>
-                      <p className="mt-1 text-xs font-bold text-emerald-700">
+                      <span className="mt-1 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
                         {status.remaining} remaining
-                      </p>
-                      <div className="mt-4 space-y-2 text-xs">
+                      </span>
+                      <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-2.5 text-xs">
                         <div className="flex justify-between gap-3">
                           <span className="text-slate-500">Valid until</span>
                           <span className="text-right font-bold text-slate-950">
@@ -1363,7 +1619,10 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                         <div className="flex justify-between gap-3">
                           <span className="text-slate-500">Cost</span>
                           <span className="font-black text-emerald-700">
-                            {formatCurrency(0, plan?.currency || selectedCurrency)}
+                            {formatCurrency(
+                              0,
+                              plan?.currency || selectedCurrency,
+                            )}
                           </span>
                         </div>
                       </div>
@@ -1374,150 +1633,269 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
             </div>
           ) : null}
 
-          <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h3 className="text-base font-black text-slate-950">
-                  Purchase Additional Advertisement
-                </h3>
-                <p className="mt-1 text-xs font-semibold text-slate-500">
-                  Select a paid placement duration. Dealer plan benefits are not shown in this table.
-                </p>
+          {/* Segmented control */}
+          {hasBundles ? (
+            <div className="grid grid-cols-2 gap-2 sm:inline-grid sm:grid-cols-[auto_auto]">
+              <button
+                type="button"
+                onClick={() =>
+                  selectIndividualPackage(activePlacement.category, 30)
+                }
+                className={`flex items-center justify-center gap-2 rounded-xl border-2 px-5 py-2.5 text-xs font-black transition ${
+                  !isBundlePackage
+                    ? "border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-600/20"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-700"
+                }`}
+              >
+                <Monitor size={14} />
+                Single placement
+              </button>
+              <button
+                type="button"
+                onClick={() => selectBundlePackage(activeBundles[0])}
+                className={`flex items-center justify-center gap-2 rounded-xl border-2 px-5 py-2.5 text-xs font-black transition ${
+                  isBundlePackage
+                    ? "border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-600/20"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-700"
+                }`}
+              >
+                Bundles
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                    isBundlePackage
+                      ? "bg-white/20 text-white"
+                      : "bg-emerald-50 text-emerald-700"
+                  }`}
+                >
+                  Save more
+                </span>
+              </button>
+            </div>
+          ) : null}
+
+          {/* SINGLE PLACEMENT */}
+          {!isBundlePackage ? (
+            <div className="grid gap-4 lg:grid-cols-[264px_minmax(0,1fr)]">
+              {/* Placement list */}
+              <div className="space-y-2">
+                {placementMeta.map((placement) => {
+                  const plan = plans.find(
+                    (item) => item.category === placement.category,
+                  );
+                  const isSelected =
+                    activePlacement?.category === placement.category;
+
+                  return (
+                    <button
+                      key={placement.category}
+                      type="button"
+                      onClick={() =>
+                        selectIndividualPackage(
+                          placement.category,
+                          Number(form.durationDays) || 30,
+                        )
+                      }
+                      className={`flex w-full items-center justify-between gap-3 rounded-xl border-2 px-3.5 py-3 text-left transition ${
+                        isSelected
+                          ? "border-blue-600 bg-blue-50 shadow-sm shadow-blue-600/10"
+                          : "border-slate-200 bg-white hover:border-blue-300"
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-slate-950">
+                          {placement.title}
+                        </p>
+                        <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500">
+                          {placement.dimensions}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-[10px] font-semibold text-slate-400">
+                          from
+                        </p>
+                        <p className="text-xs font-black text-blue-600">
+                          {formatCurrency(
+                            getTierPrice(plan, durationOptions[0]),
+                            plan?.currency || selectedCurrency,
+                          )}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-              <span className="text-xs font-bold text-slate-400">
-                Launch offer applies only to eligible paid ads
-              </span>
-            </div>
 
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[760px] border-separate border-spacing-0 text-left text-sm">
-                <thead>
-                  <tr>
-                    <th className="rounded-tl-xl bg-slate-950 px-4 py-3 text-xs font-black uppercase text-white">
-                      Advertising Space
-                    </th>
-                    {durationOptions.map((days) => (
-                      <th
-                        key={days}
-                        className="bg-slate-100 px-3 py-3 text-center text-xs font-black uppercase text-slate-700"
-                      >
-                        <span>{days} Days</span>
-                        {days === 30 ? (
-                          <span className="ml-2 rounded-full bg-pink-100 px-2 py-0.5 text-[10px] text-pink-600">
-                            Popular
-                          </span>
-                        ) : null}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {placementMeta.map((placement) => {
-                    const plan = plans.find((item) => item.category === placement.category);
+              {/* Details + duration */}
+              <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="overflow-hidden rounded-xl bg-slate-50 p-2">
+                  <div className="h-[168px] overflow-hidden rounded-lg bg-white ring-1 ring-slate-100">
+                    <img
+                      src={activePlacement?.previewImageUrl}
+                      alt={`${activePlacement?.title} preview`}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                </div>
 
-                    return (
-                      <tr key={placement.category} className="border-b border-slate-100">
-                        <td className="border-b border-slate-100 px-4 py-3">
-                          <div className="flex flex-col gap-1">
-                            <span className="font-black text-slate-950">{placement.title}</span>
-                            <span className="text-xs font-semibold text-slate-500">
-                              {placement.dimensions}
-                            </span>
-                          </div>
-                        </td>
-                        {durationOptions.map((days) => {
-                          const active =
-                            purchaseMode === "PAID" &&
-                            form.packageType === "INDIVIDUAL" &&
-                            form.category === placement.category &&
-                            Number(form.durationDays) === days;
-                          const optionPrice = getTierPrice(plan, days);
-
-                          return (
-                            <td key={days} className="border-b border-slate-100 p-2 text-center">
-                              <button
-                                type="button"
-                                onClick={() => selectIndividualPackage(placement.category, days)}
-                                className={`w-full rounded-xl border px-3 py-2 text-sm font-black transition ${
-                                  active
-                                    ? "border-blue-600 bg-blue-600 text-white shadow-sm"
-                                    : "border-slate-200 bg-white text-slate-800 hover:border-blue-200 hover:text-blue-700"
-                                }`}
-                              >
-                                {formatCurrency(optionPrice, plan?.currency || selectedCurrency)}
-                              </button>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {promotionSettings.promotionsAvailable && (promotionSettings.bundles || []).length ? (
-            <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                <div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
                   <h3 className="text-base font-black text-slate-950">
-                    Promotion Bundles - Save More
+                    {activePlacement?.title}
                   </h3>
-                  <p className="mt-1 text-sm font-medium text-slate-500">
-                    Bundle prices are based on the 30-day advertising package. Launch offer is not applied to bundles.
+                </div>
+
+                <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2">
+                  <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
+                    <Monitor size={12} />
+                    Ad size
+                  </p>
+                  <p className="mt-0.5 text-xs font-bold text-slate-700">
+                    {activePlacement?.dimensions}
                   </p>
                 </div>
-              </div>
-              <div className="mt-4 grid gap-4 lg:grid-cols-3">
-                {(promotionSettings.bundles || [])
-                  .filter((bundle) => bundle.status === "ACTIVE" && bundle.isValidForSale)
-                  .map((bundle) => {
-                    const active = form.packageType === "BUNDLE" && form.bundleCode === bundle.code;
 
-                    return (
-                      <button
-                        key={bundle.code}
-                        type="button"
-                        onClick={() => selectBundlePackage(bundle)}
-                        className={`relative rounded-2xl border p-4 text-left shadow-sm transition ${
-                          active
-                            ? "border-blue-600 bg-blue-50 ring-1 ring-blue-600"
-                            : "border-slate-200 bg-white hover:border-blue-200 hover:shadow-md"
-                        }`}
-                      >
-                        {bundle.isBestValue ? (
-                          <span className="absolute right-3 top-3 rounded-full bg-orange-500 px-2 py-1 text-[10px] font-black text-white">
-                            Best Value
+                <div className="mt-4 border-t border-slate-100 pt-3">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                    <h4 className="text-sm font-black text-slate-950">
+                      How long should it run?
+                    </h4>
+                    <p className="text-[11px] font-semibold text-slate-400">
+                      Launch offer applies only to eligible paid ads
+                    </p>
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
+                    {durationOptions.map((days) => {
+                      const active =
+                        purchaseMode === "PAID" &&
+                        form.packageType === "INDIVIDUAL" &&
+                        form.category === activePlacement.category &&
+                        Number(form.durationDays) === days;
+                      const optionPrice = getTierPrice(activePlan, days);
+
+                      return (
+                        <button
+                          key={days}
+                          type="button"
+                          onClick={() =>
+                            selectIndividualPackage(
+                              activePlacement.category,
+                              days,
+                            )
+                          }
+                          className={`relative flex items-center justify-between gap-2 rounded-xl border-2 px-3 py-2.5 text-left transition ${
+                            active
+                              ? "border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-600/20"
+                              : "border-slate-200 bg-white text-slate-800 hover:border-blue-300 hover:text-blue-700"
+                          }`}
+                        >
+                          <span className="flex relative items-center gap-1.5 text-xs font-black">
+                            {days} Days
+                            {days === 30 ? (
+                              <span
+                                className={`rounded-full px-1.5 py-0.5 text-[9px] absolute -top-5 right-0 font-bold ${
+                                  active
+                                    ? "bg-white/20 text-white"
+                                    : "bg-pink-100 text-pink-600"
+                                }`}
+                              >
+                                Popular
+                              </span>
+                            ) : null}
                           </span>
-                        ) : null}
-                        <h4 className="pr-20 text-sm font-black uppercase text-slate-950">
-                          {bundle.name}
-                        </h4>
-                        <div className="mt-4 space-y-1">
-                          {(bundle.items || []).map((item) => (
-                            <div key={item.category} className="flex justify-between text-xs">
-                              <span className="font-semibold text-slate-600">{item.categoryLabel}</span>
-                              <span className="font-black text-slate-900">x{item.quantity}</span>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-5 flex items-end justify-between">
-                          <div>
-                            <p className="text-xs font-semibold text-slate-400 line-through">
-                              {formatCurrency(bundle.originalPrice, bundle.currency || selectedCurrency)}
-                            </p>
-                            <p className="text-xl font-black text-blue-600">
-                              {formatCurrency(bundle.bundlePrice, bundle.currency || selectedCurrency)}
-                            </p>
+                          <span className="text-sm font-black">
+                            {formatCurrency(
+                              optionPrice,
+                              activePlan?.currency || selectedCurrency,
+                            )}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {/* BUNDLES */}
+          {isBundlePackage && hasBundles ? (
+            <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm">
+              <h3 className="text-base font-black text-slate-950">
+                Promotion Bundles - Save More
+              </h3>
+              <p className="mt-1 text-sm font-medium text-slate-500">
+                Bundle prices are based on the 30-day advertising package.
+                Launch offer is not applied to bundles.
+              </p>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {activeBundles.map((bundle) => {
+                  const active =
+                    form.packageType === "BUNDLE" &&
+                    form.bundleCode === bundle.code;
+
+                  return (
+                    <button
+                      key={bundle.code}
+                      type="button"
+                      onClick={() => selectBundlePackage(bundle)}
+                      className={`relative rounded-2xl border-2 p-4 text-left transition ${
+                        active
+                          ? "border-blue-600 bg-blue-50 shadow-sm shadow-blue-600/10"
+                          : "border-slate-200 bg-white hover:border-blue-300 hover:shadow-md"
+                      }`}
+                    >
+                      {bundle.isBestValue ? (
+                        <span className="absolute right-3 top-3 rounded-full bg-orange-500 px-2 py-1 text-[10px] font-black text-white">
+                          Best Value
+                        </span>
+                      ) : null}
+                      <h4 className="pr-20 text-sm font-black uppercase text-slate-950">
+                        {bundle.name}
+                      </h4>
+
+                      <div className="mt-3 space-y-1 rounded-xl bg-slate-50 p-2.5">
+                        {(bundle.items || []).map((item) => (
+                          <div
+                            key={item.category}
+                            className="flex justify-between text-xs"
+                          >
+                            <span className="font-semibold text-slate-600">
+                              {item.categoryLabel}
+                            </span>
+                            <span className="font-black text-slate-900">
+                              x{item.quantity}
+                            </span>
                           </div>
-                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
-                            Save {formatCurrency(bundle.savings, bundle.currency || selectedCurrency)}
-                          </span>
+                        ))}
+                      </div>
+
+                      <div className="mt-4 flex items-end justify-between">
+                        <div>
+                          <p className="text-xs font-semibold text-slate-400 line-through">
+                            {formatCurrency(
+                              bundle.originalPrice,
+                              bundle.currency || selectedCurrency,
+                            )}
+                          </p>
+                          <p className="text-xl font-black text-blue-600">
+                            {formatCurrency(
+                              bundle.bundlePrice,
+                              bundle.currency || selectedCurrency,
+                            )}
+                          </p>
                         </div>
-                      </button>
-                    );
-                  })}
+                        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
+                          Save{" "}
+                          {formatCurrency(
+                            bundle.savings,
+                            bundle.currency || selectedCurrency,
+                          )}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ) : null}
@@ -1529,13 +1907,18 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
       if (isBundlePackage) {
         return (
           <div>
-            <h2 className="text-xl font-black text-slate-950">Upload Bundle Creatives</h2>
+            <h2 className="text-xl font-black text-slate-950">
+              Upload Bundle Creatives
+            </h2>
             <p className="mt-1 text-sm font-medium text-slate-500">
-              Fill creatives for each advertisement included in {selectedBundle?.name}.
+              Fill creatives for each advertisement included in{" "}
+              {selectedBundle?.name}.
             </p>
             <div className="mt-5 flex gap-2 overflow-x-auto pb-2">
               {bundleSlots.map((slot, index) => {
-                const complete = devices.every((device) => hasBundleSlotCreative(slot, device.key));
+                const complete = devices.every((device) =>
+                  hasBundleSlotCreative(slot, device.key),
+                );
                 return (
                   <button
                     key={slot.slotIndex}
@@ -1548,8 +1931,13 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                     }`}
                   >
                     <span className="block">Ad {index + 1}</span>
-                    <span className={complete ? "text-emerald-600" : "text-amber-600"}>
-                      {slot.categoryLabel} - {complete ? "Creative ready" : "Needs creative"}
+                    <span
+                      className={
+                        complete ? "text-emerald-600" : "text-amber-600"
+                      }
+                    >
+                      {slot.categoryLabel} -{" "}
+                      {complete ? "Creative ready" : "Needs creative"}
                     </span>
                   </button>
                 );
@@ -1559,7 +1947,8 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
               <>
                 <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <p className="text-sm font-black text-slate-950">
-                    Advertisement {activeBundleSlotIndex + 1}: {activeBundleSlot.categoryLabel}
+                    Advertisement {activeBundleSlotIndex + 1}:{" "}
+                    {activeBundleSlot.categoryLabel}
                   </p>
                   <p className="mt-1 text-xs font-medium text-slate-500">
                     Upload desktop, tablet, and mobile creatives for this slot.
@@ -1569,11 +1958,21 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                   {devices.map((device) => (
                     <FileUpload
                       key={device.key}
+                      dimensions={getDeviceDimensionLabel(
+                        getPlacementMeta(activeBundleSlot.category),
+                        device.key,
+                      )}
                       label={`${device.label} creative`}
                       file={activeBundleSlot.creatives?.[device.key]}
-                      existingUrl={activeBundleSlot.existingCreatives?.[device.key]?.url}
+                      existingUrl={
+                        activeBundleSlot.existingCreatives?.[device.key]?.url
+                      }
                       onChange={(file) =>
-                        setBundleSlotCreative(activeBundleSlotIndex, device.key, file)
+                        setBundleSlotCreative(
+                          activeBundleSlotIndex,
+                          device.key,
+                          file,
+                        )
                       }
                     />
                   ))}
@@ -1586,14 +1985,21 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
 
       return (
         <div>
-          <h2 className="text-xl font-black text-slate-950">Upload Your Creative</h2>
+          <h2 className="text-xl font-black text-slate-950">
+            Upload Your Creative
+          </h2>
           <p className="mt-1 text-sm font-medium text-slate-500">
-            Upload the banner image that will be displayed in your chosen placement.
+            Upload the banner image that will be displayed in your chosen
+            placement.
           </p>
           <div className="mt-5 grid gap-4 xl:grid-cols-3">
             {devices.map((device) => (
               <FileUpload
                 key={device.key}
+                dimensions={getDeviceDimensionLabel(
+                  selectedPlacement,
+                  device.key,
+                )}
                 label={`${device.label} creative`}
                 file={form.creatives[device.key]}
                 onChange={(file) => setCreative(device.key, file)}
@@ -1602,14 +2008,31 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {[
-              ["Use high-resolution vehicle photos", "Minimum 150 DPI for crisp display"],
-              ["Include the asking price clearly", "Buyers decide faster when price is visible"],
-              ["Add a clear call-to-action", "\"View Listing\" or \"Contact Seller\" works well"],
-              ["Keep text minimal and bold", "Large readable text performs significantly better"],
+              [
+                "Use high-resolution vehicle photos",
+                "Minimum 150 DPI for crisp display",
+              ],
+              [
+                "Include the asking price clearly",
+                "Buyers decide faster when price is visible",
+              ],
+              [
+                "Add a clear call-to-action",
+                '"View Listing" or "Contact Seller" works well',
+              ],
+              [
+                "Keep text minimal and bold",
+                "Large readable text performs significantly better",
+              ],
             ].map(([title, text]) => (
-              <div key={title} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div
+                key={title}
+                className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+              >
                 <p className="text-sm font-bold text-slate-950">{title}</p>
-                <p className="mt-1 text-xs font-medium text-slate-500">{text}</p>
+                <p className="mt-1 text-xs font-medium text-slate-500">
+                  {text}
+                </p>
               </div>
             ))}
           </div>
@@ -1623,9 +2046,12 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
           <div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h2 className="text-xl font-black text-slate-950">Bundle Advertisement Settings</h2>
+                <h2 className="text-xl font-black text-slate-950">
+                  Bundle Advertisement Settings
+                </h2>
                 <p className="mt-1 text-sm font-medium text-slate-500">
-                  Complete every included advertisement now, or leave some slots for later.
+                  Complete every included advertisement now, or leave some slots
+                  for later.
                 </p>
               </div>
               <button
@@ -1639,7 +2065,10 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
             </div>
             <div className="mt-5 flex gap-2 overflow-x-auto pb-2">
               {bundleSlots.map((slot, index) => {
-                const missing = getBundleSlotMissingFields(slot, accountCountryIso);
+                const missing = getBundleSlotMissingFields(
+                  slot,
+                  accountCountryIso,
+                );
                 return (
                   <button
                     key={slot.slotIndex}
@@ -1652,8 +2081,15 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                     }`}
                   >
                     <span className="block">Ad {index + 1}</span>
-                    <span className={missing.length ? "text-amber-600" : "text-emerald-600"}>
-                      {slot.categoryLabel} - {missing.length ? `${missing.length} missing` : "Complete"}
+                    <span
+                      className={
+                        missing.length ? "text-amber-600" : "text-emerald-600"
+                      }
+                    >
+                      {slot.categoryLabel} -{" "}
+                      {missing.length
+                        ? `${missing.length} missing`
+                        : "Complete"}
                     </span>
                   </button>
                 );
@@ -1663,7 +2099,8 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
               <div className="mt-5 space-y-5">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <p className="text-sm font-black text-slate-950">
-                    Advertisement {activeBundleSlotIndex + 1}: {activeBundleSlot.categoryLabel}
+                    Advertisement {activeBundleSlotIndex + 1}:{" "}
+                    {activeBundleSlot.categoryLabel}
                   </p>
                   <p className="mt-1 text-xs font-medium text-slate-500">
                     Category is locked from the selected bundle.
@@ -1676,18 +2113,28 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                   <input
                     value={activeBundleSlot.name}
                     onChange={(event) =>
-                      setBundleSlotField(activeBundleSlotIndex, "name", event.target.value)
+                      setBundleSlotField(
+                        activeBundleSlotIndex,
+                        "name",
+                        event.target.value,
+                      )
                     }
                     placeholder="e.g. ABC Auto Care"
                     className="mt-3 h-14 w-full rounded-2xl border border-slate-200 px-5 text-base font-medium text-slate-950 outline-none focus:border-blue-400"
                   />
                 </label>
                 <label className="block">
-                  <span className="text-sm font-bold text-slate-950">Redirect URL</span>
+                  <span className="text-sm font-bold text-slate-950">
+                    Redirect URL
+                  </span>
                   <input
                     value={activeBundleSlot.redirectTo}
                     onChange={(event) =>
-                      setBundleSlotField(activeBundleSlotIndex, "redirectTo", event.target.value)
+                      setBundleSlotField(
+                        activeBundleSlotIndex,
+                        "redirectTo",
+                        event.target.value,
+                      )
                     }
                     placeholder="https://example.com"
                     className="mt-3 h-14 w-full rounded-2xl border border-slate-200 px-5 text-base font-medium text-slate-950 outline-none focus:border-blue-400"
@@ -1700,11 +2147,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                     </span>
                     <input
                       value={activeBundleSlot.details?.businessName || ""}
-                      onChange={(event) =>
-                        setBundleSlotDetailsField(activeBundleSlotIndex, "businessName", event.target.value)
-                      }
+                      readOnly
                       placeholder="e.g. ABC Auto Care"
-                      className="mt-3 h-14 w-full rounded-2xl border border-slate-200 px-5 text-base font-medium text-slate-950 outline-none focus:border-blue-400"
+                      className="mt-3 h-14 w-full rounded-2xl border border-slate-200 bg-slate-100 px-5 text-base font-medium text-slate-600 outline-none"
                     />
                   </label>
                   <label className="block">
@@ -1712,9 +2157,15 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                       Business Category <span className="text-red-500">*</span>
                     </span>
                     <select
-                      value={activeBundleSlot.details?.businessCategoryCode || ""}
+                      value={
+                        activeBundleSlot.details?.businessCategoryCode || ""
+                      }
                       onChange={(event) =>
-                        setBundleSlotDetailsField(activeBundleSlotIndex, "businessCategoryCode", event.target.value)
+                        setBundleSlotDetailsField(
+                          activeBundleSlotIndex,
+                          "businessCategoryCode",
+                          event.target.value,
+                        )
                       }
                       className="mt-3 h-14 w-full rounded-2xl border border-slate-200 px-5 text-base font-medium text-slate-950 outline-none focus:border-blue-400"
                     >
@@ -1744,7 +2195,11 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                         }
                         value={activeBundleSlot.details?.callPhone || ""}
                         onChange={(value) =>
-                          setBundleSlotDetailsField(activeBundleSlotIndex, "callPhone", value)
+                          setBundleSlotDetailsField(
+                            activeBundleSlotIndex,
+                            "callPhone",
+                            value,
+                          )
                         }
                       />
                     </div>
@@ -1767,7 +2222,11 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                         }
                         value={activeBundleSlot.details?.whatsappPhone || ""}
                         onChange={(value) =>
-                          setBundleSlotDetailsField(activeBundleSlotIndex, "whatsappPhone", value)
+                          setBundleSlotDetailsField(
+                            activeBundleSlotIndex,
+                            "whatsappPhone",
+                            value,
+                          )
                         }
                       />
                     </div>
@@ -1781,7 +2240,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
 
       return (
         <div>
-          <h2 className="text-xl font-black text-slate-950">Advertisement Settings</h2>
+          <h2 className="text-xl font-black text-slate-950">
+            Advertisement Settings
+          </h2>
           <p className="mt-1 text-sm font-medium text-slate-500">
             Configure the details for your advertisement campaign.
           </p>
@@ -1792,7 +2253,12 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
               </span>
               <input
                 value={form.name}
-                onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    name: event.target.value,
+                  }))
+                }
                 placeholder="e.g. ABC Auto Care"
                 className="mt-3 h-14 w-full rounded-2xl border border-slate-200 px-5 text-base font-medium text-slate-950 outline-none focus:border-blue-400"
               />
@@ -1804,9 +2270,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                 </span>
                 <input
                   value={form.details.businessName}
-                  onChange={(event) => setDetailsField("businessName", event.target.value)}
+                  readOnly
                   placeholder="e.g. ABC Auto Care"
-                  className="mt-3 h-14 w-full rounded-2xl border border-slate-200 px-5 text-base font-medium text-slate-950 outline-none focus:border-blue-400"
+                  className="mt-3 h-14 w-full rounded-2xl border border-slate-200 bg-slate-100 px-5 text-base font-medium text-slate-600 outline-none"
                 />
               </label>
               <label className="block">
@@ -1815,7 +2281,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                 </span>
                 <select
                   value={form.details.businessCategoryCode}
-                  onChange={(event) => setDetailsField("businessCategoryCode", event.target.value)}
+                  onChange={(event) =>
+                    setDetailsField("businessCategoryCode", event.target.value)
+                  }
                   className="mt-3 h-14 w-full rounded-2xl border border-slate-200 px-5 text-base font-medium text-slate-950 outline-none focus:border-blue-400"
                 >
                   <option value="">Select business category</option>
@@ -1848,7 +2316,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                     countryIso={accountCountryIso}
                     error={form.details.whatsappPhone ? whatsappPhoneError : ""}
                     value={form.details.whatsappPhone}
-                    onChange={(value) => setDetailsField("whatsappPhone", value)}
+                    onChange={(value) =>
+                      setDetailsField("whatsappPhone", value)
+                    }
                   />
                 </div>
               </label>
@@ -1861,7 +2331,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     if (step === 4) {
       return (
         <div>
-          <h2 className="text-xl font-black text-slate-950">Review Your Advertisement</h2>
+          <h2 className="text-xl font-black text-slate-950">
+            Review Your Advertisement
+          </h2>
           <p className="mt-1 text-sm font-medium text-slate-500">
             {isIncludedBundleSlot
               ? "This advertisement slot is included in your promotion bundle. Submit it for admin review when the details are ready."
@@ -1869,27 +2341,63 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
           </p>
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             {[
-              [isBundlePackage ? "Bundle" : "Placement", isBundlePackage ? selectedBundle?.name : selectedPlacement.title],
+              [
+                isBundlePackage ? "Bundle" : "Placement",
+                isBundlePackage
+                  ? selectedBundle?.name
+                  : selectedPlacement.title,
+              ],
               [
                 "Duration",
-                isIncludedWithPlan ? "Until plan expiry" : `${launchOfferDuration} Days`,
+                isIncludedWithPlan
+                  ? "Until plan expiry"
+                  : `${launchOfferDuration} Days`,
               ],
               ...(isIncludedWithPlan
-                ? [["Valid Until", formatDate(selectedPlanBenefit?.subscriptionEndsAt)]]
+                ? [
+                    [
+                      "Valid Until",
+                      formatDate(selectedPlanBenefit?.subscriptionEndsAt),
+                    ],
+                  ]
                 : []),
               ...(isBundlePackage
                 ? [
-                    ["Filled Ads", `${completedBundleSlots}/${bundleSlots.length}`],
+                    [
+                      "Filled Ads",
+                      `${completedBundleSlots}/${bundleSlots.length}`,
+                    ],
                     ["Remaining Later", incompleteBundleSlots],
                   ]
                 : []),
-              ...(freeAdditionalDays > 0 ? [["Launch Offer", `+ ${freeAdditionalDays} Days Free`]] : []),
-              ["Total", isIncludedBundleSlot ? "Included in bundle" : formatCurrency(total)],
-              ...(isIncludedWithPlan ? [["Plan Benefit", `${selectedPlanBenefit.remaining} remaining`]] : []),
+              ...(freeAdditionalDays > 0
+                ? [["Launch Offer", `+ ${freeAdditionalDays} Days Free`]]
+                : []),
+              [
+                "Total",
+                isIncludedBundleSlot
+                  ? "Included in bundle"
+                  : formatCurrency(total),
+              ],
+              ...(isIncludedWithPlan
+                ? [
+                    [
+                      "Plan Benefit",
+                      `${selectedPlanBenefit.remaining} remaining`,
+                    ],
+                  ]
+                : []),
             ].map(([label, value]) => (
-              <div key={label} className="rounded-2xl border border-slate-200 p-5">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p>
-                <p className={`mt-2 font-black ${label === "Total" ? "text-blue-600" : "text-slate-950"}`}>
+              <div
+                key={label}
+                className="rounded-2xl border border-slate-200 p-5"
+              >
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                  {label}
+                </p>
+                <p
+                  className={`mt-2 font-black ${label === "Total" ? "text-blue-600" : "text-slate-950"}`}
+                >
                   {value}
                 </p>
               </div>
@@ -1897,19 +2405,31 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
           </div>
           {isBundlePackage ? (
             <div className="mt-5 rounded-2xl border border-slate-200 p-4">
-              <h3 className="text-base font-black text-slate-950">Bundle Advertisements</h3>
+              <h3 className="text-base font-black text-slate-950">
+                Bundle Advertisements
+              </h3>
               <div className="mt-3 grid gap-2 md:grid-cols-2">
                 {bundleSlots.map((slot, index) => {
-                  const missing = getBundleSlotMissingFields(slot, accountCountryIso);
+                  const missing = getBundleSlotMissingFields(
+                    slot,
+                    accountCountryIso,
+                  );
                   return (
-                    <div key={slot.slotIndex} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                    <div
+                      key={slot.slotIndex}
+                      className="rounded-xl border border-slate-100 bg-slate-50 p-3"
+                    >
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-black text-slate-950">
                           Ad {index + 1}: {slot.categoryLabel}
                         </p>
-                        <span className={`rounded-full px-2 py-1 text-[11px] font-black ${
-                          missing.length ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
-                        }`}>
+                        <span
+                          className={`rounded-full px-2 py-1 text-[11px] font-black ${
+                            missing.length
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}
+                        >
                           {missing.length ? "Later" : "Ready"}
                         </span>
                       </div>
@@ -1923,12 +2443,16 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
             </div>
           ) : null}
           <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <h3 className="text-base font-black text-slate-950">Live Placement Preview</h3>
+            <h3 className="text-base font-black text-slate-950">
+              Live Placement Preview
+            </h3>
             <div className="mt-4">
               <PlacementSketch placement={selectedPlacement} />
             </div>
             <p className="mt-2 text-center text-xs font-medium text-slate-400">
-              Showing {isBundlePackage ? selectedBundle?.name : selectedPlacement.title} preview
+              Showing{" "}
+              {isBundlePackage ? selectedBundle?.name : selectedPlacement.title}{" "}
+              preview
               {isBundlePackage ? "" : ` - ${selectedPlacement.dimensions}`}
             </p>
           </div>
@@ -1947,66 +2471,123 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
             <div className="space-y-4 text-sm">
               {[
                 ["Advertisement", form.name || selectedPlacement.title],
-                [isBundlePackage ? "Bundle" : "Placement", isBundlePackage ? selectedBundle?.name : selectedPlacement.title],
-                ["Duration", isIncludedWithPlan ? "Until plan expiry" : `${launchOfferDuration} Days`],
+                [
+                  isBundlePackage ? "Bundle" : "Placement",
+                  isBundlePackage
+                    ? selectedBundle?.name
+                    : selectedPlacement.title,
+                ],
+                [
+                  "Duration",
+                  isIncludedWithPlan
+                    ? "Until plan expiry"
+                    : `${launchOfferDuration} Days`,
+                ],
                 ...(isIncludedWithPlan
-                  ? [["Valid Until", formatDate(selectedPlanBenefit?.subscriptionEndsAt)]]
+                  ? [
+                      [
+                        "Valid Until",
+                        formatDate(selectedPlanBenefit?.subscriptionEndsAt),
+                      ],
+                    ]
                   : []),
-                ...(freeAdditionalDays > 0 ? [["Launch Offer", `+ ${freeAdditionalDays} Days Free`]] : []),
-                ...(isBundlePackage ? [
-                  ["Filled Advertisements", `${completedBundleSlots}/${bundleSlots.length}`],
-                  ["Can Fill Later", incompleteBundleSlots],
-                  ["Original Price", formatCurrency(selectedBundle?.originalPrice, selectedCurrency)],
-                  ["Savings", formatCurrency(selectedBundle?.savings, selectedCurrency)],
-                ] : []),
-                ["Ad Fee", isIncludedWithPlan ? "Included with dealer plan" : formatCurrency(effectivePrice, selectedCurrency)],
+                ...(freeAdditionalDays > 0
+                  ? [["Launch Offer", `+ ${freeAdditionalDays} Days Free`]]
+                  : []),
+                ...(isBundlePackage
+                  ? [
+                      [
+                        "Filled Advertisements",
+                        `${completedBundleSlots}/${bundleSlots.length}`,
+                      ],
+                      ["Can Fill Later", incompleteBundleSlots],
+                      [
+                        "Original Price",
+                        formatCurrency(
+                          selectedBundle?.originalPrice,
+                          selectedCurrency,
+                        ),
+                      ],
+                      [
+                        "Savings",
+                        formatCurrency(
+                          selectedBundle?.savings,
+                          selectedCurrency,
+                        ),
+                      ],
+                    ]
+                  : []),
+                [
+                  "Ad Fee",
+                  isIncludedWithPlan
+                    ? "Included with dealer plan"
+                    : formatCurrency(effectivePrice, selectedCurrency),
+                ],
                 [taxMeta.label, formatCurrency(vat, selectedCurrency)],
               ].map(([label, value]) => (
-                <div key={label} className="flex justify-between gap-4 border-b border-slate-100 pb-3">
+                <div
+                  key={label}
+                  className="flex justify-between gap-4 border-b border-slate-100 pb-3"
+                >
                   <span className="text-slate-500">{label}</span>
-                  <span className="text-right font-bold text-slate-950">{value}</span>
+                  <span className="text-right font-bold text-slate-950">
+                    {value}
+                  </span>
                 </div>
               ))}
             </div>
             <div className="mt-5 flex items-center justify-between rounded-2xl bg-blue-50 p-5">
               <span className="font-bold text-blue-600">Total</span>
-              <span className="text-2xl font-black text-blue-600">{formatCurrency(total)}</span>
+              <span className="text-2xl font-black text-blue-600">
+                {formatCurrency(total)}
+              </span>
             </div>
             {isBundlePackage && incompleteBundleSlots > 0 ? (
               <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
-                {incompleteBundleSlots} advertisement{incompleteBundleSlots === 1 ? "" : "s"} will stay available to fill later from Advertising Manager.
+                {incompleteBundleSlots} advertisement
+                {incompleteBundleSlots === 1 ? "" : "s"} will stay available to
+                fill later from Advertising Manager.
               </div>
             ) : null}
             {isIncludedWithPlan ? (
               <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
-                This advertisement will use 1 included {selectedPlacement.title} slot from your dealer plan.
+                This advertisement will use 1 included {selectedPlacement.title}{" "}
+                slot from your dealer plan.
               </div>
             ) : (
-            <label className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-white px-4 py-3">
-              <span>
-                <span className="block text-sm font-bold text-slate-900">Use wallet balance</span>
-                <span className="mt-0.5 block text-xs font-medium text-slate-500">
-                  Available {formatCurrency(walletBalance)}
+              <label className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-white px-4 py-3">
+                <span>
+                  <span className="block text-sm font-bold text-slate-900">
+                    Use wallet balance
+                  </span>
+                  <span className="mt-0.5 block text-xs font-medium text-slate-500">
+                    Available {formatCurrency(walletBalance)}
+                  </span>
                 </span>
-              </span>
-              <input
-                type="checkbox"
-                checked={useWalletBalance}
-                disabled={walletBalance <= 0}
-                onChange={(event) => setUseWalletBalance(event.target.checked)}
-                className="h-5 w-5 rounded border-slate-300 text-blue-600"
-              />
-            </label>
+                <input
+                  type="checkbox"
+                  checked={useWalletBalance}
+                  disabled={walletBalance <= 0}
+                  onChange={(event) =>
+                    setUseWalletBalance(event.target.checked)
+                  }
+                  className="h-5 w-5 rounded border-slate-300 text-blue-600"
+                />
+              </label>
             )}
             {useWalletBalance && !isIncludedWithPlan ? (
               <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 text-xs">
                 <div className="flex justify-between text-slate-600">
                   <span>Wallet used</span>
-                  <span className="font-bold text-blue-600">- {formatCurrency(walletAmountUsed)}</span>
+                  <span className="font-bold text-blue-600">
+                    - {formatCurrency(walletAmountUsed)}
+                  </span>
                 </div>
                 <div className="mt-2 flex justify-between text-slate-600">
                   <span>Pay remaining</span>
-                  <span className="font-bold text-slate-950">{formatCurrency(onlineAmountDue)}</span>
+                  <span className="font-bold text-slate-950">
+                    {formatCurrency(onlineAmountDue)}
+                  </span>
                 </div>
               </div>
             ) : null}
@@ -2020,9 +2601,12 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
         <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
           <Shield size={30} />
         </span>
-        <h2 className="mt-5 text-2xl font-black text-slate-950">Advertisement Submitted</h2>
+        <h2 className="mt-5 text-2xl font-black text-slate-950">
+          Advertisement Submitted
+        </h2>
         <p className="mt-2 max-w-md text-sm font-medium leading-6 text-slate-500">
-          Your advertisement has been submitted for admin review. You can track its status from Advertising Manager.
+          Your advertisement has been submitted for admin review. You can track
+          its status from Advertising Manager.
         </p>
       </div>
     );
@@ -2053,7 +2637,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                   style={{ width: `${progress}%` }}
                 />
               </span>
-              <span className="text-xs font-bold text-slate-500">{progress}%</span>
+              <span className="text-xs font-bold text-slate-500">
+                {progress}%
+              </span>
             </div>
             <button
               type="button"
@@ -2121,10 +2707,10 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
             {saving
               ? "Submitting..."
               : step === 5
-              ? "Submit for Review"
-              : step === wizardSteps.length
-              ? "Go to My Ads"
-              : "Next"}
+                ? "Submit for Review"
+                : step === wizardSteps.length
+                  ? "Go to My Ads"
+                  : "Next"}
             <ArrowRight size={17} />
           </button>
         </footer>
@@ -2149,8 +2735,10 @@ export default function AdvertisementsPage() {
   const [modalDraft, setModalDraft] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [endAdId, setEndAdId] = useState("");
+  const [deleteDraftAd, setDeleteDraftAd] = useState(null);
   const [reasonAd, setReasonAd] = useState(null);
   const [isEndingAd, setIsEndingAd] = useState(false);
+  const [isDeletingDraft, setIsDeletingDraft] = useState(false);
 
   const loadAdvertisements = async () => {
     try {
@@ -2245,7 +2833,12 @@ export default function AdvertisementsPage() {
     () =>
       visibleAds.filter((ad) => {
         const matchesStatus = status === "ALL" || ad.status === status;
-        const haystack = [ad.name, ad.advertisementId, ad.categoryLabel, categories[ad.category]]
+        const haystack = [
+          ad.name,
+          ad.advertisementId,
+          ad.categoryLabel,
+          categories[ad.category],
+        ]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
@@ -2273,6 +2866,22 @@ export default function AdvertisementsPage() {
     }
   };
 
+  const handleDeleteDraft = async () => {
+    if (!deleteDraftAd?._id) return;
+
+    try {
+      setIsDeletingDraft(true);
+      await advertisementsApi.deleteDraft(deleteDraftAd._id);
+      setAds((items) => items.filter((item) => item._id !== deleteDraftAd._id));
+      setDeleteDraftAd(null);
+      await loadAdvertisements();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete advertisement draft");
+    } finally {
+      setIsDeletingDraft(false);
+    }
+  };
+
   const handleCreated = (ad) => {
     setShowModal(false);
     setModalDraft(null);
@@ -2293,8 +2902,12 @@ export default function AdvertisementsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-950">Advertising Manager</h1>
-          <p className="mt-1 text-sm text-slate-500">Create and track dealer ad campaigns.</p>
+          <h1 className="text-2xl font-bold text-slate-950">
+            Advertising Manager
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Create and track dealer ad campaigns.
+          </p>
         </div>
         <button
           type="button"
@@ -2316,20 +2929,44 @@ export default function AdvertisementsPage() {
       ) : null}
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
-        <StatCard icon={Megaphone} value={stats.activeCampaigns || 0} label="Active Campaigns" iconBg="bg-blue-100 text-blue-600" />
-        <StatCard icon={FileText} value={stats.pendingCampaigns || 0} label="Pending Review" iconBg="bg-amber-100 text-amber-600" />
-        <StatCard icon={Eye} value={(stats.totalViews || 0).toLocaleString()} label="Total Views" iconBg="bg-violet-100 text-violet-600" />
-        <StatCard icon={Wallet} value={formatCurrency(stats.totalSpent || 0)} label="Total Spent" iconBg="bg-emerald-100 text-emerald-600" />
+        <StatCard
+          icon={Megaphone}
+          value={stats.activeCampaigns || 0}
+          label="Active Campaigns"
+          iconBg="bg-blue-100 text-blue-600"
+        />
+        <StatCard
+          icon={FileText}
+          value={stats.pendingCampaigns || 0}
+          label="Pending Review"
+          iconBg="bg-amber-100 text-amber-600"
+        />
+        <StatCard
+          icon={Eye}
+          value={(stats.totalViews || 0).toLocaleString()}
+          label="Total Views"
+          iconBg="bg-violet-100 text-violet-600"
+        />
+        <StatCard
+          icon={Wallet}
+          value={formatCurrency(stats.totalSpent || 0)}
+          label="Total Spent"
+          iconBg="bg-emerald-100 text-emerald-600"
+        />
       </div>
 
       {remainingBundleGroups.length ? (
         <div className="space-y-3">
           {remainingBundleGroups.map((group) => (
-            <div key={group.key} className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div
+              key={group.key}
+              className="rounded-xl border border-amber-200 bg-amber-50 p-4"
+            >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <h3 className="text-sm font-black text-amber-900">
-                    {group.name}: {group.slots.length} paid advertisement slot{group.slots.length === 1 ? "" : "s"} remaining
+                    {group.name}: {group.slots.length} paid advertisement slot
+                    {group.slots.length === 1 ? "" : "s"} remaining
                   </h3>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {group.slots.map((slot) => (
@@ -2366,7 +3003,10 @@ export default function AdvertisementsPage() {
           <h3 className="text-lg font-bold text-slate-950">My Ads</h3>
           <div className="flex flex-col gap-3 sm:flex-row">
             <label className="relative block sm:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={16}
+              />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -2379,8 +3019,17 @@ export default function AdvertisementsPage() {
               onChange={(event) => setStatus(event.target.value)}
               className="h-10 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-600 outline-none"
             >
-              {["ALL", "DRAFT", "PENDING", "ACTIVE", "REJECTED", "INACTIVE"].map((item) => (
-                <option key={item} value={item}>{item}</option>
+              {[
+                "ALL",
+                "DRAFT",
+                "PENDING",
+                "ACTIVE",
+                "REJECTED",
+                "INACTIVE",
+              ].map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
               ))}
             </select>
           </div>
@@ -2402,7 +3051,9 @@ export default function AdvertisementsPage() {
                 >
                   <div className="flex flex-wrap items-center gap-3">
                     {ad.status === "DRAFT" ? (
-                      <span className="text-base font-bold text-slate-950">{getTitle(ad)}</span>
+                      <span className="text-base font-bold text-slate-950">
+                        {getTitle(ad)}
+                      </span>
                     ) : (
                       <Link
                         to={`/advertisements/${ad._id}`}
@@ -2411,7 +3062,9 @@ export default function AdvertisementsPage() {
                         {getTitle(ad)}
                       </Link>
                     )}
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${getStatusClass(ad.status)}`}>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-bold ${getStatusClass(ad.status)}`}
+                    >
                       {ad.status}
                     </span>
                     {ad?.filledByAdmin?.isFilled ? (
@@ -2434,26 +3087,44 @@ export default function AdvertisementsPage() {
                         }`
                       : ad.packageType === "BUNDLE"
                         ? ad.bundleNameSnapshot || "Promotion Bundle"
-                        : categories[ad.category] || ad.categoryLabel || "Advertisement"} - {ad.durationDays || 0} days
-                    {ad.freeAdditionalDaysSnapshot ? ` + ${ad.freeAdditionalDaysSnapshot} free` : ""}
+                        : categories[ad.category] ||
+                          ad.categoryLabel ||
+                          "Advertisement"}{" "}
+                    - {ad.durationDays || 0} days
+                    {ad.freeAdditionalDaysSnapshot
+                      ? ` + ${ad.freeAdditionalDaysSnapshot} free`
+                      : ""}
                   </p>
                   {ad.rejectionReason ? (
-                    <p className="mt-2 text-sm font-semibold text-red-600">{ad.rejectionReason}</p>
+                    <p className="mt-2 text-sm font-semibold text-red-600">
+                      {ad.rejectionReason}
+                    </p>
                   ) : null}
                 </button>
 
                 <div className="flex shrink-0 items-center gap-2">
                   {ad.status === "DRAFT" ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setModalDraft(ad);
-                        setShowModal(true);
-                      }}
-                      className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white"
-                    >
-                      Continue
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModalDraft(ad);
+                          setShowModal(true);
+                        }}
+                        className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white"
+                      >
+                        Continue
+                      </button>
+                      {!isPaidBundleSlotDraft(ad) ? (
+                        <button
+                          type="button"
+                          onClick={() => setDeleteDraftAd(ad)}
+                          className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-100"
+                        >
+                          Delete
+                        </button>
+                      ) : null}
+                    </>
                   ) : ad.status === "REJECTED" ? (
                     <>
                       <button
@@ -2500,10 +3171,19 @@ export default function AdvertisementsPage() {
                   <span>Views: {(ad.viewCount || 0).toLocaleString()}</span>
                   <span>CTR: {formatCtr(ad.clickCount, ad.viewCount)}</span>
                   <span>Call: {(ad.callClickCount || 0).toLocaleString()}</span>
-                  <span>WhatsApp: {(ad.whatsappClickCount || 0).toLocaleString()}</span>
-                  <span>Starts: {ad.startsAt ? formatDate(ad.startsAt) : "After approval"}</span>
-                  <span>Ends: {ad.endsAt ? formatDate(ad.endsAt) : "After approval"}</span>
-                  <span className="font-bold text-slate-900">{formatCurrency(ad.totalAmount || ad.price)}</span>
+                  <span>
+                    WhatsApp: {(ad.whatsappClickCount || 0).toLocaleString()}
+                  </span>
+                  <span>
+                    Starts:{" "}
+                    {ad.startsAt ? formatDate(ad.startsAt) : "After approval"}
+                  </span>
+                  <span>
+                    Ends: {ad.endsAt ? formatDate(ad.endsAt) : "After approval"}
+                  </span>
+                  <span className="font-bold text-slate-900">
+                    {formatCurrency(ad.totalAmount || ad.price)}
+                  </span>
                 </div>
               ) : null}
             </div>
@@ -2540,18 +3220,35 @@ export default function AdvertisementsPage() {
         }}
         onConfirm={handleEnd}
       />
+      <ConfirmModal
+        isOpen={Boolean(deleteDraftAd)}
+        title="Delete draft advertisement"
+        message="Delete this draft advertisement? This cannot be undone."
+        confirmText="Delete Draft"
+        isLoading={isDeletingDraft}
+        onClose={() => {
+          if (!isDeletingDraft) setDeleteDraftAd(null);
+        }}
+        onConfirm={handleDeleteDraft}
+      />
       {reasonAd ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4">
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-            <h2 className="text-lg font-black text-slate-950">Rejection Reason</h2>
+            <h2 className="text-lg font-black text-slate-950">
+              Rejection Reason
+            </h2>
             <div className="mt-4 rounded-xl border border-red-100 bg-red-50 p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-red-500">Reason</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-red-500">
+                Reason
+              </p>
               <p className="mt-1 text-sm font-semibold leading-6 text-red-800">
                 {reasonAd.rejectionReason || "-"}
               </p>
               {reasonAd.rejectionRemark ? (
                 <>
-                  <p className="mt-4 text-xs font-bold uppercase tracking-wide text-red-500">Admin remark</p>
+                  <p className="mt-4 text-xs font-bold uppercase tracking-wide text-red-500">
+                    Admin remark
+                  </p>
                   <p className="mt-1 text-sm font-semibold leading-6 text-red-800">
                     {reasonAd.rejectionRemark}
                   </p>

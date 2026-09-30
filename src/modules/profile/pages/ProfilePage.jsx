@@ -5,9 +5,16 @@ import {
   Building2,
   Camera,
   Car,
+  Clock,
+  Globe,
+  ImagePlus,
+  Link2,
+  MapPin,
   Pencil,
   Trash2,
+  Upload,
   Users,
+  Video,
   X,
 } from "lucide-react";
 
@@ -19,7 +26,13 @@ import ConfirmModal from "../../../components/ui/ConfirmModal";
 import { useToast } from "../../../context/ToastContext";
 import useAuth from "../../auth/hooks/useAuth";
 import { profileApi } from "../api/profileApi";
-import { GULF_COUNTRIES } from "../../listings/config/gulfLocations.config";
+import {
+  GULF_COUNTRIES,
+  getNormalizedLocationCity,
+  getNormalizedLocationCountry,
+  getNormalizedLocationState,
+} from "../../listings/config/gulfLocations.config";
+import PhoneNumberField from "../../listings/components/formFields/PhoneNumberField";
 
 const EMPTY_FORM = {
   businessName: "",
@@ -41,6 +54,28 @@ const EMPTY_FORM = {
   state: "",
   city: "",
   mapsLink: "",
+  hours: {},
+};
+
+const WEEK_DAYS = [
+  { key: "sun", label: "Sunday" },
+  { key: "mon", label: "Monday" },
+  { key: "tue", label: "Tuesday" },
+  { key: "wed", label: "Wednesday" },
+  { key: "thu", label: "Thursday" },
+  { key: "fri", label: "Friday" },
+  { key: "sat", label: "Saturday" },
+];
+
+const DEFAULT_DAY_HOURS = { open: false, open24Hours: false, opens: "09:00", closes: "18:00" };
+
+const COUNTRY_DIAL_CODES = {
+  Bahrain: "+973",
+  "Saudi Arabia": "+966",
+  "United Arab Emirates": "+971",
+  Kuwait: "+965",
+  Oman: "+968",
+  Qatar: "+974",
 };
 
 const BUSINESS_CATEGORY_OPTIONS = [
@@ -66,10 +101,10 @@ const VEHICLE_CATEGORY_OPTIONS = [
 ];
 
 const fieldClass =
-  "mt-2 h-11 w-full rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-400";
+  "mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-400";
 
 const textareaClass =
-  "mt-2 min-h-24 w-full resize-none rounded-lg border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500";
+  "mt-2 min-h-24 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 const DESCRIPTION_LIMIT = 500;
 const getCounterClass = (currentLength, maxLength) => {
   if (currentLength >= maxLength) return "text-red-600";
@@ -77,33 +112,57 @@ const getCounterClass = (currentLength, maxLength) => {
   return "text-slate-400";
 };
 
-const buildFormValues = (profile = {}) => ({
-  businessName: profile.businessName || "",
-  ownerName: profile.ownerName || "",
-  phone: profile.phone || "",
-  email: profile.email || "",
-  category: profile.category || "",
-  vehicleCategories: Array.isArray(profile.vehicleCategories)
-    ? profile.vehicleCategories
-    : [],
-  vehicleBrands: Array.isArray(profile.vehicleBrands)
-    ? profile.vehicleBrands
-    : [],
-  vehicleBrandsText: Array.isArray(profile.vehicleBrands)
-    ? profile.vehicleBrands.join(", ")
-    : "",
-  description: profile.description || "",
-  whatsapp: profile.whatsapp || "",
-  website: profile.website || "",
-  instagram: profile.instagram || "",
-  twitter: profile.twitter || "",
-  facebook: profile.facebook || "",
-  address: profile.address || profile.location || "",
-  country: profile.country || "",
-  state: profile.state || "",
-  city: profile.city || "",
-  mapsLink: profile.mapsLink || "",
-});
+const buildFormValues = (profile = {}) => {
+  const country = getNormalizedLocationCountry(profile.country);
+  const state = getNormalizedLocationState(country, profile.state, profile.city);
+  const city = getNormalizedLocationCity(country, profile.city, state);
+
+  return {
+    businessName: profile.businessName || "",
+    ownerName: profile.ownerName || "",
+    phone: withCountryDial(profile.phone, country),
+    email: profile.email || "",
+    category: profile.category || "",
+    vehicleCategories: Array.isArray(profile.vehicleCategories)
+      ? profile.vehicleCategories
+      : [],
+    vehicleBrands: Array.isArray(profile.vehicleBrands)
+      ? profile.vehicleBrands
+      : [],
+    vehicleBrandsText: Array.isArray(profile.vehicleBrands)
+      ? profile.vehicleBrands.join(", ")
+      : "",
+    description: profile.description || "",
+    whatsapp: withCountryDial(profile.whatsapp, country),
+    website: profile.website || "",
+    instagram: profile.instagram || "",
+    twitter: profile.twitter || "",
+    facebook: profile.facebook || "",
+    address: profile.address || profile.location || "",
+    country,
+    state,
+    city,
+    mapsLink: profile.mapsLink || "",
+    hours: normalizeHours(profile.workingHours),
+  };
+};
+
+const withCountryDial = (value, country) => {
+  const raw = String(value || "").trim();
+  if (!raw || raw.startsWith("+")) return raw;
+
+  const dial = COUNTRY_DIAL_CODES[country] || "+973";
+  return `${dial} ${raw.replace(/\D/g, "")}`.trim();
+};
+
+const normalizeHours = (hours = {}) =>
+  WEEK_DAYS.reduce((next, day) => {
+    next[day.key] = {
+      ...DEFAULT_DAY_HOURS,
+      ...(hours?.[day.key] || {}),
+    };
+    return next;
+  }, {});
 
 const validateFile = (file) => {
   if (!file) return "Choose a file first.";
@@ -189,11 +248,183 @@ function CheckboxGroup({ value = [], onChange, options }) {
   );
 }
 
+function FormSection({ icon: Icon, title, description, children }) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
+      <div className="mb-4 flex items-start gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm ring-1 ring-slate-200">
+          <Icon size={18} />
+        </span>
+        <div>
+          <h3 className="text-sm font-bold text-slate-900">{title}</h3>
+          {description ? (
+            <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
+          ) : null}
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function PlanLockedNotice({ children }) {
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-800">
+      {children}
+    </div>
+  );
+}
+
+function UploadAction({ icon: Icon, label, helper, busyLabel, isBusy, accept, multiple = false, disabled, onChange }) {
+  return (
+    <label
+      className={`flex min-h-28 cursor-pointer flex-col justify-between rounded-xl border border-dashed border-slate-300 bg-white p-4 transition hover:border-blue-300 hover:bg-blue-50/40 ${
+        disabled ? "pointer-events-none opacity-60" : ""
+      }`}
+    >
+      <span className="flex items-center gap-2 text-sm font-bold text-slate-800">
+        <Icon size={18} className="text-blue-600" />
+        {isBusy ? busyLabel : label}
+      </span>
+      <span className="mt-2 text-xs leading-5 text-slate-500">{helper}</span>
+      <span className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white">
+        <Upload size={14} />
+        Choose file
+      </span>
+      <input
+        type="file"
+        accept={accept}
+        multiple={multiple}
+        className="hidden"
+        disabled={disabled}
+        onChange={(event) => {
+          onChange(event.target.files);
+          event.target.value = "";
+        }}
+      />
+    </label>
+  );
+}
+
+function TimeInput({ value, disabled, onChange }) {
+  return (
+    <input
+      type="time"
+      value={value || ""}
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.value)}
+      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-400"
+    />
+  );
+}
+
+function WorkingHoursEditor({ value = {}, onChange }) {
+  const hours = normalizeHours(value);
+
+  const updateDay = (key, patch) => {
+    onChange({
+      ...hours,
+      [key]: {
+        ...hours[key],
+        ...patch,
+      },
+    });
+  };
+
+  const copyToAll = (key) => {
+    const source = hours[key];
+    onChange(
+      WEEK_DAYS.reduce((next, day) => {
+        next[day.key] = { ...source };
+        return next;
+      }, {}),
+    );
+  };
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      {WEEK_DAYS.map((day) => {
+        const item = hours[day.key] || DEFAULT_DAY_HOURS;
+
+        return (
+          <div
+            key={day.key}
+            className="grid gap-3 border-b border-slate-100 p-3 last:border-b-0 md:grid-cols-[110px_1fr_130px_130px_82px] md:items-center"
+          >
+            <span className="text-sm font-bold text-slate-800">{day.label}</span>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={Boolean(item.open)}
+                  onChange={(event) =>
+                    updateDay(day.key, {
+                      open: event.target.checked,
+                      open24Hours: event.target.checked ? Boolean(item.open24Hours) : false,
+                    })
+                  }
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                Open
+              </label>
+
+              <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={Boolean(item.open24Hours)}
+                  disabled={!item.open}
+                  onChange={(event) =>
+                    updateDay(day.key, {
+                      open24Hours: event.target.checked,
+                    })
+                  }
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                />
+                24 hours
+              </label>
+            </div>
+
+            <TimeInput
+              value={item.opens}
+              disabled={!item.open || item.open24Hours}
+              onChange={(nextValue) => updateDay(day.key, { opens: nextValue })}
+            />
+
+            <TimeInput
+              value={item.closes}
+              disabled={!item.open || item.open24Hours}
+              onChange={(nextValue) => updateDay(day.key, { closes: nextValue })}
+            />
+
+            <button
+              type="button"
+              onClick={() => copyToAll(day.key)}
+              className="text-left text-xs font-bold text-blue-600 hover:text-blue-700 md:text-center"
+            >
+              Copy all
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* -------------------------------------------------------
    PROFILE FORM
 ------------------------------------------------------- */
 
-function ProfileForm({ initialValues, locks = {}, submitLabel, onSaved }) {
+function ProfileForm({
+  initialValues,
+  profile,
+  submitLabel,
+  uploading,
+  tourVideoProgress,
+  onGalleryUpload,
+  onTourVideoUpload,
+  onSaved,
+}) {
   const [form, setForm] = useState({
     ...EMPTY_FORM,
     ...initialValues,
@@ -227,6 +458,14 @@ function ProfileForm({ initialValues, locks = {}, submitLabel, onSaved }) {
         ?.governorates || [],
     [form.country],
   );
+  const selectedState = useMemo(
+    () => stateOptions.find((state) => state.name === form.state),
+    [form.state, stateOptions],
+  );
+  const cityOptions = selectedState?.cities || [];
+  const planFeatures = profile?.planFeatures || {};
+  const canUseWebsiteLink = planFeatures.websiteLink !== false;
+  const canUseSocialMediaLinks = planFeatures.socialMediaLinks !== false;
 
   const handleCountryChange = (event) => {
     const nextCountry = event.target.value;
@@ -241,11 +480,14 @@ function ProfileForm({ initialValues, locks = {}, submitLabel, onSaved }) {
 
   const handleStateChange = (event) => {
     const nextState = event.target.value;
+    const nextStateData = stateOptions.find((state) => state.name === nextState);
 
     setForm((current) => ({
       ...current,
       state: nextState,
-      city: nextState,
+      city: nextStateData?.cities?.includes(current.city)
+        ? current.city
+        : nextStateData?.cities?.[0] || "",
     }));
   };
 
@@ -258,6 +500,18 @@ function ProfileForm({ initialValues, locks = {}, submitLabel, onSaved }) {
     try {
       const payload = { ...form };
       delete payload.businessType;
+      delete payload.vehicleBrandsText;
+
+      if (!canUseWebsiteLink) {
+        delete payload.website;
+      }
+
+      if (!canUseSocialMediaLinks) {
+        delete payload.instagram;
+        delete payload.twitter;
+        delete payload.facebook;
+      }
+
       await profileApi.updateProfile(payload);
       await onSaved();
     } catch (err) {
@@ -271,220 +525,201 @@ function ProfileForm({ initialValues, locks = {}, submitLabel, onSaved }) {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="grid grid-cols-1 gap-4 text-left sm:grid-cols-2"
-    >
-      <Field label="Business Name" required locked={locks.businessName}>
-        <input
-          className={fieldClass}
-          disabled={locks.businessName}
-          required
-          value={form.businessName}
-          onChange={update("businessName")}
-        />
-      </Field>
-
-      <Field label="Owner Name" required>
-        <input
-          className={fieldClass}
-          required
-          value={form.ownerName}
-          onChange={update("ownerName")}
-        />
-      </Field>
-
-      <Field label="Mobile Number" required locked={locks.phone}>
-        <input
-          className={fieldClass}
-          disabled={locks.phone}
-          required
-          value={form.phone}
-          onChange={update("phone")}
-        />
-      </Field>
-
-      <Field label="Business Email" required>
-        <input
-          className={fieldClass}
-          required
-          type="email"
-          value={form.email}
-          onChange={update("email")}
-        />
-      </Field>
-
-      <Field label="Business Category">
-        <select
-          className={fieldClass}
-          value={form.category}
-          onChange={update("category")}
-        >
-          <option value="">Select Business Category</option>
-          {BUSINESS_CATEGORY_OPTIONS.map((option) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
-      </Field>
-
-      <div className="sm:col-span-2">
-        <Field label="Vehicle Category">
-          <CheckboxGroup
-            value={form.vehicleCategories}
-            onChange={(value) => updateValue("vehicleCategories", value)}
-            options={VEHICLE_CATEGORY_OPTIONS}
-          />
-        </Field>
-      </div>
-
-      {/* <div className="sm:col-span-2">
-        <Field label="Vehicle Brands">
-          <input
-            className={fieldClass}
-            value={form.vehicleBrandsText}
-            onChange={(event) => {
-              const value = event.target.value;
-              setForm((current) => ({
-                ...current,
-                vehicleBrandsText: value,
-                vehicleBrands: value
-                  .split(",")
-                  .map((item) => item.trim())
-                  .filter(Boolean),
-              }));
-            }}
-            placeholder="e.g. Toyota, Nissan, BMW"
-          />
-        </Field>
-      </div> */}
-
-      <Field label="WhatsApp">
-        <input
-          className={fieldClass}
-          value={form.whatsapp}
-          onChange={update("whatsapp")}
-        />
-      </Field>
-
-      <div className="sm:col-span-2">
-        <Field label="Description">
-          <textarea
-            className={textareaClass}
-            maxLength={DESCRIPTION_LIMIT}
-            value={form.description}
-            onChange={update("description")}
-          />
-          <div className={`mt-1 text-right text-xs font-medium ${getCounterClass(form.description.length, DESCRIPTION_LIMIT)}`}>
-            {form.description.length}/{DESCRIPTION_LIMIT} characters
-          </div>
-        </Field>
-      </div>
-
-      <Field label="Website">
-        <input
-          className={fieldClass}
-          type="url"
-          value={form.website}
-          onChange={update("website")}
-        />
-      </Field>
-
-      <Field label="Google Maps Link">
-        <input
-          className={fieldClass}
-          type="url"
-          value={form.mapsLink}
-          onChange={update("mapsLink")}
-        />
-      </Field>
-
-      <Field label="Address">
-        <input
-          className={fieldClass}
-          value={form.address}
-          onChange={update("address")}
-        />
-      </Field>
-
-      <Field label="Country">
-        <select
-          className={fieldClass}
-          value={form.country}
-          onChange={handleCountryChange}
-        >
-          <option value="">Select country</option>
-          {GULF_COUNTRIES.map((country) => (
-            <option key={country.iso2} value={country.name}>
-              {country.name}
-            </option>
-          ))}
-        </select>
-      </Field>
-
-      <Field label="State / Governorate">
-        <select
-          className={fieldClass}
-          value={form.state}
-          onChange={handleStateChange}
-          disabled={!form.country}
-        >
-          <option value="">Select State / Governorate</option>
-          {stateOptions.map((state) => (
-            <option key={state.name} value={state.name}>
-              {state.name}
-            </option>
-          ))}
-        </select>
-      </Field>
-
-      <Field label="City / Area">
-        <input
-          className={fieldClass}
-          value={form.city}
-          onChange={update("city")}
-          placeholder="City / area"
-        />
-      </Field>
-
-      <Field label="Instagram">
-        <input
-          className={fieldClass}
-          value={form.instagram}
-          onChange={update("instagram")}
-        />
-      </Field>
-
-      <Field label="X / Twitter">
-        <input
-          className={fieldClass}
-          value={form.twitter}
-          onChange={update("twitter")}
-        />
-      </Field>
-
-      <div className="sm:col-span-2">
-        <Field label="Facebook">
-          <input
-            className={fieldClass}
-            value={form.facebook}
-            onChange={update("facebook")}
-          />
-        </Field>
-      </div>
-
-      {error ? (
-        <p className="sm:col-span-2 text-sm font-semibold text-red-500">
-          {error}
-        </p>
-      ) : null}
-
-      <button
-        type="submit"
-        disabled={saving}
-        className="mt-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 sm:col-span-2"
+    <form onSubmit={handleSubmit} className="space-y-5 text-left">
+      <FormSection
+        icon={Building2}
+        title="Business Details"
+        description="Changes to business name, owner, mobile, and email are sent for admin approval when required."
       >
-        {saving ? "Saving..." : submitLabel}
-      </button>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Business Name" required>
+            <input className={fieldClass} required value={form.businessName} onChange={update("businessName")} />
+          </Field>
+
+          <Field label="Owner Name" required>
+            <input className={fieldClass} required value={form.ownerName} onChange={update("ownerName")} />
+          </Field>
+
+          <Field label="Mobile Number" required>
+            <div className="mt-2">
+              <PhoneNumberField
+                value={form.phone}
+                onChange={(value) => updateValue("phone", value)}
+                placeholder="12345678"
+              />
+            </div>
+          </Field>
+
+          <Field label="Business Email" required>
+            <input className={fieldClass} required type="email" value={form.email} onChange={update("email")} />
+          </Field>
+
+          <Field label="Business Category">
+            <select className={fieldClass} value={form.category} onChange={update("category")}>
+              <option value="">Select Business Category</option>
+              {BUSINESS_CATEGORY_OPTIONS.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="WhatsApp Number">
+            <div className="mt-2">
+              <PhoneNumberField
+                value={form.whatsapp}
+                onChange={(value) => updateValue("whatsapp", value)}
+                placeholder="12345678"
+              />
+            </div>
+          </Field>
+
+          <div className="sm:col-span-2">
+            <Field label="Vehicle Category">
+              <CheckboxGroup
+                value={form.vehicleCategories}
+                onChange={(value) => updateValue("vehicleCategories", value)}
+                options={VEHICLE_CATEGORY_OPTIONS}
+              />
+            </Field>
+          </div>
+
+          <div className="sm:col-span-2">
+            <Field label="Description">
+              <textarea
+                className={textareaClass}
+                maxLength={DESCRIPTION_LIMIT}
+                value={form.description}
+                onChange={update("description")}
+              />
+              <div className={`mt-1 text-right text-xs font-medium ${getCounterClass(form.description.length, DESCRIPTION_LIMIT)}`}>
+                {form.description.length}/{DESCRIPTION_LIMIT} characters
+              </div>
+            </Field>
+          </div>
+        </div>
+      </FormSection>
+
+      <FormSection icon={MapPin} title="Location" description="State / governorate and city are separate values. Pick city from the selected state.">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Address">
+            <input className={fieldClass} value={form.address} onChange={update("address")} />
+          </Field>
+
+          <Field label="Country">
+            <select className={fieldClass} value={form.country} onChange={handleCountryChange}>
+              <option value="">Select country</option>
+              {GULF_COUNTRIES.map((country) => (
+                <option key={country.iso2} value={country.name}>{country.name}</option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="State / Governorate">
+            <select className={fieldClass} value={form.state} onChange={handleStateChange} disabled={!form.country}>
+              <option value="">Select State / Governorate</option>
+              {stateOptions.map((state) => (
+                <option key={state.name} value={state.name}>{state.name}</option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="City / Area">
+            <select
+              className={fieldClass}
+              value={form.city}
+              onChange={update("city")}
+              disabled={!form.state || !cityOptions.length}
+            >
+              <option value="">Select City / Area</option>
+              {cityOptions.map((city) => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+              {form.city && !cityOptions.includes(form.city) ? (
+                <option value={form.city}>{form.city}</option>
+              ) : null}
+            </select>
+          </Field>
+
+          <div className="sm:col-span-2">
+            <Field label="Google Maps Link">
+              <input className={fieldClass} type="url" value={form.mapsLink} onChange={update("mapsLink")} />
+            </Field>
+          </div>
+        </div>
+      </FormSection>
+
+      <FormSection icon={Link2} title="Website & Social Links" description="Available fields follow your active business page package.">
+        <div className="space-y-4">
+          {canUseWebsiteLink ? (
+            <Field label="Website">
+              <input className={fieldClass} type="url" value={form.website} onChange={update("website")} placeholder="https://yourdealer.com" />
+            </Field>
+          ) : (
+            <PlanLockedNotice>Your current package does not include a website link.</PlanLockedNotice>
+          )}
+
+          {canUseSocialMediaLinks ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Field label="Instagram">
+                <input className={fieldClass} value={form.instagram} onChange={update("instagram")} placeholder="@yourdealer" />
+              </Field>
+
+              <Field label="X / Twitter">
+                <input className={fieldClass} value={form.twitter} onChange={update("twitter")} placeholder="@yourdealer" />
+              </Field>
+
+              <Field label="Facebook">
+                <input className={fieldClass} value={form.facebook} onChange={update("facebook")} placeholder="facebook.com/yourdealer" />
+              </Field>
+            </div>
+          ) : (
+            <PlanLockedNotice>Your current package does not include social media links.</PlanLockedNotice>
+          )}
+        </div>
+      </FormSection>
+
+      <FormSection icon={Clock} title="Working Hours" description="Update weekly showroom timing directly from this edit form.">
+        <WorkingHoursEditor value={form.hours} onChange={(value) => updateValue("hours", value)} />
+      </FormSection>
+
+      <FormSection icon={Globe} title="Showroom Media" description="Add showroom photos or replace the tour video from the same edit flow.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <UploadAction
+            icon={ImagePlus}
+            label="Add Showroom Photos"
+            busyLabel="Uploading photos..."
+            helper={`${profile?.showroomGallery?.length || 0} photos uploaded. New photos are added to the existing gallery.`}
+            accept="image/*"
+            multiple
+            isBusy={uploading === "showroomGallery"}
+            disabled={Boolean(uploading)}
+            onChange={onGalleryUpload}
+          />
+
+          <UploadAction
+            icon={Video}
+            label={profile?.showroomTourVideo?.url ? "Replace Tour Video" : "Upload Tour Video"}
+            busyLabel={`Uploading ${tourVideoProgress}%`}
+            helper="MP4, MOV, or WEBM up to 200 MB. This replaces the current tour video."
+            accept="video/mp4,video/quicktime,video/webm"
+            isBusy={uploading === "showroomTourVideo"}
+            disabled={Boolean(uploading)}
+            onChange={(files) => onTourVideoUpload(files?.[0])}
+          />
+        </div>
+      </FormSection>
+
+      {error ? <p className="text-sm font-semibold text-red-500">{error}</p> : null}
+
+      <div className=" bottom-0 -mx-4 -mb-4 flex items-center justify-end gap-3 border-t border-slate-200 bg-white/95 px-4 py-4 backdrop-blur sm:-mx-5 sm:-mb-5 sm:px-5">
+        <button
+          type="submit"
+          disabled={saving || Boolean(uploading)}
+          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+        >
+          {saving ? "Saving..." : submitLabel}
+        </button>
+      </div>
     </form>
   );
 }
@@ -493,17 +728,24 @@ function ProfileForm({ initialValues, locks = {}, submitLabel, onSaved }) {
    EDIT PROFILE MODAL
 ------------------------------------------------------- */
 
-function EditProfileModal({ profile, onClose, onSaved }) {
+function EditProfileModal({
+  profile,
+  uploading,
+  tourVideoProgress,
+  onGalleryUpload,
+  onTourVideoUpload,
+  onClose,
+  onSaved,
+}) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6 shadow-lg sm:p-8">
-        <div className="mb-5 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-5">
+      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-6">
           <div>
-            <h2 className="text-lg font-bold">Edit Business Profile</h2>
+            <h2 className="text-xl font-bold text-slate-950">Edit Business Profile</h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Approved dealers cannot change business name, mobile
-              number, or Trade License Certificate.
+              Update profile details, links, hours, and showroom media. Sensitive changes are sent for approval.
             </p>
           </div>
 
@@ -517,15 +759,21 @@ function EditProfileModal({ profile, onClose, onSaved }) {
           </button>
         </div>
 
-        <ProfileForm
-          initialValues={buildFormValues(profile)}
-          locks={profile.locks || {}}
-          submitLabel="Save Changes"
-          onSaved={async () => {
-            await onSaved();
-            onClose();
-          }}
-        />
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+          <ProfileForm
+            initialValues={buildFormValues(profile)}
+            profile={profile}
+            uploading={uploading}
+            tourVideoProgress={tourVideoProgress}
+            onGalleryUpload={onGalleryUpload}
+            onTourVideoUpload={onTourVideoUpload}
+            submitLabel="Save Changes"
+            onSaved={async () => {
+              await onSaved();
+              onClose();
+            }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -1063,6 +1311,10 @@ export default function ProfilePage() {
       {isEditOpen ? (
         <EditProfileModal
           profile={profile}
+          uploading={uploading}
+          tourVideoProgress={tourVideoProgress}
+          onGalleryUpload={handleGalleryUpload}
+          onTourVideoUpload={handleTourVideoUpload}
           onClose={() => setIsEditOpen(false)}
           onSaved={load}
         />
