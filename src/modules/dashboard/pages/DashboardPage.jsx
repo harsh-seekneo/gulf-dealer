@@ -40,6 +40,14 @@ const DEFAULT_STATS = {
   advertisementPlacements: [],
 };
 
+const HOUR_MS = 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+
+const isSameLocalDay = (first, second) =>
+  first.getFullYear() === second.getFullYear() &&
+  first.getMonth() === second.getMonth() &&
+  first.getDate() === second.getDate();
+
 const formatDate = (value) => {
   if (!value) return "N/A";
 
@@ -47,6 +55,28 @@ const formatDate = (value) => {
   if (Number.isNaN(date.getTime())) return "N/A";
 
   return date.toLocaleDateString("en-GB");
+};
+
+const formatExpiryLabel = (value, nowValue = Date.now()) => {
+  if (!value) return "N/A";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "N/A";
+
+  const now = new Date(nowValue);
+  const diff = date.getTime() - now.getTime();
+
+  if (diff <= 0) return "Expired";
+  if (diff < MINUTE_MS) return `${Math.ceil(diff / 1000)} seconds remaining`;
+  if (diff < HOUR_MS) return `${Math.ceil(diff / MINUTE_MS)} minutes remaining`;
+  if (diff < 6 * HOUR_MS) return `${Math.ceil(diff / HOUR_MS)} hours remaining`;
+  if (isSameLocalDay(date, now)) return "Today";
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (isSameLocalDay(date, tomorrow)) return "Tomorrow";
+
+  return formatDate(value);
 };
 
 const getStatusClasses = (active) =>
@@ -300,12 +330,18 @@ export default function DashboardPage() {
   const [weeklyViews, setWeeklyViews] = useState([]);
   const [topVehicles, setTopVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
 
   const { weeklyData, monthlyData, monthlyLoading, handleRangeChange } =
     useListingViews(weeklyViews);
 
   useEffect(() => {
     loadDashboard();
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
   }, []);
 
   const loadDashboard = async () => {
@@ -406,6 +442,9 @@ export default function DashboardPage() {
     );
   }
 
+  const subscriptionExpiryLabel = formatExpiryLabel(subscription?.endDate, now);
+  const featuredDealerExpiryLabel = formatExpiryLabel(featuredDealer?.endDate, now);
+
   return (
     <div className="flex flex-col gap-4">
       {/* Breadcrumb */}
@@ -454,7 +493,9 @@ export default function DashboardPage() {
               </h2>
               <p className="mt-1 flex items-center gap-2 text-sm text-slate-500">
                 <CalendarDays size={15} />
-                Expires {formatDate(subscription?.endDate)}
+                {subscriptionExpiryLabel === "Expired"
+                  ? "Expired"
+                  : `Expires ${subscriptionExpiryLabel}`}
               </p>
               {subscription?.offerReason ? (
                 <p className="mt-2 text-sm font-medium text-amber-700">
@@ -515,7 +556,9 @@ export default function DashboardPage() {
               </h2>
               <p className="mt-1 flex items-center gap-2 text-sm text-slate-500">
                 <CalendarDays size={15} />
-                Expires {formatDate(featuredDealer?.endDate)}
+                {featuredDealerExpiryLabel === "Expired"
+                  ? "Expired"
+                  : `Expires ${featuredDealerExpiryLabel}`}
               </p>
             </div>
 

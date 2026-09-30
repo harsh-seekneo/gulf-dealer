@@ -30,6 +30,7 @@ import {
 } from "../../payment/paymentPopup";
 import { profileApi } from "../../profile/api/profileApi";
 import { advertisementsApi } from "../api/advertisementsApi";
+import { USER_APP_URL } from "../../../config/env";
 
 const categories = {
   HOME_PAGE_BANNER: "Homepage Banner",
@@ -313,6 +314,17 @@ const getBundleSlotLabel = (ad) =>
   categories[ad?.category] ||
   ad?.categoryLabel ||
   "Advertisement";
+
+const getBundleSlotPositionLabel = (ad) =>
+  ad?.bundleSlotIndex && ad?.bundleSlotTotal
+    ? `Slot ${ad.bundleSlotIndex} of ${ad.bundleSlotTotal}`
+    : "";
+
+const redirectToUserAdvertisementDraft = (draft) => {
+  if (!draft?._id) return;
+  const baseUrl = USER_APP_URL.replace(/\/$/, "");
+  window.location.assign(`${baseUrl}/profile/advertisements?edit=${draft._id}`);
+};
 
 const groupRemainingBundleDrafts = (ads = []) => {
   const groups = new Map();
@@ -2975,8 +2987,8 @@ export default function AdvertisementsPage() {
                         className="rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-bold text-amber-800"
                       >
                         {getBundleSlotLabel(slot)}
-                        {slot.bundleSlotIndex && slot.bundleSlotTotal
-                          ? ` ${slot.bundleSlotIndex}/${slot.bundleSlotTotal}`
+                        {getBundleSlotPositionLabel(slot)
+                          ? ` - ${getBundleSlotPositionLabel(slot)}`
                           : ""}
                       </span>
                     ))}
@@ -2984,10 +2996,7 @@ export default function AdvertisementsPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    setModalDraft(group.slots[0]);
-                    setShowModal(true);
-                  }}
+                  onClick={() => redirectToUserAdvertisementDraft(group.slots[0])}
                   className="h-10 shrink-0 rounded-xl bg-amber-600 px-4 text-sm font-black text-white"
                 >
                   Complete It
@@ -3081,8 +3090,8 @@ export default function AdvertisementsPage() {
                           ad.categoryLabel ||
                           "Advertisement"
                         }${
-                          ad.bundleSlotIndex && ad.bundleSlotTotal
-                            ? ` (${ad.bundleSlotIndex}/${ad.bundleSlotTotal})`
+                          getBundleSlotPositionLabel(ad)
+                            ? ` (${getBundleSlotPositionLabel(ad)})`
                             : ""
                         }`
                       : ad.packageType === "BUNDLE"

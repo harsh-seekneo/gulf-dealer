@@ -372,16 +372,16 @@ export default function SubscriptionPage() {
           data-renewal-review
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4"
         >
-          <div className="max-h-[92vh] w-full max-w-7xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
-          <div className="sticky top-0 z-10 -mx-5 -mt-5 flex flex-col gap-3 border-b border-slate-200 bg-white px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          <div className="sticky top-0 z-10 flex flex-col gap-3 border-b border-slate-200 bg-white px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
+              <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
                 {renewalActionLabel} Review
               </p>
-              <h2 className="mt-1 text-2xl font-bold text-slate-900">
+              <h2 className="mt-1 text-xl font-bold text-slate-900">
                 You are changing from {renewalReview.currentPackage} to {renewalSummary.newPackage}.
               </h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+              <p className="mt-1 max-w-3xl text-sm leading-5 text-slate-600">
                 Your new package includes up to {renewalSummary.listingAllowance} vehicle listings.
                 Please select the listings and advertisements you want to continue into the new period.
                 Items not selected will expire at the end of your current subscription period.
@@ -396,10 +396,10 @@ export default function SubscriptionPage() {
             </button>
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-lg bg-blue-50 p-4">
+          <div className="grid gap-3 px-5 py-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg bg-blue-50 p-3">
               <p className="text-xs font-semibold uppercase text-blue-700">Listings Continuing</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">
+              <p className="mt-1 text-xl font-bold text-slate-900">
                 {renewalSummary.listingsContinuing}
               </p>
               <p className="text-sm text-slate-600">
@@ -407,9 +407,9 @@ export default function SubscriptionPage() {
               </p>
             </div>
             {renewalSummary.ads.map((item) => (
-              <div key={item.category} className="rounded-lg bg-slate-50 p-4">
+              <div key={item.category} className="rounded-lg bg-slate-50 p-3">
                 <p className="text-xs font-semibold uppercase text-slate-500">{item.label}</p>
-                <p className="mt-1 text-2xl font-bold text-slate-900">
+                <p className="mt-1 text-xl font-bold text-slate-900">
                   {item.continuing}
                 </p>
                 <p className="text-sm text-slate-600">
@@ -419,22 +419,22 @@ export default function SubscriptionPage() {
             ))}
           </div>
 
-          <div className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_1fr]">
+          <div className="grid gap-4 px-5 pb-4 xl:grid-cols-[1.1fr_0.9fr]">
             <section>
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-slate-900">Vehicle Listing Entitlements</h3>
+                <h3 className="text-base font-bold text-slate-900">Vehicle Listing Entitlements</h3>
                 <span className="text-sm font-semibold text-slate-500">
                   {renewalSummary.listingsContinuing}/{renewalSummary.listingAllowance} selected
                 </span>
               </div>
-              <div className="mt-3 max-h-96 overflow-auto rounded-lg border border-slate-200">
+              <div className="mt-2 max-h-[34vh] overflow-auto rounded-lg border border-slate-200">
                 {renewalReview.listings?.length ? (
                   renewalReview.listings.map((listing) => {
                     const checked = renewalSelection.selectedListingIds.includes(String(listing._id));
                     return (
                       <label
                         key={listing._id}
-                        className="flex cursor-pointer items-center justify-between gap-4 border-b border-slate-100 px-4 py-3 last:border-b-0 hover:bg-slate-50"
+                        className="flex cursor-pointer items-center justify-between gap-4 border-b border-slate-100 px-3 py-2.5 last:border-b-0 hover:bg-slate-50"
                       >
                         <div>
                           <p className="font-semibold text-slate-900">
@@ -461,13 +461,13 @@ export default function SubscriptionPage() {
             </section>
 
             <section>
-              <h3 className="text-lg font-bold text-slate-900">Advertisement Entitlements</h3>
-              <div className="mt-3 flex max-h-96 flex-col gap-4 overflow-auto">
+              <h3 className="text-base font-bold text-slate-900">Advertisement Entitlements</h3>
+              <div className="mt-2 flex max-h-[34vh] flex-col gap-3 overflow-auto">
                 {Object.entries(renewalReview.advertisementsByType || {}).map(([category, group]) => {
                   const selected = renewalSelection.selectedAdvertisementIdsByType?.[category] || [];
                   return (
                     <div key={category} className="rounded-lg border border-slate-200">
-                      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                      <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2.5">
                         <p className="font-semibold text-slate-900">{group.label}</p>
                         <span className="text-xs font-semibold text-slate-500">
                           {selected.length}/{group.included} selected
@@ -479,7 +479,7 @@ export default function SubscriptionPage() {
                           return (
                             <label
                               key={ad._id}
-                              className="flex cursor-pointer items-center justify-between gap-4 border-b border-slate-100 px-4 py-3 last:border-b-0 hover:bg-slate-50"
+                              className="flex cursor-pointer items-center justify-between gap-4 border-b border-slate-100 px-3 py-2.5 last:border-b-0 hover:bg-slate-50"
                             >
                               <div>
                                 <p className="font-semibold text-slate-900">
@@ -506,36 +506,36 @@ export default function SubscriptionPage() {
             </section>
           </div>
 
-          <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-5">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="sticky bottom-0 border-t border-slate-200 bg-white px-5 py-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="text-sm font-bold uppercase tracking-wide text-blue-700">
+                <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
                   {renewalActionLabel} Summary
                 </p>
-                <h3 className="mt-1 text-xl font-black text-slate-950">
+                <h3 className="mt-1 text-base font-black text-slate-950">
                   {renewalSummary.newPackage}
                 </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
+                <p className="mt-1 text-sm leading-5 text-slate-600">
                   Selected items will continue under the new plan after payment.
                   Anything not selected remains expired and will not be visible.
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
+                <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
                   <p className="text-xs font-bold uppercase text-slate-400">Continuing</p>
                   <p className="mt-1 text-2xl font-black text-slate-950">
                     {renewalSummary.listingsContinuing +
                       renewalSummary.ads.reduce((sum, item) => sum + item.continuing, 0)}
                   </p>
                 </div>
-                <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
+                <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
                   <p className="text-xs font-bold uppercase text-slate-400">New Spaces</p>
                   <p className="mt-1 text-2xl font-black text-slate-950">
                     {renewalSummary.newListingSpacesAvailable +
                       renewalSummary.ads.reduce((sum, item) => sum + item.available, 0)}
                   </p>
                 </div>
-                <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
+                <div className="rounded-lg border border-slate-100 bg-red-50 px-4 py-3">
                   <p className="text-xs font-bold uppercase text-slate-400">Ending</p>
                   <p className="mt-1 text-2xl font-black text-red-600">
                     {renewalSummary.listingsEnding +
@@ -545,8 +545,8 @@ export default function SubscriptionPage() {
               </div>
             </div>
 
-            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-              <div className="rounded-lg border border-blue-100 bg-white p-4">
+            <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+              <div className="rounded-lg border border-slate-200 bg-white p-3">
                 <p className="text-xs font-bold uppercase text-slate-400">Vehicle Listings</p>
                 <p className="mt-1 text-sm font-bold text-slate-900">
                   {renewalSummary.listingsContinuing} continue, {renewalSummary.newListingSpacesAvailable} spaces left
@@ -554,7 +554,7 @@ export default function SubscriptionPage() {
                 <p className="mt-1 text-xs text-red-600">{renewalSummary.listingsEnding} ending</p>
               </div>
               {renewalSummary.ads.map((item) => (
-                <div key={item.category} className="rounded-lg border border-blue-100 bg-white p-4">
+                <div key={item.category} className="rounded-lg border border-slate-200 bg-white p-3">
                   <p className="text-xs font-bold uppercase text-slate-400">{item.label}</p>
                   <p className="mt-1 text-sm font-bold text-slate-900">
                     {item.continuing} continue, {item.available} spaces left
@@ -564,7 +564,7 @@ export default function SubscriptionPage() {
               ))}
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-3">
+            <div className="mt-4 flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={() => {

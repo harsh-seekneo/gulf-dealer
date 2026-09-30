@@ -3,7 +3,7 @@ import { ChevronDown, Star } from "lucide-react";
 import { isPremiumPlan } from "../utils/planHelpers";
 
 export default function ComparePlansTable({ plans = [] }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   const rows = useMemo(() => {
     return [
