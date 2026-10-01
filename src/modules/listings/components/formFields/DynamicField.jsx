@@ -187,8 +187,7 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
             }
             maxLength={maxLength}
             placeholder={field.placeholder}
-            rows={4}
-            className={`${baseInputClass} ${errorClass} h-auto resize-none py-2.5`}
+            className={`${baseInputClass} ${errorClass} h-auto min-h-[12px] resize-y py-2.5`}
           />
           {maxLength ? (
             <div className={`mt-1 text-right text-xs font-medium ${getCounterClass(currentLength, maxLength)}`}>

@@ -10,6 +10,7 @@ import {
   redirectToPaymentUrl,
 } from "../../payment/paymentPopup";
 import { useToast } from "../../../context/ToastContext";
+import { useMemo, useState } from "react";
 
 const getPlanListingLimit = (plan) => Number(plan?.activeListingCount || 0);
 
@@ -41,6 +42,381 @@ const getSelectedActionLabel = (selectedPlan) => {
   if (!selectedPlan?.renewalMode) return "Continue to Payment";
   return selectedPlan.actionLabel || "Renew Plan";
 };
+
+
+
+
+const PAGE_SIZE = 50;
+
+/* ---------- Ek tab ke andar ki list (search + filter + bulk + load more) ---------- */
+function ItemList({ items, getId, getTitle, selectedIds, limit, onToggle, onSetMany, emptyText }) {
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all"); // all | keep | drop
+  const [visible, setVisible] = useState(PAGE_SIZE);
+
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const limitReached = selectedIds.length >= limit;
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter((it) => {
+      const id = String(getId(it));
+      if (filter === "keep" && !selectedSet.has(id)) return false;
+      if (filter === "drop" && selectedSet.has(id)) return false;
+      if (q && !`${getTitle(it)} ${it.status || ""}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [items, query, filter, selectedSet, getId, getTitle]);
+
+  if (!items.length) {
+    return <p className="px-4 py-10 text-center text-sm text-slate-500">{emptyText}</p>;
+  }
+
+  const filters = [
+    ["all", `All (${items.length})`],
+    ["keep", `Continuing (${selectedIds.length})`],
+    ["drop", `Not continuing (${items.length - selectedIds.length})`],
+  ];
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* Toolbar */}
+      <div className="flex flex-col gap-2 border-b border-slate-200 p-3 md:flex-row md:items-center">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setVisible(PAGE_SIZE);
+          }}
+          placeholder="Search by name or status"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 md:max-w-xs"
+        />
+        <div className="flex flex-wrap gap-1.5">
+          {filters.map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => {
+                setFilter(key);
+                setVisible(PAGE_SIZE);
+              }}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                filter === key
+                  ? "bg-slate-900 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2 md:ml-auto">
+          <button
+            type="button"
+            onClick={() => onSetMany(filtered.slice(0, limit).map((it) => String(getId(it))))}
+            className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+          >
+            Select first {Math.min(limit, filtered.length)}
+          </button>
+          <button
+            type="button"
+            onClick={() => onSetMany([])}
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+          >
+            Clear all
+          </button>
+        </div>
+      </div>
+
+      {limitReached && (
+        <p className="bg-amber-50 px-4 py-2 text-xs font-medium text-amber-800">
+          Limit reached ({limit}). Naya item select karne ke liye pehle kisi ko uncheck karo.
+        </p>
+      )}
+
+      {/* Rows */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {filtered.length === 0 ? (
+          <p className="px-4 py-10 text-center text-sm text-slate-500">Koi result nahi mila.</p>
+        ) : (
+          <>
+            {filtered.slice(0, visible).map((it) => {
+              const id = String(getId(it));
+              const checked = selectedSet.has(id);
+              const disabled = !checked && limitReached;
+              return (
+                <label
+                  key={id}
+                  className={`flex items-center gap-3 border-b border-slate-100 px-4 py-2.5 ${
+                    disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-slate-50"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={disabled}
+                    onChange={() => onToggle(it._id)}
+                    className="h-4 w-4 shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-slate-900">{getTitle(it)}</p>
+                    <p className="text-xs text-slate-500">{it.status}</p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                      checked ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
+                    }`}
+                  >
+                    {checked ? "Continue" : "Will expire"}
+                  </span>
+                </label>
+              );
+            })}
+            {visible < filtered.length && (
+              <button
+                type="button"
+                onClick={() => setVisible((v) => v + PAGE_SIZE)}
+                className="w-full py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+              >
+                Show more ({filtered.length - visible} baaki)
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Main modal ---------- */
+function RenewalReviewModal({
+  renewalReview,
+  renewalSummary,
+  renewalSelection,
+  renewalActionLabel,
+  closeRenewalReview,
+  continueToRenewalPayment,
+  toggleListingRenewal,
+  toggleAdvertisementRenewal,
+  setListingRenewalIds, // (ids: string[]) => void
+  setAdvertisementRenewalIds, // (category: string, ids: string[]) => void
+}) {
+  const [summaryOpen, setSummaryOpen] = useState(false); // default collapsed
+  const [activeTab, setActiveTab] = useState("listings");
+
+  const listingIds = renewalSelection.selectedListingIds || [];
+  const adGroups = Object.entries(renewalReview.advertisementsByType || {});
+
+  const tabs = [
+    {
+      key: "listings",
+      label: "Vehicle Listings",
+      selected: listingIds.length,
+      limit: renewalSummary.listingAllowance,
+      total: renewalReview.listings?.length || 0,
+    },
+    ...adGroups.map(([category, group]) => ({
+      key: category,
+      label: group.label,
+      selected: (renewalSelection.selectedAdvertisementIdsByType?.[category] || []).length,
+      limit: group.included,
+      total: group.items?.length || 0,
+    })),
+  ];
+
+  const active = tabs.find((t) => t.key === activeTab) || tabs[0];
+  const activeGroup = renewalReview.advertisementsByType?.[active.key];
+  const activeAdIds = renewalSelection.selectedAdvertisementIdsByType?.[active.key] || [];
+
+  const totalContinuing =
+    renewalSummary.listingsContinuing + renewalSummary.ads.reduce((s, i) => s + i.continuing, 0);
+  const totalNewSpaces =
+    renewalSummary.newListingSpacesAvailable + renewalSummary.ads.reduce((s, i) => s + i.available, 0);
+  const totalEnding =
+    renewalSummary.listingsEnding + renewalSummary.ads.reduce((s, i) => s + i.ending, 0);
+
+  return (
+    <div
+      data-renewal-review
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-0 sm:p-4"
+    >
+      <div className="flex h-full max-h-[100vh] w-full max-w-5xl flex-col overflow-hidden bg-white shadow-2xl sm:h-[90vh] sm:rounded-2xl">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">
+              {renewalReview.currentPackage} → {renewalSummary.newPackage}
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm text-slate-600">
+              Jo listings aur ads naye period me continue karni hain unhe select karo. Baaki current
+              subscription ke end par expire ho jayengi.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={closeRenewalReview}
+            aria-label="Cancel"
+            className="shrink-0 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+        </div>
+
+        {/* Collapsible summary */}
+        <div className="border-b border-slate-200 bg-slate-50">
+          <button
+            type="button"
+            onClick={() => setSummaryOpen((o) => !o)}
+            aria-expanded={summaryOpen}
+            className="flex w-full items-center justify-between gap-3 px-5 py-2.5 text-left"
+          >
+            <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+              <span className="font-semibold text-slate-900">Summary</span>
+              <span className="text-emerald-700">{totalContinuing} continuing</span>
+              <span className="text-blue-700">{totalNewSpaces} new spaces</span>
+              <span className="text-red-600">{totalEnding} ending</span>
+            </span>
+            <span className="shrink-0 text-xs font-semibold text-slate-500">
+              {summaryOpen ? "Hide details" : "Show details"}
+            </span>
+          </button>
+
+          {summaryOpen && (
+            <div className="grid gap-2 px-5 pb-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                {
+                  key: "listings",
+                  label: "Vehicle Listings",
+                  continuing: renewalSummary.listingsContinuing,
+                  available: renewalSummary.newListingSpacesAvailable,
+                  ending: renewalSummary.listingsEnding,
+                },
+                ...renewalSummary.ads.map((i) => ({ ...i, key: i.category })),
+              ].map((i) => (
+                <div key={i.key} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                  <p className="text-sm font-semibold text-slate-900">{i.label}</p>
+                  <p className="text-xs text-slate-600">
+                    {i.continuing} continue · {i.available} spaces left ·{" "}
+                    <span className="text-red-600">{i.ending} ending</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Body: tabs + list */}
+        <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+          {/* Tabs: mobile par horizontal scroll, desktop par left sidebar */}
+          <nav
+            aria-label="Renewal categories"
+            className="flex shrink-0 gap-1 overflow-x-auto border-b border-slate-200 bg-white p-2 md:w-60 md:flex-col md:overflow-y-auto md:border-b-0 md:border-r"
+          >
+            {tabs.map((t) => {
+              const isActive = t.key === active.key;
+              const pct = t.limit ? Math.min(100, (t.selected / t.limit) * 100) : 0;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setActiveTab(t.key)}
+                  className={`min-w-[9.5rem] rounded-lg px-3 py-2 text-left md:min-w-0 ${
+                    isActive ? "bg-blue-50 ring-1 ring-blue-200" : "hover:bg-slate-50"
+                  }`}
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span
+                      className={`text-sm font-semibold ${
+                        isActive ? "text-blue-800" : "text-slate-800"
+                      }`}
+                    >
+                      {t.label}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-500">
+                      {t.selected}/{t.limit}
+                    </span>
+                  </span>
+                  <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-slate-200">
+                    <span
+                      className={`block h-full rounded-full ${
+                        t.selected >= t.limit ? "bg-amber-500" : "bg-blue-600"
+                      }`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </span>
+                  <span className="mt-1 block text-xs text-slate-500">{t.total} current</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Active panel */}
+          <section className="flex min-h-0 flex-1 flex-col">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <h3 className="text-base font-bold text-slate-900">{active.label}</h3>
+              <span className="text-sm font-semibold text-slate-600">
+                {active.selected} of {active.limit} selected
+              </span>
+            </div>
+
+            {active.key === "listings" ? (
+              <ItemList
+                key="listings"
+                items={renewalReview.listings || []}
+                getId={(l) => l._id}
+                getTitle={(l) => l.vehicleInfo?.title || l.listingId || "Vehicle listing"}
+                selectedIds={listingIds.map(String)}
+                limit={renewalSummary.listingAllowance}
+                onToggle={toggleListingRenewal}
+                onSetMany={setListingRenewalIds}
+                emptyText="Renewal ke liye koi current listing nahi mili."
+              />
+            ) : (
+              <ItemList
+                key={active.key}
+                items={activeGroup?.items || []}
+                getId={(a) => a._id}
+                getTitle={(a) => a.name || a.advertisementId || activeGroup?.label}
+                selectedIds={activeAdIds.map(String)}
+                limit={activeGroup?.included || 0}
+                onToggle={(id) => toggleAdvertisementRenewal(active.key, id)}
+                onSetMany={(ids) => setAdvertisementRenewalIds(active.key, ids)}
+                emptyText="Is type ki koi current ad nahi hai."
+              />
+            )}
+          </section>
+        </div>
+
+        {/* Footer */}
+        <div className="flex flex-col gap-3 border-t border-slate-200 bg-white px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-slate-600">
+            <span className="font-semibold text-emerald-700">{totalContinuing} continue</span> ·{" "}
+            <span className="font-semibold text-red-600">{totalEnding} expire</span>. Selected items
+            payment ke baad naye plan me continue hongi.
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={closeRenewalReview}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={continueToRenewalPayment}
+              className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+            >
+              {renewalActionLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 export default function SubscriptionPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -368,223 +744,229 @@ export default function SubscriptionPage() {
       )}
 
       {renewalReview && renewalSummary && (
-        <div
-          data-renewal-review
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4"
-        >
-          <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
-          <div className="sticky top-0 z-10 flex flex-col gap-3 border-b border-slate-200 bg-white px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
-                {renewalActionLabel} Review
-              </p>
-              <h2 className="mt-1 text-xl font-bold text-slate-900">
-                You are changing from {renewalReview.currentPackage} to {renewalSummary.newPackage}.
-              </h2>
-              <p className="mt-1 max-w-3xl text-sm leading-5 text-slate-600">
-                Your new package includes up to {renewalSummary.listingAllowance} vehicle listings.
-                Please select the listings and advertisements you want to continue into the new period.
-                Items not selected will expire at the end of your current subscription period.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={closeRenewalReview}
-              className="w-fit rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-          </div>
+        // <div
+        //   data-renewal-review
+        //   className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4"
+        // >
+        //   <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        //   <div className="sticky top-0 z-10 flex flex-col gap-3 border-b border-slate-200 bg-white px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
+        //     <div>
+        //       <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
+        //         {renewalActionLabel} Review
+        //       </p>
+        //       <h2 className="mt-1 text-xl font-bold text-slate-900">
+        //         You are changing from {renewalReview.currentPackage} to {renewalSummary.newPackage}.
+        //       </h2>
+        //       <p className="mt-1 max-w-3xl text-sm leading-5 text-slate-600">
+        //         Your new package includes up to {renewalSummary.listingAllowance} vehicle listings.
+        //         Please select the listings and advertisements you want to continue into the new period.
+        //         Items not selected will expire at the end of your current subscription period.
+        //       </p>
+        //     </div>
+        //     <button
+        //       type="button"
+        //       onClick={closeRenewalReview}
+        //       className="w-fit rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        //     >
+        //       Cancel
+        //     </button>
+        //   </div>
 
-          <div className="grid gap-3 px-5 py-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-lg bg-blue-50 p-3">
-              <p className="text-xs font-semibold uppercase text-blue-700">Listings Continuing</p>
-              <p className="mt-1 text-xl font-bold text-slate-900">
-                {renewalSummary.listingsContinuing}
-              </p>
-              <p className="text-sm text-slate-600">
-                {renewalSummary.newListingSpacesAvailable} new listing spaces available
-              </p>
-            </div>
-            {renewalSummary.ads.map((item) => (
-              <div key={item.category} className="rounded-lg bg-slate-50 p-3">
-                <p className="text-xs font-semibold uppercase text-slate-500">{item.label}</p>
-                <p className="mt-1 text-xl font-bold text-slate-900">
-                  {item.continuing}
-                </p>
-                <p className="text-sm text-slate-600">
-                  {item.available} spaces available
-                </p>
-              </div>
-            ))}
-          </div>
+        //   <div className="grid gap-3 px-5 py-4 md:grid-cols-2 xl:grid-cols-4">
+        //     <div className="rounded-lg bg-blue-50 p-3">
+        //       <p className="text-xs font-semibold uppercase text-blue-700">Listings Continuing</p>
+        //       <p className="mt-1 text-xl font-bold text-slate-900">
+        //         {renewalSummary.listingsContinuing}
+        //       </p>
+        //       <p className="text-sm text-slate-600">
+        //         {renewalSummary.newListingSpacesAvailable} new listing spaces available
+        //       </p>
+        //     </div>
+        //     {renewalSummary.ads.map((item) => (
+        //       <div key={item.category} className="rounded-lg bg-slate-50 p-3">
+        //         <p className="text-xs font-semibold uppercase text-slate-500">{item.label}</p>
+        //         <p className="mt-1 text-xl font-bold text-slate-900">
+        //           {item.continuing}
+        //         </p>
+        //         <p className="text-sm text-slate-600">
+        //           {item.available} spaces available
+        //         </p>
+        //       </div>
+        //     ))}
+        //   </div>
 
-          <div className="grid gap-4 px-5 pb-4 xl:grid-cols-[1.1fr_0.9fr]">
-            <section>
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-slate-900">Vehicle Listing Entitlements</h3>
-                <span className="text-sm font-semibold text-slate-500">
-                  {renewalSummary.listingsContinuing}/{renewalSummary.listingAllowance} selected
-                </span>
-              </div>
-              <div className="mt-2 max-h-[34vh] overflow-auto rounded-lg border border-slate-200">
-                {renewalReview.listings?.length ? (
-                  renewalReview.listings.map((listing) => {
-                    const checked = renewalSelection.selectedListingIds.includes(String(listing._id));
-                    return (
-                      <label
-                        key={listing._id}
-                        className="flex cursor-pointer items-center justify-between gap-4 border-b border-slate-100 px-3 py-2.5 last:border-b-0 hover:bg-slate-50"
-                      >
-                        <div>
-                          <p className="font-semibold text-slate-900">
-                            {listing.vehicleInfo?.title || listing.listingId || "Vehicle listing"}
-                          </p>
-                          <p className="text-xs text-slate-500">{listing.status}</p>
-                        </div>
-                        <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                          {checked ? "Continue/Renew" : "Delete/Do Not Renew"}
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleListingRenewal(listing._id)}
-                            className="h-4 w-4"
-                          />
-                        </span>
-                      </label>
-                    );
-                  })
-                ) : (
-                  <p className="px-4 py-6 text-sm text-slate-500">No current dealer listings found for renewal.</p>
-                )}
-              </div>
-            </section>
+        //   <div className="grid gap-4 px-5 pb-4 xl:grid-cols-[1.1fr_0.9fr]">
+        //     <section>
+        //       <div className="flex items-center justify-between">
+        //         <h3 className="text-base font-bold text-slate-900">Vehicle Listing Entitlements</h3>
+        //         <span className="text-sm font-semibold text-slate-500">
+        //           {renewalSummary.listingsContinuing}/{renewalSummary.listingAllowance} selected
+        //         </span>
+        //       </div>
+        //       <div className="mt-2 max-h-[34vh] overflow-auto rounded-lg border border-slate-200">
+        //         {renewalReview.listings?.length ? (
+        //           renewalReview.listings.map((listing) => {
+        //             const checked = renewalSelection.selectedListingIds.includes(String(listing._id));
+        //             return (
+        //               <label
+        //                 key={listing._id}
+        //                 className="flex cursor-pointer items-center justify-between gap-4 border-b border-slate-100 px-3 py-2.5 last:border-b-0 hover:bg-slate-50"
+        //               >
+        //                 <div>
+        //                   <p className="font-semibold text-slate-900">
+        //                     {listing.vehicleInfo?.title || listing.listingId || "Vehicle listing"}
+        //                   </p>
+        //                   <p className="text-xs text-slate-500">{listing.status}</p>
+        //                 </div>
+        //                 <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+        //                   {checked ? "Continue/Renew" : "Delete/Do Not Renew"}
+        //                   <input
+        //                     type="checkbox"
+        //                     checked={checked}
+        //                     onChange={() => toggleListingRenewal(listing._id)}
+        //                     className="h-4 w-4"
+        //                   />
+        //                 </span>
+        //               </label>
+        //             );
+        //           })
+        //         ) : (
+        //           <p className="px-4 py-6 text-sm text-slate-500">No current dealer listings found for renewal.</p>
+        //         )}
+        //       </div>
+        //     </section>
 
-            <section>
-              <h3 className="text-base font-bold text-slate-900">Advertisement Entitlements</h3>
-              <div className="mt-2 flex max-h-[34vh] flex-col gap-3 overflow-auto">
-                {Object.entries(renewalReview.advertisementsByType || {}).map(([category, group]) => {
-                  const selected = renewalSelection.selectedAdvertisementIdsByType?.[category] || [];
-                  return (
-                    <div key={category} className="rounded-lg border border-slate-200">
-                      <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2.5">
-                        <p className="font-semibold text-slate-900">{group.label}</p>
-                        <span className="text-xs font-semibold text-slate-500">
-                          {selected.length}/{group.included} selected
-                        </span>
-                      </div>
-                      {group.items?.length ? (
-                        group.items.map((ad) => {
-                          const checked = selected.includes(String(ad._id));
-                          return (
-                            <label
-                              key={ad._id}
-                              className="flex cursor-pointer items-center justify-between gap-4 border-b border-slate-100 px-3 py-2.5 last:border-b-0 hover:bg-slate-50"
-                            >
-                              <div>
-                                <p className="font-semibold text-slate-900">
-                                  {ad.name || ad.advertisementId || group.label}
-                                </p>
-                                <p className="text-xs text-slate-500">{ad.status}</p>
-                              </div>
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleAdvertisementRenewal(category, ad._id)}
-                                className="h-4 w-4"
-                              />
-                            </label>
-                          );
-                        })
-                      ) : (
-                        <p className="px-4 py-4 text-sm text-slate-500">No current ads of this type.</p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          </div>
+        //     <section>
+        //       <h3 className="text-base font-bold text-slate-900">Advertisement Entitlements</h3>
+        //       <div className="mt-2 flex max-h-[34vh] flex-col gap-3 overflow-auto">
+        //         {Object.entries(renewalReview.advertisementsByType || {}).map(([category, group]) => {
+        //           const selected = renewalSelection.selectedAdvertisementIdsByType?.[category] || [];
+        //           return (
+        //             <div key={category} className="rounded-lg border border-slate-200">
+        //               <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2.5">
+        //                 <p className="font-semibold text-slate-900">{group.label}</p>
+        //                 <span className="text-xs font-semibold text-slate-500">
+        //                   {selected.length}/{group.included} selected
+        //                 </span>
+        //               </div>
+        //               {group.items?.length ? (
+        //                 group.items.map((ad) => {
+        //                   const checked = selected.includes(String(ad._id));
+        //                   return (
+        //                     <label
+        //                       key={ad._id}
+        //                       className="flex cursor-pointer items-center justify-between gap-4 border-b border-slate-100 px-3 py-2.5 last:border-b-0 hover:bg-slate-50"
+        //                     >
+        //                       <div>
+        //                         <p className="font-semibold text-slate-900">
+        //                           {ad.name || ad.advertisementId || group.label}
+        //                         </p>
+        //                         <p className="text-xs text-slate-500">{ad.status}</p>
+        //                       </div>
+        //                       <input
+        //                         type="checkbox"
+        //                         checked={checked}
+        //                         onChange={() => toggleAdvertisementRenewal(category, ad._id)}
+        //                         className="h-4 w-4"
+        //                       />
+        //                     </label>
+        //                   );
+        //                 })
+        //               ) : (
+        //                 <p className="px-4 py-4 text-sm text-slate-500">No current ads of this type.</p>
+        //               )}
+        //             </div>
+        //           );
+        //         })}
+        //       </div>
+        //     </section>
+        //   </div>
 
-          <div className="sticky bottom-0 border-t border-slate-200 bg-white px-5 py-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
-                  {renewalActionLabel} Summary
-                </p>
-                <h3 className="mt-1 text-base font-black text-slate-950">
-                  {renewalSummary.newPackage}
-                </h3>
-                <p className="mt-1 text-sm leading-5 text-slate-600">
-                  Selected items will continue under the new plan after payment.
-                  Anything not selected remains expired and will not be visible.
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-                  <p className="text-xs font-bold uppercase text-slate-400">Continuing</p>
-                  <p className="mt-1 text-2xl font-black text-slate-950">
-                    {renewalSummary.listingsContinuing +
-                      renewalSummary.ads.reduce((sum, item) => sum + item.continuing, 0)}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-                  <p className="text-xs font-bold uppercase text-slate-400">New Spaces</p>
-                  <p className="mt-1 text-2xl font-black text-slate-950">
-                    {renewalSummary.newListingSpacesAvailable +
-                      renewalSummary.ads.reduce((sum, item) => sum + item.available, 0)}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-slate-100 bg-red-50 px-4 py-3">
-                  <p className="text-xs font-bold uppercase text-slate-400">Ending</p>
-                  <p className="mt-1 text-2xl font-black text-red-600">
-                    {renewalSummary.listingsEnding +
-                      renewalSummary.ads.reduce((sum, item) => sum + item.ending, 0)}
-                  </p>
-                </div>
-              </div>
-            </div>
+        //   <div className="sticky bottom-0 border-t border-slate-200 bg-white px-5 py-4">
+        //     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        //       <div>
+        //         <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
+        //           {renewalActionLabel} Summary
+        //         </p>
+        //         <h3 className="mt-1 text-base font-black text-slate-950">
+        //           {renewalSummary.newPackage}
+        //         </h3>
+        //         <p className="mt-1 text-sm leading-5 text-slate-600">
+        //           Selected items will continue under the new plan after payment.
+        //           Anything not selected remains expired and will not be visible.
+        //         </p>
+        //       </div>
+        //       <div className="grid gap-3 sm:grid-cols-3">
+        //         <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
+        //           <p className="text-xs font-bold uppercase text-slate-400">Continuing</p>
+        //           <p className="mt-1 text-2xl font-black text-slate-950">
+        //             {renewalSummary.listingsContinuing +
+        //               renewalSummary.ads.reduce((sum, item) => sum + item.continuing, 0)}
+        //           </p>
+        //         </div>
+        //         <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
+        //           <p className="text-xs font-bold uppercase text-slate-400">New Spaces</p>
+        //           <p className="mt-1 text-2xl font-black text-slate-950">
+        //             {renewalSummary.newListingSpacesAvailable +
+        //               renewalSummary.ads.reduce((sum, item) => sum + item.available, 0)}
+        //           </p>
+        //         </div>
+        //         <div className="rounded-lg border border-slate-100 bg-red-50 px-4 py-3">
+        //           <p className="text-xs font-bold uppercase text-slate-400">Ending</p>
+        //           <p className="mt-1 text-2xl font-black text-red-600">
+        //             {renewalSummary.listingsEnding +
+        //               renewalSummary.ads.reduce((sum, item) => sum + item.ending, 0)}
+        //           </p>
+        //         </div>
+        //       </div>
+        //     </div>
 
-            <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
-              <div className="rounded-lg border border-slate-200 bg-white p-3">
-                <p className="text-xs font-bold uppercase text-slate-400">Vehicle Listings</p>
-                <p className="mt-1 text-sm font-bold text-slate-900">
-                  {renewalSummary.listingsContinuing} continue, {renewalSummary.newListingSpacesAvailable} spaces left
-                </p>
-                <p className="mt-1 text-xs text-red-600">{renewalSummary.listingsEnding} ending</p>
-              </div>
-              {renewalSummary.ads.map((item) => (
-                <div key={item.category} className="rounded-lg border border-slate-200 bg-white p-3">
-                  <p className="text-xs font-bold uppercase text-slate-400">{item.label}</p>
-                  <p className="mt-1 text-sm font-bold text-slate-900">
-                    {item.continuing} continue, {item.available} spaces left
-                  </p>
-                  <p className="mt-1 text-xs text-red-600">{item.ending} ending</p>
-                </div>
-              ))}
-            </div>
+        //     <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+        //       <div className="rounded-lg border border-slate-200 bg-white p-3">
+        //         <p className="text-xs font-bold uppercase text-slate-400">Vehicle Listings</p>
+        //         <p className="mt-1 text-sm font-bold text-slate-900">
+        //           {renewalSummary.listingsContinuing} continue, {renewalSummary.newListingSpacesAvailable} spaces left
+        //         </p>
+        //         <p className="mt-1 text-xs text-red-600">{renewalSummary.listingsEnding} ending</p>
+        //       </div>
+        //       {renewalSummary.ads.map((item) => (
+        //         <div key={item.category} className="rounded-lg border border-slate-200 bg-white p-3">
+        //           <p className="text-xs font-bold uppercase text-slate-400">{item.label}</p>
+        //           <p className="mt-1 text-sm font-bold text-slate-900">
+        //             {item.continuing} continue, {item.available} spaces left
+        //           </p>
+        //           <p className="mt-1 text-xs text-red-600">{item.ending} ending</p>
+        //         </div>
+        //       ))}
+        //     </div>
 
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  document.querySelector("[data-renewal-review]")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-              >
-                Review Listings & Ads
-              </button>
-              <button
-                type="button"
-                onClick={continueToRenewalPayment}
-                className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-              >
-                {renewalActionLabel}
-              </button>
-            </div>
-          </div>
-          </div>
-        </div>
+        //     <div className="mt-4 flex flex-wrap gap-3">
+        //       <button
+        //         type="button"
+        //         onClick={() => {
+        //           document.querySelector("[data-renewal-review]")?.scrollIntoView({ behavior: "smooth" });
+        //         }}
+        //         className="rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+        //       >
+        //         Review Listings & Ads
+        //       </button>
+        //       <button
+        //         type="button"
+        //         onClick={continueToRenewalPayment}
+        //         className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+        //       >
+        //         {renewalActionLabel}
+        //       </button>
+        //     </div>
+        //   </div>
+        //   </div>
+        // </div>
+        <RenewalReviewModal renewalActionLabel={renewalActionLabel} renewalReview={renewalReview} renewalSummary={renewalSummary} renewalSelection={renewalSelection} closeRenewalReview={closeRenewalReview}
+  continueToRenewalPayment={continueToRenewalPayment}
+  toggleListingRenewal={toggleListingRenewal}
+  toggleAdvertisementRenewal={toggleAdvertisementRenewal}
+  setListingRenewalIds={setListingRenewalIds} // (ids: string[]) => void
+  setAdvertisementRenewalIds={setAdvertisementRenewalIds}/>
       )}
 
       {plans.length > 0 && <ComparePlansTable plans={plans} />}

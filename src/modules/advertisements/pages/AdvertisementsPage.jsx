@@ -248,11 +248,11 @@ const placementMeta = [
     labelClass: "bg-purple-50 text-purple-600",
     description:
       "Featured prominently in category and search results pages. Captures high-volume browse traffic across all categories.",
-    dimensions: "300 x 250 px",
+    dimensions: "300 x 866 px",
     deviceDimensions: {
-      desktop: { width: 300, height: 250 },
-      tablet: { width: 300, height: 250 },
-      mobile: { width: 300, height: 250 },
+      desktop: { width: 300, height: 866 },
+      tablet: { width: 240, height: 696 },
+      mobile: { width: 160, height: 462 },
     },
     previewImageUrl:
       "https://gulfincart-dev.s3.ap-south-1.amazonaws.com/ui/ads-form/large-category-ads-preview.png",
@@ -264,11 +264,11 @@ const placementMeta = [
     labelClass: "bg-orange-50 text-orange-600",
     description:
       "Sidebar and inline card slots across the platform. Ideal for sustained brand presence at an accessible price point.",
-    dimensions: "160 x 600 px",
+    dimensions: "300 x 425 px",
     deviceDimensions: {
-      desktop: { width: 160, height: 600 },
-      tablet: { width: 112, height: 420 },
-      mobile: { width: 80, height: 300 },
+      desktop: { width: 300, height: 425 },
+      tablet: { width: 240, height: 340 },
+      mobile: { width: 160, height: 227 },
     },
     previewImageUrl:
       "https://gulfincart-dev.s3.ap-south-1.amazonaws.com/ui/ads-form/small-ad-sapace-preview.png",

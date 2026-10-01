@@ -33,14 +33,14 @@ const categoryConfig = {
   LARGE_CATEGORY_BANNER: {
     title: "Large Category Ad",
     subtitle: "Shown on category and search result pages",
-    dimensions: "300 x 250 px",
+    dimensions: "300 x 866 px",
     icon: Layers,
     priority: "Standard",
   },
   SMALL_ADVERTISEMENT_SPACE: {
     title: "Small Ad Space",
     subtitle: "Sidebar and inline ad slots",
-    dimensions: "160 x 600 px",
+    dimensions: "300 x 425 px",
     icon: Tag,
     priority: "Basic",
   },
