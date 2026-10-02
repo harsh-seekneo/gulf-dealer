@@ -2776,6 +2776,7 @@ export default function AdvertisementsPage() {
   const [reasonAd, setReasonAd] = useState(null);
   const [isEndingAd, setIsEndingAd] = useState(false);
   const [isDeletingDraft, setIsDeletingDraft] = useState(false);
+  const [renewingAdId, setRenewingAdId] = useState("");
 
   const loadAdvertisements = async () => {
     try {
@@ -2907,6 +2908,20 @@ export default function AdvertisementsPage() {
       setEndAdId("");
     } finally {
       setIsEndingAd(false);
+    }
+  };
+
+  const handleRenewDealerCycleAd = async (adId) => {
+    try {
+      setError("");
+      setRenewingAdId(adId);
+      const updated = await advertisementsApi.renewDealerCycleAd(adId);
+      const ad = updated.ad || updated;
+      setAds((prev) => prev.map((item) => (item._id === ad._id ? ad : item)));
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to renew advertisement");
+    } finally {
+      setRenewingAdId("");
     }
   };
 
@@ -3208,12 +3223,24 @@ export default function AdvertisementsPage() {
                       </button>
                     </>
                   ) : (
-                    <Link
-                      to={`/advertisements/${ad._id}`}
-                      className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 hover:text-blue-600"
-                    >
-                      Details
-                    </Link>
+                    <>
+                      {ad.status === "EXPIRED" && ad.paymentMethod === "DEALER_PLAN" ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRenewDealerCycleAd(ad._id)}
+                          disabled={renewingAdId === ad._id}
+                          className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
+                        >
+                          {renewingAdId === ad._id ? "Renewing..." : "Renew"}
+                        </button>
+                      ) : null}
+                      <Link
+                        to={`/advertisements/${ad._id}`}
+                        className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 hover:text-blue-600"
+                      >
+                        Details
+                      </Link>
+                    </>
                   )}
                   {["ACTIVE", "PENDING"].includes(ad.status) ? (
                     <button

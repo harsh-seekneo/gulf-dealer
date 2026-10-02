@@ -17,6 +17,11 @@ export const resubmitListingApi = async (listingId) => {
   return res.data.data;
 };
 
+export const renewDealerCycleListingApi = async (listingId) => {
+  const res = await apiClient.post(`${BASE_URL}/${listingId}/renew-dealer-cycle`);
+  return res.data.data;
+};
+
 export const purchaseListingPlanApi = async (planId, options = {}) => {
   const res = await apiClient.post("/user-subscriptions/purchase", {
     planId,

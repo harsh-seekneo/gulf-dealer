@@ -104,6 +104,10 @@ export const advertisementsApi = {
     const res = await apiClient.patch(`/dealer/advertisements/${id}/end`);
     return res.data.data;
   },
+  renewDealerCycleAd: async (id) => {
+    const res = await apiClient.post(`/dealer/advertisements/${id}/renew-dealer-cycle`);
+    return res.data.data;
+  },
   downloadInvoice: async (id) => {
     const res = await apiClient.get(`/dealer/advertisements/${id}/invoice`, {
       responseType: "blob",

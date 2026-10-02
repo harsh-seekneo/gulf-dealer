@@ -93,6 +93,7 @@ export default function CurrentPlanBanner({ plan }) {
   const remainingDays = Number(plan.daysRemaining ?? totalDays);
   const usedDays = Number(plan.daysUsed ?? Math.max(totalDays - remainingDays, 0));
   const expiryLabel = formatExpiryLabel(endDate, now);
+  const cycleEndLabel = formatExpiryLabel(plan.cycleEndDate, now);
 
   // Progress bar shows remaining percentage
   const progress = totalDays > 0 ? Math.round((remainingDays / totalDays) * 100) : 0;
@@ -117,6 +118,12 @@ export default function CurrentPlanBanner({ plan }) {
         <p className="mt-1 text-sm text-amber-100">
           Status: {plan.status}
         </p>
+
+        {plan.cycleLabel ? (
+          <p className="mt-1 text-sm text-amber-100">
+            {plan.cycleLabel} · Cycle ends {cycleEndLabel}
+          </p>
+        ) : null}
 
         {plan.launchOfferApplied && (
           <p className="mt-1 text-sm text-amber-100">

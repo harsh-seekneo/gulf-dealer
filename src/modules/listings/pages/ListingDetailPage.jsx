@@ -8,6 +8,7 @@ import {
   getMyWalletApi,
   getPaymentStatusApi,
   purchaseListingPlanApi,
+  renewDealerCycleListingApi,
   resubmitListingApi,
 } from "../api/listingDetailApi";
 import { listingsApi } from "../api/listingsApi";
@@ -273,6 +274,7 @@ const ListingOverviewCard = ({
   onSubmitForReview,
   isSubmitting,
   onResubmit,
+  onRenewDealerCycle,
   isResubmitting,
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -498,6 +500,18 @@ const ListingOverviewCard = ({
             >
               {isResubmitting && <Loader2 size={13} className="animate-spin" />}
               Resubmit for Review
+            </button>
+          ) : null}
+
+          {listing.status === "EXPIRED" && listing.listingSource === "DEALER_BUSINESS" ? (
+            <button
+              type="button"
+              onClick={onRenewDealerCycle}
+              disabled={isResubmitting}
+              className="inline-flex h-9 items-center gap-2 rounded-[8px] bg-[#2454ef] px-4 text-xs font-black text-white disabled:opacity-60"
+            >
+              {isResubmitting && <Loader2 size={13} className="animate-spin" />}
+              Renew for Current Cycle
             </button>
           ) : null}
 
@@ -831,6 +845,23 @@ const ListingDetailPage = () => {
     }
   };
 
+  const handleRenewDealerCycle = async () => {
+    setIsResubmitting(true);
+
+    try {
+      const updatedListing = await renewDealerCycleListingApi(listing._id);
+      setListing(updatedListing);
+      showToast("Listing sent for renewal review", "success");
+    } catch (error) {
+      showToast(
+        error.response?.data?.message || "Unable to renew this listing",
+        "error"
+      );
+    } finally {
+      setIsResubmitting(false);
+    }
+  };
+
   const handleConfirmDelete = async () => {
     setIsDeleting(true);
 
@@ -969,6 +1000,7 @@ const ListingDetailPage = () => {
           setIsResubmitting(true);
           setShowResubmitModal(true);
         }}
+        onRenewDealerCycle={handleRenewDealerCycle}
         onToggleSold={() => setShowSoldConfirm(true)}
       />
 

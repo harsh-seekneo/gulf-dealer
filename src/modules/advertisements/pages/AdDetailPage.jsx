@@ -130,6 +130,7 @@ export default function AdDetailPage() {
   const [device, setDevice] = useState("desktop");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isRenewing, setIsRenewing] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -153,6 +154,20 @@ export default function AdDetailPage() {
 
   const handleDownloadInvoice = () => {
     window.print();
+  };
+
+  const handleRenewDealerCycle = async () => {
+    setIsRenewing(true);
+    setError("");
+
+    try {
+      const updated = await advertisementsApi.renewDealerCycleAd(ad._id);
+      setAd(updated);
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to renew advertisement");
+    } finally {
+      setIsRenewing(false);
+    }
   };
 
   if (loading) return <p className="text-sm text-slate-400">Loading ad details...</p>;
@@ -217,15 +232,27 @@ export default function AdDetailPage() {
           </div>
           <p className="mt-1 text-sm text-slate-500">{ad.advertisementId}</p>
         </div>
-        {ad.status === "REJECTED" ? (
-          <Link
-            to={`/advertisements?edit=${ad._id}`}
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white hover:bg-blue-700"
-          >
-            <Pencil size={16} />
-            Edit & Resubmit
-          </Link>
-        ) : null}
+        <div className="flex flex-wrap gap-2">
+          {ad.status === "REJECTED" ? (
+            <Link
+              to={`/advertisements?edit=${ad._id}`}
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white hover:bg-blue-700"
+            >
+              <Pencil size={16} />
+              Edit & Resubmit
+            </Link>
+          ) : null}
+          {ad.status === "EXPIRED" && ad.paymentMethod === "DEALER_PLAN" ? (
+            <button
+              type="button"
+              onClick={handleRenewDealerCycle}
+              disabled={isRenewing}
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
+            >
+              {isRenewing ? "Renewing..." : "Renew for Current Cycle"}
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <Section
