@@ -43,8 +43,8 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
     ? "Upload a video"
     : "Upload a vehicle walkthrough video";
   const mediaIntro = isSpecialNumber
-    ? "Upload clear plate photos to attract more buyers. Minimum 6 photos required."
-    : "Upload high-quality photos to attract more buyers. Minimum 6 photos required.";
+    ? "Upload clear plate photos to attract more buyers. "
+    : "Upload high-quality photos to attract more buyers. ";
   const allowBrochure = !isSpecialNumber;
   const hasSecondaryGallery = Boolean(config.hasSecondaryGallery);
   const secondaryGalleryLabel = config.secondaryGalleryLabel || "Additional Images";
