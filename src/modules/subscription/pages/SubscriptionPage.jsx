@@ -10,6 +10,7 @@ import {
   redirectToPaymentUrl,
 } from "../../payment/paymentPopup";
 import { useToast } from "../../../context/ToastContext";
+import { getRenewalAvailability } from "../utils/renewalWindow";
 
 const getPlanListingLimit = (plan) => Number(plan?.activeListingCount || 0);
 
@@ -46,6 +47,11 @@ const getSelectedActionLabel = (selectedPlan) => {
 
 
 const PAGE_SIZE = 50;
+
+const getPlanPrice = (plan) => {
+  const tier = plan?.pricingTiers?.[0] || {};
+  return Number(plan?.basePrice ?? tier.basePrice ?? tier.finalPrice ?? tier.price ?? 0);
+};
 
 /* ---------- Ek tab ke andar ki list (search + filter + bulk + load more) ---------- */
 function ItemList({ items, getId, getTitle, selectedIds, limit, onToggle, onSetMany, emptyText }) {
@@ -200,6 +206,9 @@ function RenewalReviewModal({
   toggleAdvertisementRenewal,
   setListingRenewalIds, // (ids: string[]) => void
   setAdvertisementRenewalIds, // (category: string, ids: string[]) => void
+  addOnPlans = [],
+  selectedAddOnPlanIds = [],
+  toggleAddOnPlan,
 }) {
   const [summaryOpen, setSummaryOpen] = useState(false); // default collapsed
   const [activeTab, setActiveTab] = useState("listings");
@@ -244,6 +253,9 @@ function RenewalReviewModal({
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
           <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
+              1. Current/available Dealer Page package
+            </p>
             <h2 className="text-lg font-bold text-slate-900">
               {renewalReview.currentPackage} → {renewalSummary.newPackage}
             </h2>
@@ -387,6 +399,49 @@ function RenewalReviewModal({
           </section>
         </div>
 
+        {addOnPlans.length > 0 && (
+          <div className="border-t border-slate-200 bg-amber-50 px-5 py-4">
+            <p className="text-sm font-bold text-slate-900">
+              2. Featured Dealer - Optional Add-on
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {addOnPlans.map((addOn) => {
+                const checked = selectedAddOnPlanIds.includes(String(addOn._id));
+                const price = getPlanPrice(addOn);
+                const tier = addOn.pricingTiers?.[0] || {};
+
+                return (
+                  <label
+                    key={addOn._id}
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border bg-white px-4 py-3 ${
+                      checked ? "border-amber-400 ring-2 ring-amber-100" : "border-amber-100"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleAddOnPlan(addOn._id)}
+                      className="mt-1 h-4 w-4 shrink-0"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-extrabold text-slate-950">
+                        {addOn.planName || "Featured Dealer"}
+                      </span>
+                      <span className="mt-1 block text-sm text-slate-600">
+                        Promote your dealer profile in the Featured Dealers section.
+                      </span>
+                      <span className="mt-2 block text-sm font-bold text-amber-700">
+                        {addOn.currency || "BHD"} {price.toFixed(3)}
+                        {tier.durationDays ? ` / ${tier.durationDays} days` : ""}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="flex flex-col gap-3 border-t border-slate-200 bg-white px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-slate-600">
@@ -423,10 +478,12 @@ export default function SubscriptionPage() {
   const { showToast } = useToast();
   const [currentPlan, setCurrentPlan] = useState(null);
   const [plans, setPlans] = useState([]);
+  const [addOnPlans, setAddOnPlans] = useState([]);
   const [dealerId, setDealerId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isSwitchingPlan, setIsSwitchingPlan] = useState(false);
+  const [renewalBlocked, setRenewalBlocked] = useState(null);
   const [renewalPlan, setRenewalPlan] = useState(null);
   const [renewalActionLabel, setRenewalActionLabel] = useState("Renew Plan");
   const [renewalReview, setRenewalReview] = useState(null);
@@ -434,6 +491,7 @@ export default function SubscriptionPage() {
     selectedListingIds: [],
     selectedAdvertisementIdsByType: {},
   });
+  const [selectedAddOnPlanIds, setSelectedAddOnPlanIds] = useState([]);
   const [isLoadingRenewalReview, setIsLoadingRenewalReview] = useState(false);
 
   useEffect(() => {
@@ -473,14 +531,16 @@ export default function SubscriptionPage() {
 
   const loadData = async () => {
     try {
-      const [current, available, status] = await Promise.all([
+      const [current, available, status, addOns] = await Promise.all([
         subscriptionApi.getCurrentPlan(),
         subscriptionApi.getAvailablePlans(),
         getDealerStatusApi(),
+        subscriptionApi.getAddOnPlans().catch(() => []),
       ]);
 
       setCurrentPlan(current || null);
       setPlans(available?.plans || []);
+      setAddOnPlans(Array.isArray(addOns) ? addOns : []);
       setDealerId(status?.dealer?._id || null);
     } catch (err) {
       console.error("Failed to load subscription:", err);
@@ -494,6 +554,12 @@ export default function SubscriptionPage() {
     const hasRenewableSubscription =
       ["ACTIVE", "EXPIRED"].includes(currentPlan?.status) &&
       currentPlan?.endDate;
+    const renewalAvailability = getRenewalAvailability(currentPlan);
+
+    if (hasRenewableSubscription && !renewalAvailability.canRenew) {
+      setRenewalBlocked(renewalAvailability);
+      return;
+    }
 
     if (!hasRenewableSubscription) {
       setSelectedPlan({ plan, renewalMode: false, actionLabel });
@@ -515,6 +581,7 @@ export default function SubscriptionPage() {
           ])
         ),
       });
+      setSelectedAddOnPlanIds([]);
     } catch (error) {
       showToast(
         error.response?.data?.message || "Unable to load renewal review",
@@ -604,6 +671,34 @@ export default function SubscriptionPage() {
     });
   };
 
+  const setListingRenewalIds = (ids) => {
+    const limit = Number(renewalReview?.newPackage?.activeListingCount || 0);
+    setRenewalSelection((current) => ({
+      ...current,
+      selectedListingIds: ids.map(String).slice(0, limit),
+    }));
+  };
+
+  const setAdvertisementRenewalIds = (category, ids) => {
+    const limit = Number(renewalReview?.advertisementsByType?.[category]?.included || 0);
+    setRenewalSelection((current) => ({
+      ...current,
+      selectedAdvertisementIdsByType: {
+        ...(current.selectedAdvertisementIdsByType || {}),
+        [category]: ids.map(String).slice(0, limit),
+      },
+    }));
+  };
+
+  const toggleAddOnPlan = (planId) => {
+    const id = String(planId);
+    setSelectedAddOnPlanIds((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id]
+    );
+  };
+
   const confirmSelectPlan = async () => {
     if (!selectedPlan?.plan) return;
 
@@ -628,6 +723,7 @@ export default function SubscriptionPage() {
         renewalMode: selectedPlan.renewalMode,
         selectedListingIds: selectedPlan.selectedListingIds,
         selectedAdvertisementIdsByType: selectedPlan.selectedAdvertisementIdsByType,
+        addOnPlanIds: selectedPlan.addOnPlanIds,
       });
 
       const payment = await subscriptionApi.pay({
@@ -668,6 +764,7 @@ export default function SubscriptionPage() {
       selectedListingIds: renewalSelection.selectedListingIds,
       selectedAdvertisementIdsByType:
         renewalSelection.selectedAdvertisementIdsByType,
+      addOnPlanIds: selectedAddOnPlanIds,
     });
   };
 
@@ -679,6 +776,7 @@ export default function SubscriptionPage() {
       selectedListingIds: [],
       selectedAdvertisementIdsByType: {},
     });
+    setSelectedAddOnPlanIds([]);
   };
 
   if (loading) {
@@ -960,12 +1058,21 @@ export default function SubscriptionPage() {
         //   </div>
         //   </div>
         // </div>
-        <RenewalReviewModal renewalActionLabel={renewalActionLabel} renewalReview={renewalReview} renewalSummary={renewalSummary} renewalSelection={renewalSelection} closeRenewalReview={closeRenewalReview}
-  continueToRenewalPayment={continueToRenewalPayment}
-  toggleListingRenewal={toggleListingRenewal}
-  toggleAdvertisementRenewal={toggleAdvertisementRenewal}
-  setListingRenewalIds={setListingRenewalIds} // (ids: string[]) => void
-  setAdvertisementRenewalIds={setAdvertisementRenewalIds}/>
+        <RenewalReviewModal
+          renewalActionLabel={renewalActionLabel}
+          renewalReview={renewalReview}
+          renewalSummary={renewalSummary}
+          renewalSelection={renewalSelection}
+          closeRenewalReview={closeRenewalReview}
+          continueToRenewalPayment={continueToRenewalPayment}
+          toggleListingRenewal={toggleListingRenewal}
+          toggleAdvertisementRenewal={toggleAdvertisementRenewal}
+          setListingRenewalIds={setListingRenewalIds}
+          setAdvertisementRenewalIds={setAdvertisementRenewalIds}
+          addOnPlans={addOnPlans}
+          selectedAddOnPlanIds={selectedAddOnPlanIds}
+          toggleAddOnPlan={toggleAddOnPlan}
+        />
       )}
 
       {plans.length > 0 && <ComparePlansTable plans={plans} />}
@@ -985,6 +1092,19 @@ export default function SubscriptionPage() {
           if (!isSwitchingPlan) setSelectedPlan(null);
         }}
         onConfirm={confirmSelectPlan}
+      />
+
+      <ConfirmModal
+        isOpen={Boolean(renewalBlocked)}
+        title="Renewal Not Available Yet"
+        message={`Your current plan is active until ${
+          renewalBlocked?.expiryLabel || "your current expiry date"
+        }. You will be able to renew your subscription closer to the expiry date.`}
+        confirmText="OK"
+        variant="primary"
+        hideCancel
+        onClose={() => setRenewalBlocked(null)}
+        onConfirm={() => setRenewalBlocked(null)}
       />
     </div>
   );

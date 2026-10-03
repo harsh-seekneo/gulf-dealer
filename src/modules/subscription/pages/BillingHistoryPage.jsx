@@ -122,7 +122,7 @@ export default function BillingHistoryPage() {
                       </td>
                       <td className="px-5 py-4">
                         <Link
-                          to={`/subscription/billing?invoice=${item._id}`}
+                          to={item.invoiceUrl || `/subscription/billing?invoice=${item._id}`}
                           className="inline-flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm font-bold text-blue-700 hover:bg-blue-100"
                         >
                           <FileText size={16} />

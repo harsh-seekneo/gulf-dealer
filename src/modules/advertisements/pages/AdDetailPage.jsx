@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Check,
@@ -126,6 +126,7 @@ const Section = ({ title, children, action }) => (
 
 export default function AdDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [ad, setAd] = useState(null);
   const [device, setDevice] = useState("desktop");
   const [loading, setLoading] = useState(true);
@@ -153,6 +154,13 @@ export default function AdDetailPage() {
   }, [id]);
 
   const handleDownloadInvoice = () => {
+    const paymentId = ad?.paymentIntent?.publicId;
+
+    if (paymentId) {
+      navigate(`/invoices/${paymentId}`);
+      return;
+    }
+
     window.print();
   };
 

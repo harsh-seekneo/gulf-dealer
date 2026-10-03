@@ -5,6 +5,8 @@ import { API_ENDPOINTS } from "../../../constant/apiEndpoints";
 const DEFAULT_DASHBOARD = {
   stats: {
     activeListings: 0,
+    draftListings: 0,
+    pendingApprovalListings: 0,
     totalViews: 0,
     leadsReceived: 0,
     totalListingsUsed: 0,
@@ -20,7 +22,7 @@ const DEFAULT_DASHBOARD = {
     active: false,
     status: "NONE",
     daysRemaining: null,
-    daysLabel: "Not purchased",
+    daysLabel: "Not Active",
   },
   weeklyViews: [],
   topVehicles: [],
@@ -40,6 +42,8 @@ export const dashboardApi = {
       return {
         stats: {
           activeListings: dashboard?.stats?.activeListings ?? 0,
+          draftListings: dashboard?.stats?.draftListings ?? 0,
+          pendingApprovalListings: dashboard?.stats?.pendingApprovalListings ?? 0,
           totalViews: dashboard?.stats?.totalViews ?? 0,
           leadsReceived: dashboard?.stats?.leadsReceived ?? 0,
           totalListingsUsed: dashboard?.stats?.totalListingsUsed ?? 0,
@@ -75,7 +79,7 @@ export const dashboardApi = {
           amount: dashboard?.featuredDealer?.amount ?? null,
           currency: dashboard?.featuredDealer?.currency ?? "BHD",
           daysRemaining: dashboard?.featuredDealer?.daysRemaining ?? null,
-          daysLabel: dashboard?.featuredDealer?.daysLabel ?? "Not purchased",
+          daysLabel: dashboard?.featuredDealer?.daysLabel ?? "Not Active",
           daysTotal: dashboard?.featuredDealer?.daysTotal ?? null,
           daysUsed: dashboard?.featuredDealer?.daysUsed ?? null,
         },

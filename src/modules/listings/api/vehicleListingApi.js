@@ -5,6 +5,8 @@ const BASE_URL = "/vehicle-listings";
 const VIDEO_PART_CONCURRENCY = 3;
 const VIDEO_PART_RETRY_LIMIT = 3;
 const DEFAULT_VIDEO_PART_SIZE = 8 * 1024 * 1024;
+const IMAGE_UPLOAD_CONCURRENCY = 3;
+const DIRECT_UPLOAD_TIMEOUT_MS = 120000;
 
 const getVideoUploadSessionKey = (listingId, file) =>
   `gic-video-upload:${listingId}:${file.name}:${file.size}:${file.lastModified}`;
@@ -69,6 +71,90 @@ const getListingVideoPartUploadUrlApi = async (listingId, payload) => {
 const completeListingVideoMultipartUploadApi = async (listingId, payload) => {
   const { data } = await apiClient.post(`${BASE_URL}/${listingId}/video/multipart/complete`, payload);
   return data.data;
+};
+
+const startListingImageDirectUploadApi = async (listingId, payload) => {
+  const { data } = await apiClient.post(`${BASE_URL}/${listingId}/images/direct/start`, payload);
+  return data.data;
+};
+
+const startListingBrochureDirectUploadApi = async (listingId, payload) => {
+  const { data } = await apiClient.post(`${BASE_URL}/${listingId}/brochure/direct/start`, payload);
+  return data.data;
+};
+
+export const completeListingImageDirectUploadApi = async (listingId, payload) => {
+  const { data } = await apiClient.post(`${BASE_URL}/${listingId}/images/direct/complete`, payload);
+  return data.data;
+};
+
+const getImageContentType = (file) => {
+  if (file.type) return file.type;
+
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  if (extension === "png") return "image/png";
+  if (extension === "webp") return "image/webp";
+  return "image/jpeg";
+};
+
+const uploadListingImageDirectApi = async ({ listingId, file }) => {
+  const contentType = getImageContentType(file);
+  const upload = await startListingImageDirectUploadApi(listingId, {
+    fileName: file.name,
+    contentType,
+    fileSize: file.size,
+  });
+
+  await axios.put(upload.uploadUrl, file, {
+    headers: { "Content-Type": contentType },
+    timeout: DIRECT_UPLOAD_TIMEOUT_MS,
+  });
+
+  return {
+    key: upload.key,
+    url: upload.url,
+  };
+};
+
+export const uploadListingImagesDirectApi = async ({ listingId, files = [] }) => {
+  const results = new Array(files.length);
+  let nextIndex = 0;
+
+  const workers = Array.from(
+    { length: Math.min(IMAGE_UPLOAD_CONCURRENCY, files.length) },
+    async () => {
+      while (nextIndex < files.length) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+        results[currentIndex] = await uploadListingImageDirectApi({
+          listingId,
+          file: files[currentIndex],
+        });
+      }
+    }
+  );
+
+  await Promise.all(workers);
+  return results;
+};
+
+export const uploadListingBrochureDirectApi = async ({ listingId, file }) => {
+  const contentType = file.type || "application/pdf";
+  const upload = await startListingBrochureDirectUploadApi(listingId, {
+    fileName: file.name,
+    contentType,
+    fileSize: file.size,
+  });
+
+  await axios.put(upload.uploadUrl, file, {
+    headers: { "Content-Type": contentType },
+    timeout: DIRECT_UPLOAD_TIMEOUT_MS,
+  });
+
+  return {
+    key: upload.key,
+    url: upload.url,
+  };
 };
 
 export const uploadListingVideoMultipartApi = async ({ listingId, file, onProgress }) => {

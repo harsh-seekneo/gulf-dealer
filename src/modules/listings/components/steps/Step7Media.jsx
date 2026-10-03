@@ -4,7 +4,12 @@ import { useRef, useState } from "react";
 import { FileText, ImagePlus, Trash2, Upload, Video, X } from "lucide-react";
 
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
-import { uploadListingVideoMultipartApi } from "../../api/vehicleListingApi";
+import {
+  completeListingImageDirectUploadApi,
+  uploadListingBrochureDirectApi,
+  uploadListingImagesDirectApi,
+  uploadListingVideoMultipartApi,
+} from "../../api/vehicleListingApi";
 import WizardFooterNav from "../WizardFooterNav";
 import { carFormConfig } from "../../config/categoryForms/carForm.config";
 import { commercialFormConfig } from "../../config/categoryForms/commercialForm.config";
@@ -24,6 +29,8 @@ const configByFormType = {
   CARAVAN: caravanFormConfig,
   SPECIAL_NUMBER: specialNumberFormConfig,
 };
+const IMAGE_MAX_SIZE_BYTES = 5 * 1024 * 1024;
+const BROCHURE_MAX_SIZE_BYTES = 20 * 1024 * 1024;
 
 const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
   const { listing, isSaving, saveMedia, goPrevious, saveDraft } =
@@ -47,24 +54,32 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
     : "Upload high-quality photos to attract more buyers. ";
   const allowBrochure = !isSpecialNumber;
   const hasSecondaryGallery = Boolean(config.hasSecondaryGallery);
-  const secondaryGalleryLabel = config.secondaryGalleryLabel || "Additional Images";
+  const secondaryGalleryLabel =
+    config.secondaryGalleryLabel || "Additional Images";
 
   const [existingSecondaryImages, setExistingSecondaryImages] = useState(
-    listing?.media?.secondaryImages || []
+    listing?.media?.secondaryImages || [],
   );
   const [newSecondaryImageFiles, setNewSecondaryImageFiles] = useState([]);
-  const [newSecondaryImagePreviews, setNewSecondaryImagePreviews] = useState([]);
-  const [isDraggingSecondaryImages, setIsDraggingSecondaryImages] = useState(false);
-
-  const [existingImages, setExistingImages] = useState(listing?.media?.images || []);
-  const [existingFeaturedImage, setExistingFeaturedImage] = useState(
-    listing?.media?.featuredImage || null
+  const [newSecondaryImagePreviews, setNewSecondaryImagePreviews] = useState(
+    [],
   );
-  const [existingVideo, setExistingVideo] = useState(listing?.media?.video || null);
+  const [isDraggingSecondaryImages, setIsDraggingSecondaryImages] =
+    useState(false);
+
+  const [existingImages, setExistingImages] = useState(
+    listing?.media?.images || [],
+  );
+  const [existingFeaturedImage, setExistingFeaturedImage] = useState(
+    listing?.media?.featuredImage || null,
+  );
+  const [existingVideo, setExistingVideo] = useState(
+    listing?.media?.video || null,
+  );
 
   const [featuredFile, setFeaturedFile] = useState(null);
   const [featuredPreview, setFeaturedPreview] = useState(
-    listing?.media?.featuredImage?.url || ""
+    listing?.media?.featuredImage?.url || "",
   );
 
   const [newImageFiles, setNewImageFiles] = useState([]);
@@ -72,12 +87,18 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
   const [removedImageKeys, setRemovedImageKeys] = useState([]);
 
   const [videoFile, setVideoFile] = useState(null);
-  const [videoName, setVideoName] = useState(existingVideo ? "Uploaded video" : "");
+  const [videoName, setVideoName] = useState(
+    existingVideo ? "Uploaded video" : "",
+  );
   const [videoUploadProgress, setVideoUploadProgress] = useState(null);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
-  const [existingBrochure, setExistingBrochure] = useState(listing?.media?.brochure || null);
+  const [existingBrochure, setExistingBrochure] = useState(
+    listing?.media?.brochure || null,
+  );
   const [brochureFile, setBrochureFile] = useState(null);
-  const [brochureName, setBrochureName] = useState(existingBrochure ? "Uploaded brochure" : "");
+  const [brochureName, setBrochureName] = useState(
+    existingBrochure ? "Uploaded brochure" : "",
+  );
 
   const [errorMessage, setErrorMessage] = useState("");
   const [mediaErrors, setMediaErrors] = useState({});
@@ -94,6 +115,14 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
 
   const handleFeaturedSelect = (file) => {
     if (!file) return;
+    if (file.size > IMAGE_MAX_SIZE_BYTES) {
+      setErrorMessage("Featured image must be 5MB or smaller.");
+      setMediaErrors((previous) => ({
+        ...previous,
+        featuredImage: "Featured image must be 5MB or smaller",
+      }));
+      return;
+    }
     setFeaturedFile(file);
     setFeaturedPreview(URL.createObjectURL(file));
     setExistingFeaturedImage(null);
@@ -103,14 +132,28 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
 
   const addImageFiles = (files) => {
     const fileArray = Array.from(files);
+    const oversizedFile = fileArray.find((file) => file.size > IMAGE_MAX_SIZE_BYTES);
+
+    if (oversizedFile) {
+      setErrorMessage("Each image must be 5MB or smaller.");
+      setMediaErrors((previous) => ({
+        ...previous,
+        images: "Each image must be 5MB or smaller",
+      }));
+      return;
+    }
+
     const remainingSlots =
       maxPhotos !== null ? maxPhotos - totalCurrentPhotos : fileArray.length;
 
     if (remainingSlots <= 0) {
       setErrorMessage(
-        `Your plan allows a maximum of ${maxPhotos} photos. Remove some to add more.`
+        `Your plan allows a maximum of ${maxPhotos} photos. Remove some to add more.`,
       );
-      setMediaErrors((previous) => ({ ...previous, images: "Photo limit reached" }));
+      setMediaErrors((previous) => ({
+        ...previous,
+        images: "Photo limit reached",
+      }));
       return;
     }
 
@@ -118,7 +161,7 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
 
     if (fileArray.length > filesToAdd.length) {
       setErrorMessage(
-        `Only ${filesToAdd.length} photo(s) added — your plan's limit of ${maxPhotos} photos was reached.`
+        `Only ${filesToAdd.length} photo(s) added — your plan's limit of ${maxPhotos} photos was reached.`,
       );
     } else {
       setErrorMessage("");
@@ -140,6 +183,13 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
 
   const addSecondaryImageFiles = (files) => {
     const fileArray = Array.from(files);
+    const oversizedFile = fileArray.find((file) => file.size > IMAGE_MAX_SIZE_BYTES);
+
+    if (oversizedFile) {
+      setErrorMessage("Each image must be 5MB or smaller.");
+      return;
+    }
+
     setNewSecondaryImageFiles((previous) => [...previous, ...fileArray]);
     setNewSecondaryImagePreviews((previous) => [
       ...previous,
@@ -154,12 +204,18 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
   };
 
   const removeNewSecondaryImage = (index) => {
-    setNewSecondaryImageFiles((previous) => previous.filter((_, i) => i !== index));
-    setNewSecondaryImagePreviews((previous) => previous.filter((_, i) => i !== index));
+    setNewSecondaryImageFiles((previous) =>
+      previous.filter((_, i) => i !== index),
+    );
+    setNewSecondaryImagePreviews((previous) =>
+      previous.filter((_, i) => i !== index),
+    );
   };
 
   const removeExistingImage = (key) => {
-    setExistingImages((previous) => previous.filter((image) => image.key !== key));
+    setExistingImages((previous) =>
+      previous.filter((image) => image.key !== key),
+    );
     setRemovedImageKeys((previous) => [...previous, key]);
   };
 
@@ -173,7 +229,10 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
 
     if (!videoAllowed) {
       setErrorMessage("Your current plan does not include video uploads.");
-      setMediaErrors((previous) => ({ ...previous, video: "Video is not included in your plan" }));
+      setMediaErrors((previous) => ({
+        ...previous,
+        video: "Video is not included in your plan",
+      }));
       return;
     }
 
@@ -194,6 +253,10 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
 
   const handleBrochureSelect = (file) => {
     if (!file) return;
+    if (file.size > BROCHURE_MAX_SIZE_BYTES) {
+      setErrorMessage("Brochure must be 20MB or smaller.");
+      return;
+    }
     setBrochureFile(file);
     setBrochureName(file.name);
     setExistingBrochure(null);
@@ -217,23 +280,6 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
     }
 
     const formData = new FormData();
-
-    if (featuredFile) {
-      formData.append("featuredImage", featuredFile);
-    }
-
-    newImageFiles.forEach((file) => {
-      formData.append("images", file);
-    });
-
-    newSecondaryImageFiles.forEach((file) => {
-      formData.append("secondaryImages", file);
-    });
-
-    if (allowBrochure && brochureFile) {
-      formData.append("brochure", brochureFile);
-    }
-
     formData.append("removedImageKeys", JSON.stringify(removedImageKeys));
 
     if (videoFile) {
@@ -258,15 +304,55 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
       }
     }
 
+    let uploadedFeaturedImages = [];
+    let uploadedImages = [];
+    let uploadedSecondaryImages = [];
+    let uploadedBrochure = null;
+
+    try {
+      [
+        uploadedFeaturedImages,
+        uploadedImages,
+        uploadedSecondaryImages,
+        uploadedBrochure,
+      ] = await Promise.all([
+        featuredFile
+          ? uploadListingImagesDirectApi({ listingId: listing._id, files: [featuredFile] })
+          : Promise.resolve([]),
+        newImageFiles.length
+          ? uploadListingImagesDirectApi({ listingId: listing._id, files: newImageFiles })
+          : Promise.resolve([]),
+        newSecondaryImageFiles.length
+          ? uploadListingImagesDirectApi({ listingId: listing._id, files: newSecondaryImageFiles })
+          : Promise.resolve([]),
+        allowBrochure && brochureFile
+          ? uploadListingBrochureDirectApi({ listingId: listing._id, file: brochureFile })
+          : Promise.resolve(null),
+      ]);
+
+      await completeListingImageDirectUploadApi(listing._id, {
+        featuredImage: uploadedFeaturedImages[0] || null,
+        images: uploadedImages,
+        secondaryImages: uploadedSecondaryImages,
+        brochure: uploadedBrochure,
+        removedImageKeys,
+      });
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Unable to upload media. Please try again.";
+      setErrorMessage(message);
+      return;
+    }
+
     await saveMedia(formData);
   };
 
   return (
     <div>
       <h2 className="text-lg font-bold text-slate-950">Media Upload</h2>
-      <p className="mt-1 text-sm text-slate-500">
-        {mediaIntro}
-      </p>
+      <p className="mt-1 text-sm text-slate-500">{mediaIntro}</p>
 
       {errorMessage && (
         <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
@@ -319,7 +405,9 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
             }`}
           >
             <ImagePlus size={26} />
-            <span className="text-sm font-medium">Click to upload featured image</span>
+            <span className="text-sm font-medium">
+              Click to upload featured image
+            </span>
             <span className="text-xs">JPG, PNG up to 5MB</span>
           </button>
         )}
@@ -356,13 +444,15 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
             mediaErrors.images
               ? "border-red-400 text-red-500 ring-2 ring-red-400 ring-offset-1"
               : isDraggingImages
-              ? "border-blue-500 bg-blue-50"
-              : "border-slate-300 text-slate-400 hover:border-blue-400 hover:bg-blue-50/50"
+                ? "border-blue-500 bg-blue-50"
+                : "border-slate-300 text-slate-400 hover:border-blue-400 hover:bg-blue-50/50"
           }`}
         >
           <Upload size={20} />
           <span className="text-sm font-medium">Drag & drop images here</span>
-          <span className="text-xs">or click to browse — JPG, PNG, WEBP each</span>
+          <span className="text-xs">
+            or click to browse — JPG, PNG, WEBP each
+          </span>
         </div>
 
         {(existingImages.length > 0 || newImagePreviews.length > 0) && (
@@ -372,7 +462,11 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
                 key={image.key}
                 className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200"
               >
-                <img src={image.url} alt={imageAlt} className="h-full w-full object-cover" />
+                <img
+                  src={image.url}
+                  alt={imageAlt}
+                  className="h-full w-full object-cover"
+                />
                 <button
                   type="button"
                   onClick={() => removeExistingImage(image.key)}
@@ -388,7 +482,11 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
                 key={preview}
                 className="group relative aspect-square animate-[fadeIn_0.3s_ease] overflow-hidden rounded-lg border border-blue-200"
               >
-                <img src={preview} alt="New upload" className="h-full w-full object-cover" />
+                <img
+                  src={preview}
+                  alt="New upload"
+                  className="h-full w-full object-cover"
+                />
                 <button
                   type="button"
                   onClick={() => removeNewImage(index)}
@@ -405,9 +503,13 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
       {hasSecondaryGallery && (
         <div className="mt-6">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-700">{secondaryGalleryLabel}</p>
+            <p className="text-sm font-medium text-slate-700">
+              {secondaryGalleryLabel}
+            </p>
             <span className="text-xs font-medium text-slate-500">
-              {existingSecondaryImages.length + newSecondaryImagePreviews.length} uploaded
+              {existingSecondaryImages.length +
+                newSecondaryImagePreviews.length}{" "}
+              uploaded
             </span>
           </div>
 
@@ -421,7 +523,10 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
           />
 
           <div
-            onDragOver={(e) => { e.preventDefault(); setIsDraggingSecondaryImages(true); }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDraggingSecondaryImages(true);
+            }}
             onDragLeave={() => setIsDraggingSecondaryImages(false)}
             onDrop={handleSecondaryImagesDrop}
             onClick={() => secondaryImagesInputRef.current?.click()}
@@ -432,21 +537,38 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
             }`}
           >
             <Upload size={18} />
-            <span className="text-sm font-medium">Drag &amp; drop {secondaryGalleryLabel.toLowerCase()} here</span>
+            <span className="text-sm font-medium">
+              Drag &amp; drop {secondaryGalleryLabel.toLowerCase()} here
+            </span>
             <span className="text-xs">or click to browse</span>
           </div>
 
-          {(existingSecondaryImages.length > 0 || newSecondaryImagePreviews.length > 0) && (
+          {(existingSecondaryImages.length > 0 ||
+            newSecondaryImagePreviews.length > 0) && (
             <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
               {existingSecondaryImages.map((image) => (
-                <div key={image.key} className="aspect-square overflow-hidden rounded-lg border border-slate-200">
-                  <img src={image.url} alt="" className="h-full w-full object-cover" />
+                <div
+                  key={image.key}
+                  className="aspect-square overflow-hidden rounded-lg border border-slate-200"
+                >
+                  <img
+                    src={image.url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
                 </div>
               ))}
 
               {newSecondaryImagePreviews.map((preview, index) => (
-                <div key={preview} className="group relative aspect-square overflow-hidden rounded-lg border border-blue-200">
-                  <img src={preview} alt="" className="h-full w-full object-cover" />
+                <div
+                  key={preview}
+                  className="group relative aspect-square overflow-hidden rounded-lg border border-blue-200"
+                >
+                  <img
+                    src={preview}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
                   <button
                     type="button"
                     onClick={() => removeNewSecondaryImage(index)}
@@ -463,7 +585,8 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
 
       <div className="mt-6">
         <p className="mb-2 text-sm font-medium text-slate-700">
-          {videoLabel} {!videoAllowed && (
+          {videoLabel}{" "}
+          {!videoAllowed && (
             <span className="text-xs font-normal text-slate-400">
               (not included in your current plan)
             </span>
@@ -518,43 +641,52 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
       </div>
 
       {allowBrochure && (
-      <div className="mt-6">
-        <p className="mb-2 text-sm font-medium text-slate-700">
-          Vehicle Brochure <span className="text-xs font-normal text-slate-400">(optional, PDF only)</span>
-        </p>
-
-        <input
-          ref={brochureInputRef}
-          type="file"
-          accept="application/pdf"
-          className="hidden"
-          onChange={(e) => handleBrochureSelect(e.target.files?.[0])}
-        />
-
-        {brochureName ? (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3">
-            <div className="flex min-w-0 items-center gap-2 text-sm text-slate-700">
-              <FileText size={17} className="text-blue-600" />
-              <span className="min-w-0 truncate">{brochureName}</span>
-            </div>
-            <button type="button" onClick={removeBrochure} className="text-slate-400 transition-colors hover:text-red-600">
-              <Trash2 size={16} />
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => brochureInputRef.current?.click()}
-            className="flex w-full flex-col items-start gap-1.5 rounded-xl border-2 border-dashed border-slate-300 px-4 py-3 text-sm font-medium text-blue-600 transition-colors duration-200 hover:border-blue-400 hover:bg-blue-50/50 sm:flex-row sm:items-center sm:gap-2"
-          >
-            <span className="flex items-center gap-2">
-              <FileText size={17} />
-              Upload a vehicle brochure
+        <div className="mt-6">
+          <p className="mb-2 text-sm font-medium text-slate-700">
+            Vehicle Brochure{" "}
+            <span className="text-xs font-normal text-slate-400">
+              (optional, PDF only)
             </span>
-            <span className="text-xs font-normal text-slate-400 sm:ml-auto">PDF up to 20MB</span>
-          </button>
-        )}
-      </div>
+          </p>
+
+          <input
+            ref={brochureInputRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={(e) => handleBrochureSelect(e.target.files?.[0])}
+          />
+
+          {brochureName ? (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3">
+              <div className="flex min-w-0 items-center gap-2 text-sm text-slate-700">
+                <FileText size={17} className="text-blue-600" />
+                <span className="min-w-0 truncate">{brochureName}</span>
+              </div>
+              <button
+                type="button"
+                onClick={removeBrochure}
+                className="text-slate-400 transition-colors hover:text-red-600"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => brochureInputRef.current?.click()}
+              className="flex w-full flex-col items-start gap-1.5 rounded-xl border-2 border-dashed border-slate-300 px-4 py-3 text-sm font-medium text-blue-600 transition-colors duration-200 hover:border-blue-400 hover:bg-blue-50/50 sm:flex-row sm:items-center sm:gap-2"
+            >
+              <span className="flex items-center gap-2">
+                <FileText size={17} />
+                Upload a vehicle brochure
+              </span>
+              <span className="text-xs font-normal text-slate-400 sm:ml-auto">
+                PDF up to 20MB
+              </span>
+            </button>
+          )}
+        </div>
       )}
 
       <WizardFooterNav

@@ -9,6 +9,7 @@ export default function ConfirmModal({
   cancelText = "Cancel",
   isLoading = false,
   variant = "danger",
+  hideCancel = false,
   onClose,
   onConfirm,
 }) {
@@ -76,14 +77,16 @@ export default function ConfirmModal({
         </header>
 
         <footer className="flex justify-end gap-3 bg-slate-50 px-5 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isLoading}
-            className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {cancelText}
-          </button>
+          {!hideCancel && (
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isLoading}
+              className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {cancelText}
+            </button>
+          )}
           <button
             type="button"
             onClick={onConfirm}

@@ -9,6 +9,7 @@ import AdvertisementsPage from "../modules/advertisements/pages/AdvertisementsPa
 import AdDetailPage from "../modules/advertisements/pages/AdDetailPage";
 import SubscriptionPage from "../modules/subscription/pages/SubscriptionPage";
 import BillingHistoryPage from "../modules/subscription/pages/BillingHistoryPage";
+import InvoicePage from "../modules/payment/pages/InvoicePage";
 import ProfilePage from "../modules/profile/pages/ProfilePage";
 import NotificationsPage from "../modules/notifications/pages/NotificationsPage";
 import AddVehiclePage from "../modules/listings/pages/AddVehiclePage";
@@ -28,6 +29,7 @@ export default function AppRoutes() {
           <Route path="/advertisements/:id" element={<AdDetailPage />} />
           <Route path="/subscription" element={<SubscriptionPage />} />
           <Route path="/subscription/billing" element={<BillingHistoryPage />} />
+          <Route path="/invoices/:paymentId" element={<InvoicePage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/listings/add-vehicle" element={<AddVehiclePage />} />

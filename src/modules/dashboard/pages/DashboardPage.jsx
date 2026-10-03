@@ -30,9 +30,13 @@ import TopPerformingVehicles from "../components/TopPerformingVehicles";
 import { dashboardApi } from "../api/dashboardApi";
 import { listingsApi } from "../../listings/api/listingsApi";
 import { useListingViews } from "../hooks/useListingViews";
+import ConfirmModal from "../../../components/ui/ConfirmModal";
+import { getRenewalAvailability } from "../../subscription/utils/renewalWindow";
 
 const DEFAULT_STATS = {
   activeListings: 0,
+  draftListings: 0,
+  pendingApprovalListings: 0,
   totalViews: 0,
   leadsReceived: 0,
   totalListingsUsed: 0,
@@ -331,6 +335,7 @@ export default function DashboardPage() {
   const [topVehicles, setTopVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => Date.now());
+  const [renewalBlocked, setRenewalBlocked] = useState(null);
 
   const { weeklyData, monthlyData, monthlyLoading, handleRangeChange } =
     useListingViews(weeklyViews);
@@ -355,6 +360,8 @@ export default function DashboardPage() {
 
       setStats({
         activeListings: dashboardData?.stats?.activeListings ?? 0,
+        draftListings: dashboardData?.stats?.draftListings ?? 0,
+        pendingApprovalListings: dashboardData?.stats?.pendingApprovalListings ?? 0,
         totalViews: dashboardData?.stats?.totalViews ?? 0,
         leadsReceived: dashboardData?.stats?.leadsReceived ?? 0,
         totalListingsUsed: dashboardData?.stats?.totalListingsUsed ?? 0,
@@ -407,6 +414,17 @@ export default function DashboardPage() {
     }
   };
 
+  const handleRenewPlan = () => {
+    const availability = getRenewalAvailability(subscription, now);
+
+    if (!availability.canRenew) {
+      setRenewalBlocked(availability);
+      return;
+    }
+
+    navigate("/subscription?renew=dealer");
+  };
+
   const quickActions = [
     {
       label: "Add Vehicle",
@@ -429,7 +447,7 @@ export default function DashboardPage() {
     {
       label: "Renew Plan",
       icon: CreditCard,
-      onClick: () => navigate("/subscription?renew=dealer"),
+      onClick: handleRenewPlan,
       border: "border-pink-200",
     },
   ];
@@ -527,7 +545,7 @@ export default function DashboardPage() {
 
             <button
               type="button"
-              onClick={() => navigate("/subscription?renew=dealer")}
+              onClick={handleRenewPlan}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
             >
               <RotateCcw size={16} />
@@ -574,23 +592,15 @@ export default function DashboardPage() {
           <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-2xl font-extrabold text-slate-900">
-                {featuredDealer?.daysLabel || "Not purchased"}
+                {featuredDealer?.daysLabel || "Not Active"}
               </p>
               <p className="mt-1 text-sm text-slate-500">
                 {featuredDealer?.purchased
-                  ? "Renew this add-on separately from the dealer page plan"
-                  : "Purchase the add-on to promote this dealer profile"}
+                  ? "Renew this add-on with your dealer page subscription"
+                  : "Add this during renewal to promote this dealer profile"}
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => navigate("/subscription?renew=featured-dealer")}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-700 transition hover:bg-amber-100"
-            >
-              <RotateCcw size={16} />
-              {featuredDealer?.purchased ? "Renew Add-on" : "Add Featured Dealer"}
-            </button>
           </div>
         </div>
       </div>
@@ -599,12 +609,26 @@ export default function DashboardPage() {
       
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
           icon={Car}
           value={stats.activeListings}
           label="Active Listings"
           iconBg="bg-blue-100 text-blue-600"
+        />
+
+        <StatCard
+          icon={ClipboardList}
+          value={stats.draftListings}
+          label="Draft Listings"
+          iconBg="bg-amber-100 text-amber-600"
+        />
+
+        <StatCard
+          icon={BadgeCheck}
+          value={stats.pendingApprovalListings}
+          label="Pending Approval"
+          iconBg="bg-purple-100 text-purple-600"
         />
 
         <StatCard
@@ -632,6 +656,19 @@ export default function DashboardPage() {
 
       {/* Top Performing Vehicles */}
       <TopPerformingVehicles vehicles={topVehicles} />
+
+      <ConfirmModal
+        isOpen={Boolean(renewalBlocked)}
+        title="Renewal Not Available Yet"
+        message={`Your current plan is active until ${
+          renewalBlocked?.expiryLabel || "your current expiry date"
+        }. You will be able to renew your subscription closer to the expiry date.`}
+        confirmText="OK"
+        variant="primary"
+        hideCancel
+        onClose={() => setRenewalBlocked(null)}
+        onConfirm={() => setRenewalBlocked(null)}
+      />
     </div>
   );
 }

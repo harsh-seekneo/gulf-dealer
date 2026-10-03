@@ -31,6 +31,11 @@ export const subscriptionApi = {
     return data.data;
   },
 
+  async getAddOnPlans() {
+    const { data } = await apiClient.get("/dealer/addon-plans");
+    return data.data || [];
+  },
+
   /**
    * Select subscription plan
    * POST /api/v1/dealer/submit
@@ -42,6 +47,7 @@ export const subscriptionApi = {
     renewalMode = false,
     selectedListingIds = [],
     selectedAdvertisementIdsByType = {},
+    addOnPlanIds = [],
   }) {
     const { data } = await apiClient.post("/dealer/submit", {
       dealerId,
@@ -50,6 +56,7 @@ export const subscriptionApi = {
       renewalMode,
       selectedListingIds,
       selectedAdvertisementIdsByType,
+      addOnPlanIds,
     });
 
     return data.data;
