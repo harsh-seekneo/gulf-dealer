@@ -325,12 +325,12 @@ const ListingOverviewCard = ({
     <section className="overflow-hidden rounded-[12px] border border-[#e5eaf1] bg-white">
       <div className="relative h-[196px] overflow-hidden bg-slate-200">
         {activeMedia?.type === "video" ? (
-          <video src={activeMedia.url} controls className="h-full w-full object-cover" />
+          <video src={activeMedia.url} controls className="h-full w-full bg-black object-contain" />
         ) : (
           <img
             src={activeMedia?.url || heroImage}
             alt={vehicleInfo.title || "Vehicle"}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain p-2 sm:p-3"
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />

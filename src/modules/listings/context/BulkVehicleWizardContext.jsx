@@ -73,14 +73,14 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
         setIsInitializing(true);
         setInitError("");
 
-        if (!subscriptionId) {
-          throw new Error("No business plan found for this dealer account");
-        }
-
         if (listingId) {
           const existingListing = await getListingByIdApi(listingId);
           if (isMounted) setListing(existingListing);
         } else {
+          if (!subscriptionId) {
+            throw new Error("No business plan found for this dealer account");
+          }
+
           // Guards against React Strict Mode's double effect
           // invocation in development, which would otherwise
           // create two separate draft listings.
@@ -141,6 +141,12 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
     const index = activeStepSequence.indexOf(currentStep);
 
     if (currentStep === 10) {
+      if (listing.status !== "DRAFT") {
+        showToast("Listing changes saved", "success");
+        navigate(`/vehicles/${listing._id}`);
+        return;
+      }
+
       try {
         const submittedListing = await submitSingleBulkListingApi(listing._id);
         setListing(submittedListing || listing);
@@ -160,7 +166,7 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
     if (index === activeStepSequence.length - 1) return;
 
     goToStepIndex(index + 1);
-  }, [activeStepSequence, currentStep, goToStepIndex, listing, showToast, updateUrl]);
+  }, [activeStepSequence, currentStep, goToStepIndex, listing, navigate, showToast, updateUrl]);
 
   const goPrevious = useCallback(() => {
     const index = activeStepSequence.indexOf(currentStep);
