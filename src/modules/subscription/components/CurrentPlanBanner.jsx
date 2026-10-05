@@ -42,6 +42,7 @@ export default function CurrentPlanBanner({ plan }) {
   if (!plan) return null;
 
   const isPendingActivation = plan.status === "PENDING_ACTIVATION" || !plan.startDate || !plan.endDate;
+  const launchOfferLabel = plan.launchOfferLabel || plan.offerLabel || "Launch Offer";
   const adSlots = [
     { label: "Homepage", value: plan.homepageBanner ?? plan.plan?.homepageBanner },
     { label: "Listing banner", value: plan.listingBanner ?? plan.plan?.listingBanner },
@@ -69,7 +70,7 @@ export default function CurrentPlanBanner({ plan }) {
           {plan.launchOfferFreeMonths > 0 && (
             <p className="mt-1 text-sm text-amber-100">
               {plan.offerReason ||
-                `Launch offer eligible: ${plan.launchOfferFreeMonths} free months`}
+                `${launchOfferLabel} eligible: ${plan.launchOfferFreeMonths} free months`}
             </p>
           )}
 
@@ -128,7 +129,7 @@ export default function CurrentPlanBanner({ plan }) {
         {plan.launchOfferApplied && (
           <p className="mt-1 text-sm text-amber-100">
             {plan.offerReason ||
-              `Launch offer applied: ${plan.launchOfferFreeMonths} free months`}
+              `${launchOfferLabel} applied: ${plan.launchOfferFreeMonths} free months`}
           </p>
         )}
 

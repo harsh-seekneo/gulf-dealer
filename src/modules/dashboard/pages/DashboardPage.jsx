@@ -141,7 +141,7 @@ const AdPlacementUsage = ({ placements = [] }) => (
             <div className="flex items-center justify-between gap-3 text-sm">
               <span className="font-semibold text-slate-700">{placement.label}</span>
               <span className="font-extrabold text-slate-900">
-                {used.toLocaleString()} / {hasLimit ? limit.toLocaleString() : "NAN"}
+                {hasLimit ?`${used.toLocaleString()} /   ${limit.toLocaleString()}` : "NA"}
               </span>
             </div>
             {hasLimit ? (

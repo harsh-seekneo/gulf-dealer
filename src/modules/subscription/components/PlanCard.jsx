@@ -5,6 +5,7 @@ export default function PlanCard({ plan, isCurrent, actionLabel, onSelect }) {
   const price = plan.basePrice ?? tier?.basePrice ?? tier?.price ?? 0;
   const isPremium = isPremiumPlan(plan);
   const taxName = plan.taxName || tier?.taxName || "VAT";
+  const launchOfferLabel = plan.launchOfferLabel || "Launch Offer";
 
   return (
     <div
@@ -58,7 +59,7 @@ export default function PlanCard({ plan, isCurrent, actionLabel, onSelect }) {
             isPremium ? "text-amber-300" : "text-amber-600"
           }`}
         >
-          + {plan.launchOfferFreeMonths} free months on first purchase
+          + {plan.launchOfferFreeMonths} free months on first purchase ({launchOfferLabel})
         </p>
       )}
 
