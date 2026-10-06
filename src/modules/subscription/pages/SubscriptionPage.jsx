@@ -53,8 +53,115 @@ const getPlanPrice = (plan) => {
   return Number(plan?.basePrice ?? tier.basePrice ?? tier.finalPrice ?? tier.price ?? 0);
 };
 
+const formatReviewDate = (value) => {
+  if (!value) return "N/A";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "N/A";
+
+  return date.toLocaleDateString("en-GB");
+};
+
+const getListingPreviewImage = (listing) =>
+  listing?.media?.featuredImage?.url ||
+  listing?.media?.featuredImage ||
+  "";
+
+const getAdvertisementPreviewImage = (ad) =>
+  ad?.creatives?.desktop?.url ||
+  ad?.creatives?.tablet?.url ||
+  ad?.creatives?.mobile?.url ||
+  "";
+
+const getItemPreviewMeta = (item, type, fallbackTitle) => {
+  if (type === "listing") {
+    return {
+      title: item?.vehicleInfo?.title || item?.listingId || fallbackTitle,
+      imageUrl: getListingPreviewImage(item),
+      badge: item?.status || "Listing",
+      rows: [
+        ["Listing ID", item?.listingId || "N/A"],
+        ["Expires", formatReviewDate(item?.expiresAt)],
+      ],
+    };
+  }
+
+  const details = item?.details || {};
+
+  return {
+    title: item?.name || item?.advertisementId || fallbackTitle,
+    imageUrl: getAdvertisementPreviewImage(item),
+    badge: item?.status || "Advertisement",
+    rows: [
+      ["Ad ID", item?.advertisementId || "N/A"],
+      ["Business", details.businessName || "N/A"],
+      ["Category", details.businessCategoryLabelSnapshot || item?.category || "N/A"],
+      ["Ends", formatReviewDate(item?.endsAt)],
+    ],
+    description: details.tagline || "",
+  };
+};
+
+function HoverPreviewCard({ item, type, fallbackTitle }) {
+  const preview = getItemPreviewMeta(item, type, fallbackTitle);
+
+  return (
+    <div className="pointer-events-none absolute left-12 top-full z-20 hidden w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-2xl group-hover:block">
+      <div className="overflow-hidden rounded-lg border border-slate-100 bg-slate-100">
+        {preview.imageUrl ? (
+          <img
+            src={preview.imageUrl}
+            alt=""
+            className="h-32 w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-32 items-center justify-center text-xs font-semibold text-slate-400">
+            No image available
+          </div>
+        )}
+      </div>
+      <div className="mt-3">
+        <div className="flex items-start justify-between gap-3">
+          <p className="line-clamp-2 text-sm font-bold text-slate-950">
+            {preview.title}
+          </p>
+          <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-600">
+            {preview.badge}
+          </span>
+        </div>
+        {preview.description ? (
+          <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+            {preview.description}
+          </p>
+        ) : null}
+        <div className="mt-2 space-y-1">
+          {preview.rows.map(([label, value]) => (
+            <div key={label} className="flex justify-between gap-3 text-xs">
+              <span className="text-slate-400">{label}</span>
+              <span className="max-w-[9rem] truncate text-right font-semibold text-slate-700">
+                {value}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Ek tab ke andar ki list (search + filter + bulk + load more) ---------- */
-function ItemList({ items, getId, getTitle, selectedIds, limit, onToggle, onSetMany, emptyText }) {
+function ItemList({
+  items,
+  getId,
+  getTitle,
+  selectedIds,
+  limit,
+  onToggle,
+  onSetMany,
+  emptyText,
+  previewType,
+  previewFallbackTitle,
+}) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all"); // all | keep | drop
   const [visible, setVisible] = useState(PAGE_SIZE);
@@ -153,10 +260,15 @@ function ItemList({ items, getId, getTitle, selectedIds, limit, onToggle, onSetM
               return (
                 <label
                   key={id}
-                  className={`flex items-center gap-3 border-b border-slate-100 px-4 py-2.5 ${
+                  className={`group relative flex items-center gap-3 border-b border-slate-100 px-4 py-2.5 ${
                     disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-slate-50"
                   }`}
                 >
+                  <HoverPreviewCard
+                    item={it}
+                    type={previewType}
+                    fallbackTitle={previewFallbackTitle || getTitle(it)}
+                  />
                   <input
                     type="checkbox"
                     checked={checked}
@@ -381,6 +493,8 @@ function RenewalReviewModal({
                 onToggle={toggleListingRenewal}
                 onSetMany={setListingRenewalIds}
                 emptyText="No current listings were found for renewal."
+                previewType="listing"
+                previewFallbackTitle="Vehicle listing"
               />
             ) : (
               <ItemList
@@ -393,6 +507,8 @@ function RenewalReviewModal({
                 onToggle={(id) => toggleAdvertisementRenewal(active.key, id)}
                 onSetMany={(ids) => setAdvertisementRenewalIds(active.key, ids)}
                 emptyText="Is type ki koi current ad nahi hai."
+                previewType="advertisement"
+                previewFallbackTitle={activeGroup?.label || "Advertisement"}
               />
             )}
           </section>
