@@ -46,7 +46,6 @@ export default function CurrentPlanBanner({ plan }) {
   const adSlots = [
     { label: "Homepage", value: plan.homepageBanner ?? plan.plan?.homepageBanner },
     { label: "Listing banner", value: plan.listingBanner ?? plan.plan?.listingBanner },
-    { label: "Large ads", value: plan.largeAdsSpace ?? plan.plan?.largeAdsSpace },
     { label: "Small ads", value: plan.smallAdsSpace ?? plan.plan?.smallAdsSpace },
   ].filter((item) => item.value !== null && item.value !== undefined);
 
@@ -143,7 +142,7 @@ export default function CurrentPlanBanner({ plan }) {
       {/* Right */}
       <div className="w-full sm:w-56">
         <p className="text-right text-xs text-amber-100">
-          {plan.daysLabel || `${remainingDays} Days Remaining`}
+          {expiryLabel}
         </p>
 
         <p className="text-right text-xl font-bold">

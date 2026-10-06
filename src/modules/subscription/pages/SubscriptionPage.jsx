@@ -260,8 +260,7 @@ function RenewalReviewModal({
               {renewalReview.currentPackage} → {renewalSummary.newPackage}
             </h2>
             <p className="mt-1 max-w-2xl text-sm text-slate-600">
-              Jo listings aur ads naye period me continue karni hain unhe select karo. Baaki current
-              subscription ke end par expire ho jayengi.
+              Select which items you want to continue in the new package. Items not selected will expire after your current package ends.
             </p>
           </div>
           <button
@@ -381,7 +380,7 @@ function RenewalReviewModal({
                 limit={renewalSummary.listingAllowance}
                 onToggle={toggleListingRenewal}
                 onSetMany={setListingRenewalIds}
-                emptyText="Renewal ke liye koi current listing nahi mili."
+                emptyText="No current listings were found for renewal."
               />
             ) : (
               <ItemList
@@ -446,8 +445,7 @@ function RenewalReviewModal({
         <div className="flex flex-col gap-3 border-t border-slate-200 bg-white px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-slate-600">
             <span className="font-semibold text-emerald-700">{totalContinuing} continue</span> ·{" "}
-            <span className="font-semibold text-red-600">{totalEnding} expire</span>. Selected items
-            payment ke baad naye plan me continue hongi.
+            <span className="font-semibold text-red-600">{totalEnding} expire</span>. Selected items will continue in the new plan after payment.
           </p>
           <div className="flex gap-2">
             <button

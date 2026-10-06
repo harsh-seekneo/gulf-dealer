@@ -534,7 +534,7 @@ export default function DashboardPage() {
           <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-2xl font-extrabold text-slate-900">
-                {subscription?.daysLabel || "N/A"}
+                {subscriptionExpiryLabel}
               </p>
               {subscription?.daysTotal ? (
                 <p className="mt-1 text-sm text-slate-500">
@@ -592,7 +592,7 @@ export default function DashboardPage() {
           <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-2xl font-extrabold text-slate-900">
-                {featuredDealer?.daysLabel || "Not Active"}
+                {featuredDealer?.purchased ? featuredDealerExpiryLabel : "Not purchased"}
               </p>
               <p className="mt-1 text-sm text-slate-500">
                 {featuredDealer?.purchased

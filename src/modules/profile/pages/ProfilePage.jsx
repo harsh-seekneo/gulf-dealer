@@ -112,6 +112,15 @@ const getCounterClass = (currentLength, maxLength) => {
   return "text-slate-400";
 };
 
+const getShowroomPhotoLimit = (profile) => {
+  const value = profile?.subscription?.maxPhotos;
+
+  if (value === null || value === undefined) return null;
+
+  const limit = Number(value);
+  return Number.isNaN(limit) ? null : limit;
+};
+
 const buildFormValues = (profile = {}) => {
   const country = getNormalizedLocationCountry(profile.country);
   const state = getNormalizedLocationState(country, profile.state, profile.city);
@@ -422,6 +431,7 @@ function ProfileForm({
   uploading,
   tourVideoProgress,
   onGalleryUpload,
+  onGalleryRemove,
   onTourVideoUpload,
   onSaved,
 }) {
@@ -466,6 +476,12 @@ function ProfileForm({
   const planFeatures = profile?.planFeatures || {};
   const canUseWebsiteLink = planFeatures.websiteLink !== false;
   const canUseSocialMediaLinks = planFeatures.socialMediaLinks !== false;
+  const showroomGallery = Array.isArray(profile?.showroomGallery)
+    ? profile.showroomGallery
+    : [];
+  const showroomPhotoLimit = getShowroomPhotoLimit(profile);
+  const showroomPhotoLimitReached =
+    showroomPhotoLimit !== null && showroomGallery.length >= showroomPhotoLimit;
 
   const handleCountryChange = (event) => {
     const nextCountry = event.target.value;
@@ -682,17 +698,17 @@ function ProfileForm({
         <WorkingHoursEditor value={form.hours} onChange={(value) => updateValue("hours", value)} />
       </FormSection>
 
-      <FormSection icon={Globe} title="Showroom Media" description="Add showroom photos or replace the tour video from the same edit flow.">
+      <FormSection icon={Globe} title="Showroom Media" description="Add showroom photos, remove old photos, or replace the tour video from the same edit flow.">
         <div className="grid gap-4 sm:grid-cols-2">
           <UploadAction
             icon={ImagePlus}
-            label="Add Showroom Photos"
+            label={showroomPhotoLimitReached ? "Photo Limit Reached" : "Add Showroom Photos"}
             busyLabel="Uploading photos..."
-            helper={`${profile?.showroomGallery?.length || 0} photos uploaded. New photos are added to the existing gallery.`}
+            helper={`${showroomGallery.length}/${showroomPhotoLimit ?? "Unlimited"} photos uploaded. New photos are added to the existing gallery.`}
             accept="image/*"
             multiple
             isBusy={uploading === "showroomGallery"}
-            disabled={Boolean(uploading)}
+            disabled={Boolean(uploading) || showroomPhotoLimitReached}
             onChange={onGalleryUpload}
           />
 
@@ -707,6 +723,32 @@ function ProfileForm({
             onChange={(files) => onTourVideoUpload(files?.[0])}
           />
         </div>
+
+        {showroomGallery.length ? (
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {showroomGallery.map((image, index) => (
+              <div
+                key={image.key || image.url || index}
+                className="relative overflow-hidden rounded-xl border border-slate-100"
+              >
+                <img
+                  src={image.url || image}
+                  alt={`Showroom ${index + 1}`}
+                  className="aspect-[4/3] w-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => onGalleryRemove(image)}
+                  disabled={Boolean(uploading)}
+                  aria-label={`Remove showroom image ${index + 1}`}
+                  className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-slate-700 shadow-sm transition hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </FormSection>
 
       {error ? <p className="text-sm font-semibold text-red-500">{error}</p> : null}
@@ -733,6 +775,7 @@ function EditProfileModal({
   uploading,
   tourVideoProgress,
   onGalleryUpload,
+  onGalleryRemove,
   onTourVideoUpload,
   onClose,
   onSaved,
@@ -766,6 +809,7 @@ function EditProfileModal({
             uploading={uploading}
             tourVideoProgress={tourVideoProgress}
             onGalleryUpload={onGalleryUpload}
+            onGalleryRemove={onGalleryRemove}
             onTourVideoUpload={onTourVideoUpload}
             submitLabel="Save Changes"
             onSaved={async () => {
@@ -830,6 +874,7 @@ export default function ProfilePage() {
 
     if (validationError) {
       setError(validationError);
+      showToast(validationError, "error");
       return;
     }
 
@@ -871,6 +916,25 @@ export default function ProfilePage() {
       return;
     }
 
+    const showroomPhotoLimit = getShowroomPhotoLimit(profile);
+    const currentPhotoCount = Array.isArray(profile?.showroomGallery)
+      ? profile.showroomGallery.length
+      : 0;
+
+    if (
+      showroomPhotoLimit !== null &&
+      currentPhotoCount + imageFiles.length > showroomPhotoLimit
+    ) {
+      setError(
+        `Your plan allows a maximum of ${showroomPhotoLimit} showroom images. Remove existing photos before adding more.`
+      );
+      showToast(
+        `Your plan allows a maximum of ${showroomPhotoLimit} showroom images. Remove existing photos before adding more.`,
+        "error"
+      );
+      return;
+    }
+
     setUploading("showroomGallery");
     setError("");
 
@@ -878,9 +942,35 @@ export default function ProfilePage() {
       const data = await profileApi.uploadShowroomGallery(imageFiles);
       setProfile(data);
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Gallery upload failed. Please try again."
-      );
+      const message =
+        err.response?.data?.message || "Gallery upload failed. Please try again.";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setUploading("");
+    }
+  };
+
+  const handleGalleryRemove = async (image) => {
+    const imageKey = image?.key || "";
+    const imageUrl = image?.url || (typeof image === "string" ? image : "");
+
+    setUploading("showroomGallery");
+    setError("");
+
+    try {
+      const data = await profileApi.removeShowroomGalleryImage({
+        imageKey,
+        imageUrl,
+      });
+      setProfile(data);
+    } catch (err) {
+      const message =
+        err.response?.data?.message ||
+          err.message ||
+        "Unable to remove showroom image.";
+      setError(message);
+      showToast(message, "error");
     } finally {
       setUploading("");
     }
@@ -959,6 +1049,13 @@ export default function ProfilePage() {
       .slice(0, 2)
       .toUpperCase();
   }, [profile?.businessName]);
+
+  const showroomGallery = Array.isArray(profile?.showroomGallery)
+    ? profile.showroomGallery
+    : [];
+  const showroomPhotoLimit = getShowroomPhotoLimit(profile);
+  const showroomPhotoLimitReached =
+    showroomPhotoLimit !== null && showroomGallery.length >= showroomPhotoLimit;
 
   /* -------------------------------------------------------
      LOADING
@@ -1203,13 +1300,17 @@ export default function ProfilePage() {
 
           <div className="flex flex-wrap gap-3">
             <label className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-              {uploading === "showroomGallery" ? "Uploading..." : "Add Photos"}
+              {uploading === "showroomGallery"
+                ? "Updating..."
+                : showroomPhotoLimitReached
+                  ? "Photo Limit Reached"
+                  : "Add Photos"}
               <input
                 type="file"
                 accept="image/*"
                 multiple
                 className="hidden"
-                disabled={uploading === "showroomGallery"}
+                disabled={uploading === "showroomGallery" || showroomPhotoLimitReached}
                 onChange={(event) => {
                   handleGalleryUpload(event.target.files);
                   event.target.value = "";
@@ -1235,9 +1336,9 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {Array.isArray(profile.showroomGallery) && profile.showroomGallery.length ? (
+        {showroomGallery.length ? (
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-            {profile.showroomGallery.map((image, index) => (
+            {showroomGallery.map((image, index) => (
               <img
                 key={image.key || image.url || index}
                 src={image.url || image}
@@ -1314,6 +1415,7 @@ export default function ProfilePage() {
           uploading={uploading}
           tourVideoProgress={tourVideoProgress}
           onGalleryUpload={handleGalleryUpload}
+          onGalleryRemove={handleGalleryRemove}
           onTourVideoUpload={handleTourVideoUpload}
           onClose={() => setIsEditOpen(false)}
           onSaved={load}

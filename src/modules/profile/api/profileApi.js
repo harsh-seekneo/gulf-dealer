@@ -129,6 +129,24 @@ export const profileApi = {
     return res.data.data;
   },
 
+  removeShowroomGalleryImage: async ({ imageKey, imageUrl }) => {
+    if (!imageKey && !imageUrl) {
+      throw new Error("Showroom image is required");
+    }
+
+    const res = await apiClient.delete(
+      API_ENDPOINTS.DEALER.SHOWROOM_GALLERY,
+      {
+        data: {
+          imageKey,
+          imageUrl,
+        },
+      }
+    );
+
+    return res.data.data;
+  },
+
   uploadTourVideo: async (file, onProgress) => {
     if (!file) {
       throw new Error("Showroom tour video is required");

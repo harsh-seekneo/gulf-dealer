@@ -1,9 +1,8 @@
-import { LayoutGrid, FileText, Layers, Tag, Check } from "lucide-react";
+import { LayoutGrid, FileText, Tag, Check } from "lucide-react";
 
 const PLACEMENTS = [
   { key: "homepage_banner", label: "Homepage Banner", desc: "Top placement — highest visibility", icon: LayoutGrid },
   { key: "listing_page_banner", label: "Listing Page Banner", desc: "Shown inside listing detail pages", icon: FileText },
-  { key: "large_category_ad", label: "Large Category Ad", desc: "Category & search result pages", icon: Layers },
   { key: "small_ad_space", label: "Small Ad Space", desc: "Sidebar & inline card slots", icon: Tag },
 ];
 

@@ -81,12 +81,6 @@ export default function PlanCard({ plan, isCurrent, actionLabel, onSelect }) {
           </li>
         )}
 
-        {plan.largeAdsSpace !== null && plan.largeAdsSpace !== undefined && (
-          <li className={isPremium ? "text-slate-300" : "text-slate-600"}>
-            • {plan.largeAdsSpace} Large Ads Space
-          </li>
-        )}
-
         {plan.smallAdsSpace !== null && plan.smallAdsSpace !== undefined && (
           <li className={isPremium ? "text-slate-300" : "text-slate-600"}>
             • {plan.smallAdsSpace} Small Ads Space
@@ -94,11 +88,11 @@ export default function PlanCard({ plan, isCurrent, actionLabel, onSelect }) {
         )}
 
         <li className={isPremium ? "text-slate-300" : "text-slate-600"}>
-          • {plan.maxPhotos ?? 0} Photos
+         {plan.maxPhotos !== 0 && `• ${plan.maxPhotos} Photos`}
         </li>
 
         <li className={isPremium ? "text-slate-300" : "text-slate-600"}>
-          • {plan.maxVideos ?? 0} Videos
+         {plan.maxVideos !==0 && `• ${plan.maxVideos} Videos`}
         </li>
 
         <li className={isPremium ? "text-slate-300" : "text-slate-600"}>
@@ -106,11 +100,11 @@ export default function PlanCard({ plan, isCurrent, actionLabel, onSelect }) {
         </li>
 
 
-        {plan.hasVehicleVideo && (
+        {/* {plan.hasVehicleVideo && (
           <li className={isPremium ? "text-slate-300" : "text-slate-600"}>
             • Video
           </li>
-        )}
+        )} */}
 
         {plan.features?.map((feature) => (
           <li key={feature} className={isPremium ? "text-slate-300" : "text-slate-600"}>

@@ -18,6 +18,36 @@ import { subscriptionApi } from "../../modules/subscription/api/subscriptionApi"
 import { profileApi } from "../../modules/profile/api/profileApi";
 import { USER_APP_URL } from "../../config/env";
 
+const HOUR_MS = 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+
+const isSameLocalDay = (first, second) =>
+  first.getFullYear() === second.getFullYear() &&
+  first.getMonth() === second.getMonth() &&
+  first.getDate() === second.getDate();
+
+const formatExpiryLabel = (value, nowValue = Date.now()) => {
+  if (!value) return "N/A";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "N/A";
+
+  const now = new Date(nowValue);
+  const diff = date.getTime() - now.getTime();
+
+  if (diff <= 0) return "Expired";
+  if (diff < MINUTE_MS) return `${Math.ceil(diff / 1000)} seconds remaining`;
+  if (diff < HOUR_MS) return `${Math.ceil(diff / MINUTE_MS)} minutes remaining`;
+  if (diff < 6 * HOUR_MS) return `${Math.ceil(diff / HOUR_MS)} hours remaining`;
+  if (isSameLocalDay(date, now)) return "Today";
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (isSameLocalDay(date, tomorrow)) return "Tomorrow";
+
+  return date.toLocaleDateString("en-GB");
+};
+
 const navItems = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutGrid },
   { label: "Listings", path: "/vehicles", icon: Car, badgeKey: "vehicles" },
@@ -52,6 +82,7 @@ export default function DealerSidebar({ isOpen, onClose }) {
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [logoError, setLogoError] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   // -----------------------------------------
   // Load Dealer Profile
@@ -72,6 +103,11 @@ export default function DealerSidebar({ isOpen, onClose }) {
     };
 
     loadProfile();
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
   }, []);
 
   // -----------------------------------------
@@ -309,6 +345,7 @@ export default function DealerSidebar({ isOpen, onClose }) {
                 100,
                 totalDays > 0 ? Math.round((daysUsed / totalDays) * 100) : 0
               );
+              const expiryLabel = formatExpiryLabel(subscription.endDate, now);
 
               return (
                 <div className="rounded-xl bg-white/5 p-3">
@@ -328,7 +365,7 @@ export default function DealerSidebar({ isOpen, onClose }) {
                   </div>
 
                   <p className="mt-1.5 text-xs text-slate-400">
-                    {daysRemaining} of {totalDays} days remaining
+                    {expiryLabel}
                   </p>
 
                   {subscription.offerReason ? (

@@ -35,7 +35,6 @@ import { USER_APP_URL } from "../../../config/env";
 const categories = {
   HOME_PAGE_BANNER: "Homepage Banner",
   LISTING_BANNER: "Listing Page Banner",
-  LARGE_CATEGORY_BANNER: "Large Category Ad",
   SMALL_ADVERTISEMENT_SPACE: "Small Ad Space",
 };
 
@@ -240,22 +239,6 @@ const placementMeta = [
     },
     previewImageUrl:
       "https://gulfincart-dev.s3.ap-south-1.amazonaws.com/ui/ads-form/listingpage-banner-preview.png",
-  },
-  {
-    category: "LARGE_CATEGORY_BANNER",
-    title: "Large Category Ad",
-    label: "Broad Reach",
-    labelClass: "bg-purple-50 text-purple-600",
-    description:
-      "Featured prominently in category and search results pages. Captures high-volume browse traffic across all categories.",
-    dimensions: "300 x 866 px",
-    deviceDimensions: {
-      desktop: { width: 300, height: 866 },
-      tablet: { width: 240, height: 696 },
-      mobile: { width: 160, height: 462 },
-    },
-    previewImageUrl:
-      "https://gulfincart-dev.s3.ap-south-1.amazonaws.com/ui/ads-form/large-category-ads-preview.png",
   },
   {
     category: "SMALL_ADVERTISEMENT_SPACE",
@@ -514,6 +497,9 @@ const isLaunchOfferActiveForDuration = (launchOffer, durationDays) => {
   return Number(launchOffer.freeAdditionalDays || 0) > 0;
 };
 
+const getLaunchOfferName = (launchOffer) =>
+  String(launchOffer?.title || "Launch Offer").trim() || "Launch Offer";
+
 const getTaxMeta = (plan) => {
   const taxName = plan?.taxName || "VAT";
   const percentage = plan?.vatEnabled ? Number(plan.vatPercentage || 0) : 0;
@@ -761,6 +747,7 @@ const SummaryPanel = ({
   packageType,
   selectedBundle,
   freeAdditionalDays,
+  launchOfferName,
 }) => {
   const vat = Number(
     ((Number(price || 0) * taxMeta.percentage) / 100).toFixed(3),
@@ -813,7 +800,7 @@ const SummaryPanel = ({
         </div>
         {freeAdditionalDays > 0 ? (
           <div className="flex justify-between">
-            <span className="text-emerald-600">Launch Offer</span>
+            <span className="text-emerald-600">{launchOfferName}</span>
             <span className="font-bold text-emerald-700">
               + {freeAdditionalDays} Days Free
             </span>
@@ -1565,6 +1552,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
       const activePlan = plans.find(
         (item) => item.category === activePlacement?.category,
       );
+      const launchOfferName = getLaunchOfferName(
+        promotionSettings.launchOffer,
+      );
 
       return (
         <div className="space-y-4">
@@ -1585,10 +1575,12 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
               <span className="group relative inline-flex shrink-0">
                 <span className="inline-flex cursor-default items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700">
                   <Megaphone size={13} />
-                  {promotionSettings.launchOffer?.description ||
-                    "30 Days + 15 Days FREE"}
+                  {launchOfferName}
                 </span>
                 <span className="pointer-events-none absolute right-0 top-full z-20 mt-1.5 w-60 scale-95 rounded-lg bg-slate-900 px-2.5 py-1.5 text-[10px] font-medium leading-4 text-white opacity-0 shadow-lg transition group-hover:scale-100 group-hover:opacity-100">
+                  {promotionSettings.launchOffer?.description ||
+                    "30 Days + 15 Days FREE"}
+                  <br />
                   Only paid individual 30-day ads. Dealer plan benefits and
                   bundles are excluded.
                 </span>
@@ -1610,7 +1602,7 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                   </p>
                 </div>
                 <span className="text-xs font-bold text-emerald-700">
-                  Launch offer does not apply
+                  {launchOfferName} does not apply
                 </span>
               </div>
 
@@ -1795,7 +1787,7 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                       How long should it run?
                     </h4>
                     <p className="text-[11px] font-semibold text-slate-400">
-                      Launch offer applies only to eligible paid ads
+                      {launchOfferName} applies only to eligible paid ads
                     </p>
                   </div>
 
@@ -1860,8 +1852,8 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                 Promotion Bundles - Save More
               </h3>
               <p className="mt-1 text-sm font-medium text-slate-500">
-                Bundle prices are based on the 30-day advertising package.
-                Launch offer is not applied to bundles.
+                Bundle prices are based on the 30-day advertising package.{" "}
+                {launchOfferName} is not applied to bundles.
               </p>
 
               <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -2407,7 +2399,12 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                   ]
                 : []),
               ...(freeAdditionalDays > 0
-                ? [["Launch Offer", `+ ${freeAdditionalDays} Days Free`]]
+                ? [
+                    [
+                      getLaunchOfferName(promotionSettings.launchOffer),
+                      `+ ${freeAdditionalDays} Days Free`,
+                    ],
+                  ]
                 : []),
               [
                 "Total",
@@ -2528,7 +2525,12 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                     ]
                   : []),
                 ...(freeAdditionalDays > 0
-                  ? [["Launch Offer", `+ ${freeAdditionalDays} Days Free`]]
+                  ? [
+                      [
+                        getLaunchOfferName(promotionSettings.launchOffer),
+                        `+ ${freeAdditionalDays} Days Free`,
+                      ],
+                    ]
                   : []),
                 ...(isBundlePackage
                   ? [
@@ -2711,6 +2713,9 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
               packageType={form.packageType}
               selectedBundle={selectedBundle}
               freeAdditionalDays={freeAdditionalDays}
+              launchOfferName={getLaunchOfferName(
+                promotionSettings.launchOffer,
+              )}
             />
           ) : null}
         </div>
