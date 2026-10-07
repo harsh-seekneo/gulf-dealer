@@ -102,30 +102,33 @@ const getItemPreviewMeta = (item, type, fallbackTitle) => {
   };
 };
 
-function HoverPreviewCard({ item, type, fallbackTitle }) {
+function HoverPreviewCard({ item, type, fallbackTitle, position }) {
   const preview = getItemPreviewMeta(item, type, fallbackTitle);
 
   return (
-    <div className="pointer-events-none absolute left-12 top-full z-20 hidden w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-2xl group-hover:block">
-      <div className="overflow-hidden rounded-lg border border-slate-100 bg-slate-100">
+    <div
+      className="pointer-events-none fixed z-[120] w-72 rounded-lg border border-slate-200 bg-slate-50 p-2.5 shadow-xl ring-1 ring-slate-900/5"
+      style={{ left: position.left, top: position.top }}
+    >
+      <div className="overflow-hidden rounded-md border border-slate-200 bg-slate-100">
         {preview.imageUrl ? (
           <img
             src={preview.imageUrl}
             alt=""
-            className="h-32 w-full object-cover"
+            className="h-28 w-full object-cover opacity-80 saturate-75"
           />
         ) : (
-          <div className="flex h-32 items-center justify-center text-xs font-semibold text-slate-400">
+          <div className="flex h-28 items-center justify-center text-xs font-semibold text-slate-400">
             No image available
           </div>
         )}
       </div>
-      <div className="mt-3">
+      <div className="mt-2.5">
         <div className="flex items-start justify-between gap-3">
-          <p className="line-clamp-2 text-sm font-bold text-slate-950">
+          <p className="line-clamp-2 text-[13px] font-semibold leading-5 text-slate-800">
             {preview.title}
           </p>
-          <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-600">
+          <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
             {preview.badge}
           </span>
         </div>
@@ -138,7 +141,7 @@ function HoverPreviewCard({ item, type, fallbackTitle }) {
           {preview.rows.map(([label, value]) => (
             <div key={label} className="flex justify-between gap-3 text-xs">
               <span className="text-slate-400">{label}</span>
-              <span className="max-w-[9rem] truncate text-right font-semibold text-slate-700">
+              <span className="max-w-[9rem] truncate text-right font-medium text-slate-600">
                 {value}
               </span>
             </div>
@@ -149,7 +152,6 @@ function HoverPreviewCard({ item, type, fallbackTitle }) {
   );
 }
 
-/* ---------- Ek tab ke andar ki list (search + filter + bulk + load more) ---------- */
 function ItemList({
   items,
   getId,
@@ -165,8 +167,12 @@ function ItemList({
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all"); // all | keep | drop
   const [visible, setVisible] = useState(PAGE_SIZE);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deletedIds, setDeletedIds] = useState([]);
+  const [hoverPreview, setHoverPreview] = useState(null);
 
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const deletedSet = useMemo(() => new Set(deletedIds), [deletedIds]);
   const limitReached = selectedIds.length >= limit;
 
   const filtered = useMemo(() => {
@@ -174,11 +180,11 @@ function ItemList({
     return items.filter((it) => {
       const id = String(getId(it));
       if (filter === "keep" && !selectedSet.has(id)) return false;
-      if (filter === "drop" && selectedSet.has(id)) return false;
+      if (filter === "drop" && !deletedSet.has(id)) return false;
       if (q && !`${getTitle(it)} ${it.status || ""}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [items, query, filter, selectedSet, getId, getTitle]);
+  }, [items, query, filter, selectedSet, deletedSet, getId, getTitle]);
 
   if (!items.length) {
     return <p className="px-4 py-10 text-center text-sm text-slate-500">{emptyText}</p>;
@@ -187,8 +193,40 @@ function ItemList({
   const filters = [
     ["all", `All (${items.length})`],
     ["keep", `Continuing (${selectedIds.length})`],
-    ["drop", `Not continuing (${items.length - selectedIds.length})`],
+    ["drop", `Deleted (${deletedIds.length})`],
   ];
+
+  const handleDelete = () => {
+    if (!deleteConfirm) return;
+
+    const id = String(getId(deleteConfirm));
+    if (selectedSet.has(id)) {
+      onToggle(id);
+    }
+    setDeletedIds((current) => (current.includes(id) ? current : [...current, id]));
+    setDeleteConfirm(null);
+  };
+
+  const showHoverPreview = (event, item) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const cardWidth = 288;
+    const cardHeight = 250;
+    const gutter = 12;
+    const left = Math.min(rect.left + 48, window.innerWidth - cardWidth - gutter);
+    const preferredTop = rect.bottom + 8;
+    const top =
+      preferredTop + cardHeight > window.innerHeight - gutter
+        ? Math.max(gutter, rect.top - cardHeight - 8)
+        : preferredTop;
+
+    setHoverPreview({
+      item,
+      position: {
+        left: Math.max(gutter, left),
+        top,
+      },
+    });
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -226,68 +264,102 @@ function ItemList({
         <div className="flex gap-2 md:ml-auto">
           <button
             type="button"
-            onClick={() => onSetMany(filtered.slice(0, limit).map((it) => String(getId(it))))}
+            onClick={() => {
+              const ids = filtered.slice(0, limit).map((it) => String(getId(it)));
+              setDeletedIds((current) => current.filter((id) => !ids.includes(id)));
+              onSetMany(ids);
+            }}
             className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50"
           >
-            Select first {Math.min(limit, filtered.length)}
+            Continue first {Math.min(limit, filtered.length)}
           </button>
           <button
             type="button"
             onClick={() => onSetMany([])}
             className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
           >
-            Clear all
+            Discontinue all
           </button>
         </div>
       </div>
 
       {limitReached && (
         <p className="bg-amber-50 px-4 py-2 text-xs font-medium text-amber-800">
-          Limit reached ({limit}). Naya item select karne ke liye pehle kisi ko uncheck karo.
+          Limit reached ({limit}). Discontinue an item before continuing another one.
         </p>
       )}
 
       {/* Rows */}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {filtered.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-slate-500">Koi result nahi mila.</p>
+          <p className="px-4 py-10 text-center text-sm text-slate-500">No results found.</p>
         ) : (
           <>
             {filtered.slice(0, visible).map((it) => {
               const id = String(getId(it));
               const checked = selectedSet.has(id);
-              const disabled = !checked && limitReached;
+              const deleted = deletedSet.has(id);
+              const disabled = !checked && (limitReached || deleted);
               return (
-                <label
+                <div
                   key={id}
+                  onMouseEnter={(event) => showHoverPreview(event, it)}
+                  onMouseLeave={() => setHoverPreview(null)}
+                  onFocus={(event) => showHoverPreview(event, it)}
+                  onBlur={() => setHoverPreview(null)}
                   className={`group relative flex items-center gap-3 border-b border-slate-100 px-4 py-2.5 ${
-                    disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-slate-50"
+                    disabled ? "opacity-50" : "hover:bg-slate-50"
                   }`}
                 >
-                  <HoverPreviewCard
-                    item={it}
-                    type={previewType}
-                    fallbackTitle={previewFallbackTitle || getTitle(it)}
-                  />
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    disabled={disabled}
-                    onChange={() => onToggle(it._id)}
-                    className="h-4 w-4 shrink-0"
-                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-slate-900">{getTitle(it)}</p>
                     <p className="text-xs text-slate-500">{it.status}</p>
                   </div>
                   <span
                     className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                      checked ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
+                      checked
+                        ? "bg-emerald-50 text-emerald-700"
+                        : deleted
+                          ? "bg-slate-100 text-slate-600"
+                          : "bg-red-50 text-red-600"
                     }`}
                   >
-                    {checked ? "Continue" : "Will expire"}
+                    {checked ? "Continuing" : deleted ? "Deleted" : "Will expire"}
                   </span>
-                </label>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {checked ? (
+                      <button
+                        type="button"
+                        onClick={() => onToggle(id)}
+                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        Discontinue
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => {
+                            setDeletedIds((current) => current.filter((item) => item !== id));
+                            onToggle(id);
+                          }}
+                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Continue
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deleted}
+                          onClick={() => setDeleteConfirm(it)}
+                          className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               );
             })}
             {visible < filtered.length && (
@@ -296,17 +368,33 @@ function ItemList({
                 onClick={() => setVisible((v) => v + PAGE_SIZE)}
                 className="w-full py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
               >
-                Show more ({filtered.length - visible} baaki)
+                Show more ({filtered.length - visible} remaining)
               </button>
             )}
+            {hoverPreview ? (
+              <HoverPreviewCard
+                item={hoverPreview.item}
+                type={previewType}
+                fallbackTitle={previewFallbackTitle || getTitle(hoverPreview.item)}
+                position={hoverPreview.position}
+              />
+            ) : null}
           </>
         )}
       </div>
+      <ConfirmModal
+        isOpen={Boolean(deleteConfirm)}
+        title="Delete from renewal?"
+        message={`If you delete "${deleteConfirm ? getTitle(deleteConfirm) : "this item"}" from renewal, it will expire after the current plan ends.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }
 
-/* ---------- Main modal ---------- */
 function RenewalReviewModal({
   renewalReview,
   renewalSummary,
@@ -351,10 +439,16 @@ function RenewalReviewModal({
 
   const totalContinuing =
     renewalSummary.listingsContinuing + renewalSummary.ads.reduce((s, i) => s + i.continuing, 0);
-  const totalNewSpaces =
-    renewalSummary.newListingSpacesAvailable + renewalSummary.ads.reduce((s, i) => s + i.available, 0);
   const totalEnding =
     renewalSummary.listingsEnding + renewalSummary.ads.reduce((s, i) => s + i.ending, 0);
+  const newSpaceBreakdown = [
+    { key: "listings", label: "Vehicle", available: renewalSummary.newListingSpacesAvailable },
+    ...renewalSummary.ads.map((item) => ({
+      key: item.category,
+      label: item.label,
+      available: item.available,
+    })),
+  ];
 
   return (
     <div
@@ -372,7 +466,7 @@ function RenewalReviewModal({
               {renewalReview.currentPackage} → {renewalSummary.newPackage}
             </h2>
             <p className="mt-1 max-w-2xl text-sm text-slate-600">
-              Select which items you want to continue in the new package. Items not selected will expire after your current package ends.
+              Choose Continue for items moving to the new package, or Delete for items that should expire after your current package ends.
             </p>
           </div>
           <button
@@ -396,7 +490,11 @@ function RenewalReviewModal({
             <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
               <span className="font-semibold text-slate-900">Summary</span>
               <span className="text-emerald-700">{totalContinuing} continuing</span>
-              <span className="text-blue-700">{totalNewSpaces} new spaces</span>
+              {newSpaceBreakdown.map((item) => (
+                <span key={item.key} className="text-blue-700">
+                  {item.label}: {item.available} new spaces
+                </span>
+              ))}
               <span className="text-red-600">{totalEnding} ending</span>
             </span>
             <span className="shrink-0 text-xs font-semibold text-slate-500">
@@ -419,7 +517,7 @@ function RenewalReviewModal({
                 <div key={i.key} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
                   <p className="text-sm font-semibold text-slate-900">{i.label}</p>
                   <p className="text-xs text-slate-600">
-                    {i.continuing} continue · {i.available} spaces left ·{" "}
+                    {i.continuing} continue · {i.available} new spaces ·{" "}
                     <span className="text-red-600">{i.ending} ending</span>
                   </p>
                 </div>
@@ -428,9 +526,7 @@ function RenewalReviewModal({
           )}
         </div>
 
-        {/* Body: tabs + list */}
         <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-          {/* Tabs: mobile par horizontal scroll, desktop par left sidebar */}
           <nav
             aria-label="Renewal categories"
             className="flex shrink-0 gap-1 overflow-x-auto border-b border-slate-200 bg-white p-2 md:w-60 md:flex-col md:overflow-y-auto md:border-b-0 md:border-r"
@@ -506,7 +602,7 @@ function RenewalReviewModal({
                 limit={activeGroup?.included || 0}
                 onToggle={(id) => toggleAdvertisementRenewal(active.key, id)}
                 onSetMany={(ids) => setAdvertisementRenewalIds(active.key, ids)}
-                emptyText="Is type ki koi current ad nahi hai."
+                emptyText="No current ads of this type."
                 previewType="advertisement"
                 previewFallbackTitle={activeGroup?.label || "Advertisement"}
               />
@@ -560,7 +656,7 @@ function RenewalReviewModal({
         {/* Footer */}
         <div className="flex flex-col gap-3 border-t border-slate-200 bg-white px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-slate-600">
-            <span className="font-semibold text-emerald-700">{totalContinuing} continue</span> ·{" "}
+            <span className="font-semibold text-emerald-700">{totalContinuing} continuing</span> ·{" "}
             <span className="font-semibold text-red-600">{totalEnding} expire</span>. Selected items will continue in the new plan after payment.
           </p>
           <div className="flex gap-2">

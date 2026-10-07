@@ -58,11 +58,30 @@ const statusConfig = {
 const EDITABLE_STATUSES = ["DRAFT", "PENDING_REVIEW", "REJECTED"];
 const ELECTRIC_DEPENDENT_FIELDS = new Set(["engineCapacity", "numberOfCylinders"]);
 
+const getDeleteListingMessage = (listing) => {
+  if (listing?.status === "PUBLISHED") {
+    return "This listing has already used a plan slot. Deleting it will not restore that slot. This action cannot be undone.";
+  }
+
+  if (listing?.status === "PENDING_REVIEW" || listing?.status === "DRAFT") {
+    return "This listing has not used a final approved slot yet, so its reserved slot will be available again. This action cannot be undone.";
+  }
+
+  return "This listing will be permanently deleted. This action cannot be undone.";
+};
+
 const formatLocation = (location = {}) =>
   [location.city, location.governorate, location.country].filter(Boolean).join(", ");
 
 const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 const formatPlanAmount = (value) => `BHD ${Number(value || 0).toFixed(2)}`;
+
+const isListingExpired = (listing) => {
+  if (String(listing?.status || "").toUpperCase() === "EXPIRED") return true;
+
+  const expiresAt = listing?.expiresAt ? new Date(listing.expiresAt) : null;
+  return Boolean(expiresAt && Number.isFinite(expiresAt.getTime()) && expiresAt <= new Date());
+};
 
 const isBlankValue = (value) =>
   value === undefined ||
@@ -297,6 +316,7 @@ const ListingOverviewCard = ({
     getServiceCountryCurrencyByName(listing?.location?.country);
   const status = statusConfig[listing?.status] || statusConfig.DRAFT;
   const isSold = Boolean(listing?.isSold) || listing?.status === "SOLD";
+  const isExpired = isListingExpired(listing);
   const canEditMedia = EDITABLE_STATUSES.includes(listing?.status) && !isSold;
   const isFeatured = listing?.addOns?.some((addOn) => /featured/i.test(addOn.planNameSnapshot));
   const { daysUsed, totalDays, percent } = formatDaysUsedVsTotal(listing, now);
@@ -456,7 +476,7 @@ const ListingOverviewCard = ({
               <Check size={13} />
               Sold
             </span>
-          ) : (
+          ) : !isExpired ? (
             <button
               type="button"
               onClick={onToggleSold}
@@ -466,7 +486,7 @@ const ListingOverviewCard = ({
               {isTogglingSold ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
               Mark as Sold
             </button>
-          )}
+          ) : null}
 
           {listing.status === "DRAFT" ? (
             <button
@@ -1060,7 +1080,7 @@ const ListingDetailPage = () => {
           <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
             <h3 className="text-base font-semibold text-slate-900">Delete this listing?</h3>
             <p className="mt-2 text-sm text-slate-500">
-              This listing will be permanently deleted. This action cannot be undone.
+              {getDeleteListingMessage(listing)}
             </p>
 
             <div className="mt-5 flex justify-end gap-3">

@@ -47,6 +47,7 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
 
   const subscriptionId = providedSubscriptionId || searchParams.get("subscriptionId") || "";
   const listingId = searchParams.get("listingId") || "";
+  const draftRequestKey = searchParams.get("draftRequestKey") || "";
   const requestedStep = Number(searchParams.get("step")) || 1;
 
   const [listing, setListing] = useState(null);
@@ -85,7 +86,10 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
           // invocation in development, which would otherwise
           // create two separate draft listings.
           if (!draftCreationPromiseRef.current) {
-            draftCreationPromiseRef.current = createBulkDraftListingApi(subscriptionId);
+            draftCreationPromiseRef.current = createBulkDraftListingApi(
+              subscriptionId,
+              draftRequestKey
+            );
           }
 
           const newDraft = await draftCreationPromiseRef.current;
@@ -114,7 +118,7 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
       isMounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subscriptionId, listingId]);
+  }, [subscriptionId, listingId, draftRequestKey]);
 
   const listingFormType = getListingWizardFormType(listing);
   const activeStepSequence = getWizardStepSequence(listingFormType);

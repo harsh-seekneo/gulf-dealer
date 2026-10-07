@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { Search, Plus } from "lucide-react";
 import { getDealerStatusApi } from "../../dealer/api/dealerApi";
 import { useNavigate } from "react-router-dom";
+import { USER_APP_URL } from "../../../config/env";
 
 import ListingsTabs from "../components/ListingsTabs";
 import ListingsTable from "../components/ListingsTable";
 import { listingsApi } from "../api/listingsApi";
+import { getBulkSessionListingsApi } from "../api/bulkListingApi";
 import { profileApi } from "../../profile/api/profileApi";
 import { LISTING_TABS } from "../listings.constants";
 import ConfirmModal from "../../../components/ui/ConfirmModal";
@@ -29,6 +31,55 @@ const SELLER_FILTERS = [
 
 function isEnded(label) {
   return Boolean(label) && /expired/i.test(label);
+}
+
+function getDeleteListingMessage(listing) {
+  const title = listing?.title || listing?.vehicleInfo?.title || "this listing";
+
+  if (listing?.status === "PUBLISHED") {
+    return `Delete "${title}"? This listing has already used a plan slot. Deleting it will not restore that slot. This action cannot be undone.`;
+  }
+
+  if (listing?.status === "PENDING_REVIEW" || listing?.status === "DRAFT") {
+    return `Delete "${title}"? This listing has not used a final approved slot yet, so its reserved slot will be available again. This action cannot be undone.`;
+  }
+
+  return `Delete "${title}"? This action cannot be undone.`;
+}
+
+function createDraftRequestKey() {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function isPastDate(value) {
+  if (!value) return false;
+
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) && date <= new Date();
+}
+
+function isDealerPlanExpired(dealerStatus) {
+  const subscription =
+    dealerStatus?.dealer?.subscription ||
+    dealerStatus?.dealer?.business?.businessSubscriptionRef ||
+    {};
+
+  return (
+    String(subscription.status || "").toUpperCase() === "EXPIRED" ||
+    isPastDate(subscription.endDate || subscription.expiresAt)
+  );
+}
+
+function redirectToUserIndividualListing(reason) {
+  const baseUrl = String(USER_APP_URL || "").replace(/\/$/, "");
+  const url = new URL(`${baseUrl}/list-a-vehicle`);
+  url.searchParams.set("dealerIndividualFallback", "1");
+  url.searchParams.set("reason", reason);
+  window.location.assign(url.toString());
 }
 
 export default function ListingsPage() {
@@ -246,7 +297,24 @@ export default function ListingsPage() {
         return;
       }
 
-      navigate(`/listings/add-vehicle?subscriptionId=${subscriptionId}`);
+      if (isDealerPlanExpired(dealerStatus)) {
+        redirectToUserIndividualListing("expired");
+        return;
+      }
+
+      const quota = await getBulkSessionListingsApi(subscriptionId);
+
+      if (quota?.remaining !== null && quota?.remaining !== undefined && quota.remaining <= 0) {
+        redirectToUserIndividualListing("quota_exhausted");
+        return;
+      }
+
+      const params = new URLSearchParams({
+        subscriptionId,
+        draftRequestKey: createDraftRequestKey(),
+      });
+
+      navigate(`/listings/add-vehicle?${params.toString()}`);
     } catch (err) {
       console.error("Failed to check dealer status:", err);
       alert("Unable to verify your profile or plan. Please try again.");
@@ -350,7 +418,7 @@ export default function ListingsPage() {
       <ConfirmModal
         isOpen={Boolean(deleteVehicle)}
         title="Delete listing"
-        message={`Delete "${deleteVehicle?.title || "this listing"}"? This action cannot be undone.`}
+        message={getDeleteListingMessage(deleteVehicle)}
         confirmText="Delete"
         isLoading={isDeleting}
         onClose={() => {

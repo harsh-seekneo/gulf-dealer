@@ -2,8 +2,11 @@ import apiClient from "../../../services/apiClient";
 
 const BASE_URL = "/vehicle-listings";
 
-export const createBulkDraftListingApi = async (subscriptionId) => {
-  const { data } = await apiClient.post(`${BASE_URL}/bulk`, { subscriptionId });
+export const createBulkDraftListingApi = async (subscriptionId, draftRequestKey = "") => {
+  const { data } = await apiClient.post(`${BASE_URL}/bulk`, {
+    subscriptionId,
+    draftRequestKey,
+  });
   return data.data;
 };
 

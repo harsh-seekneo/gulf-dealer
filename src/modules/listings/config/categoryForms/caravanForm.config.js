@@ -63,5 +63,5 @@ export const caravanFormConfig = {
 
   hasSecondaryGallery: true,
   secondaryGalleryLabel: "Interior Tour Images",
-  hasAreaField: true,
+ 
 };

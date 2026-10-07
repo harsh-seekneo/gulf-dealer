@@ -58,5 +58,4 @@ export const buggyFormConfig = {
     { key: "features", label: "Features", options: ["12V Power Outlet", "Adjustable Steering Wheel", "Alloy Wheels", "Bluetooth", "Cargo Bed", "Cup Holders", "Digital Display", "Differential Lock", "Door Nets", "Electric Power Steering (EPS)", "Foldable Windshield", "Front Winch", "GPS Navigation", "Half Doors", "Hard Roof", "Hard Doors", "Heated Seats", "LED Headlights", "Mud Guards", "Passenger Grab Handles", "Rear Cargo Rack", "Rear View Mirror", "Reverse Camera", "Roof Rack", "Roll Cage", "Seat Belts", "Skid Plates", "Soft Doors", "Soft Roof", "Sound System", "Spare Wheel", "Speed Limiter", "Sport Mode", "Storage Box", "Tow Hitch", "USB Charging Port", "Windshield"] },
   ],
 
-  hasAreaField: true,
 };

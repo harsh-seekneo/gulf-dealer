@@ -31,6 +31,7 @@ const configByFormType = {
 };
 const IMAGE_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const BROCHURE_MAX_SIZE_BYTES = 20 * 1024 * 1024;
+const CARAVAN_GALLERY_IMAGE_LIMIT = 10;
 
 const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
   const { listing, isSaving, saveMedia, goPrevious, saveDraft } =
@@ -41,6 +42,11 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
   const videoAllowed = Boolean(maxVideos);
 
   const formType = listing?.category?.vehicleFormType || "CAR";
+  const isCaravan = formType === "CARAVAN";
+  const primaryPhotoLimit = isCaravan
+    ? Math.min(maxPhotos ?? CARAVAN_GALLERY_IMAGE_LIMIT, CARAVAN_GALLERY_IMAGE_LIMIT)
+    : maxPhotos;
+  const secondaryPhotoLimit = isCaravan ? CARAVAN_GALLERY_IMAGE_LIMIT : null;
   const config = configByFormType[formType] || carFormConfig;
   const isSpecialNumber = formType === "SPECIAL_NUMBER";
   const imageLabel = isSpecialNumber ? "Plate Images" : "Vehicle Images";
@@ -57,7 +63,7 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
   const secondaryGalleryLabel =
     config.secondaryGalleryLabel || "Additional Images";
 
-  const [existingSecondaryImages, setExistingSecondaryImages] = useState(
+  const [existingSecondaryImages] = useState(
     listing?.media?.secondaryImages || [],
   );
   const [newSecondaryImageFiles, setNewSecondaryImageFiles] = useState([]);
@@ -144,11 +150,11 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
     }
 
     const remainingSlots =
-      maxPhotos !== null ? maxPhotos - totalCurrentPhotos : fileArray.length;
+      primaryPhotoLimit !== null ? primaryPhotoLimit - totalCurrentPhotos : fileArray.length;
 
     if (remainingSlots <= 0) {
       setErrorMessage(
-        `Your plan allows a maximum of ${maxPhotos} photos. Remove some to add more.`,
+        `You can upload a maximum of ${primaryPhotoLimit} photos. Remove some to add more.`,
       );
       setMediaErrors((previous) => ({
         ...previous,
@@ -161,7 +167,7 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
 
     if (fileArray.length > filesToAdd.length) {
       setErrorMessage(
-        `Only ${filesToAdd.length} photo(s) added — your plan's limit of ${maxPhotos} photos was reached.`,
+        `Only ${filesToAdd.length} photo(s) added — the limit of ${primaryPhotoLimit} photos was reached.`,
       );
     } else {
       setErrorMessage("");
@@ -190,10 +196,32 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
       return;
     }
 
-    setNewSecondaryImageFiles((previous) => [...previous, ...fileArray]);
+    const totalSecondaryImages =
+      existingSecondaryImages.length + newSecondaryImagePreviews.length;
+    const remainingSlots =
+      secondaryPhotoLimit !== null
+        ? secondaryPhotoLimit - totalSecondaryImages
+        : fileArray.length;
+
+    if (remainingSlots <= 0) {
+      setErrorMessage(`You can upload a maximum of ${secondaryPhotoLimit} interior photos.`);
+      return;
+    }
+
+    const filesToAdd = fileArray.slice(0, remainingSlots);
+
+    if (fileArray.length > filesToAdd.length) {
+      setErrorMessage(
+        `Only ${filesToAdd.length} interior photo(s) added — the limit of ${secondaryPhotoLimit} photos was reached.`,
+      );
+    } else {
+      setErrorMessage("");
+    }
+
+    setNewSecondaryImageFiles((previous) => [...previous, ...filesToAdd]);
     setNewSecondaryImagePreviews((previous) => [
       ...previous,
-      ...fileArray.map((file) => URL.createObjectURL(file)),
+      ...filesToAdd.map((file) => URL.createObjectURL(file)),
     ]);
   };
 
@@ -416,10 +444,10 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
       <div className="mt-6">
         <div className="mb-2 flex items-center justify-between">
           <p className="text-sm font-medium text-slate-700">
-            {imageLabel} (max {maxPhotos ?? "∞"})
+            {imageLabel} (max {primaryPhotoLimit ?? "∞"})
           </p>
           <span className="text-xs font-medium text-slate-500">
-            {totalCurrentPhotos}/{maxPhotos ?? "∞"} uploaded
+            {totalCurrentPhotos}/{primaryPhotoLimit ?? "∞"} uploaded
           </span>
         </div>
 
@@ -509,7 +537,7 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
             <span className="text-xs font-medium text-slate-500">
               {existingSecondaryImages.length +
                 newSecondaryImagePreviews.length}{" "}
-              uploaded
+              /{secondaryPhotoLimit ?? "∞"} uploaded
             </span>
           </div>
 
