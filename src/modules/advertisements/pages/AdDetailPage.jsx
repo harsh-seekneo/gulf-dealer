@@ -17,16 +17,26 @@ import { advertisementsApi } from "../api/advertisementsApi";
 
 const categoryConfig = {
   HOME_PAGE_BANNER: {
-    title: "Homepage Banner",
-    subtitle: "Top placement with maximum homepage visibility",
-    dimensions: "1440 x 200 px",
+    title: "Main Banner",
+    subtitle: "Main placement with maximum homepage visibility",
+    dimensions: "1440 x 300 px",
+    deviceDimensions: {
+      desktop: { width: 1440, height: 300 },
+      tablet: { width: 1024, height: 213 },
+      mobile: { width: 816, height: 300 },
+    },
     icon: Layers,
     priority: "Premium",
   },
   LISTING_BANNER: {
     title: "Listing Page Banner",
     subtitle: "Appears inside listing detail pages",
-    dimensions: "728 x 90 px",
+    dimensions: "1440 x 250 px",
+    deviceDimensions: {
+      desktop: { width: 1440, height: 250 },
+      tablet: { width: 1024, height: 180 },
+      mobile: { width: 408, height: 130 },
+    },
     icon: FileText,
     priority: "High Intent",
   },
@@ -34,6 +44,11 @@ const categoryConfig = {
     title: "Small Ad Space",
     subtitle: "Sidebar and inline ad slots",
     dimensions: "300 x 425 px",
+    deviceDimensions: {
+      desktop: { width: 300, height: 425 },
+      tablet: { width: 240, height: 340 },
+      mobile: { width: 160, height: 227 },
+    },
     icon: Tag,
     priority: "Basic",
   },
@@ -178,6 +193,8 @@ export default function AdDetailPage() {
   const config = categoryConfig[ad.category] || categoryConfig.HOME_PAGE_BANNER;
   const activeDevice = devices.find((item) => item.key === device) || devices[0];
   const creativeUrl = ad.creatives?.[device]?.url || ad.creatives?.desktop?.url;
+  const dimensions =
+    config.deviceDimensions?.[device] || config.deviceDimensions?.desktop || null;
   const startDate = ad.startsAt || null;
   const isAwaitingApproval = ad.status === "PENDING" && !startDate;
 
@@ -292,13 +309,29 @@ export default function AdDetailPage() {
               </div>
               <div className="relative p-4">
                 {creativeUrl ? (
-                  <img
-                    src={creativeUrl}
-                    alt={`${device} advertisement creative`}
-                    className="h-52 w-full rounded-lg object-cover"
-                  />
+                  <div
+                    className="w-full overflow-hidden rounded-lg bg-slate-100"
+                    style={
+                      dimensions?.width && dimensions?.height
+                        ? { aspectRatio: `${dimensions.width} / ${dimensions.height}` }
+                        : undefined
+                    }
+                  >
+                    <img
+                      src={creativeUrl}
+                      alt={`${device} advertisement creative`}
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
                 ) : (
-                  <div className="flex h-52 items-center justify-center rounded-lg bg-slate-100 text-sm font-semibold text-slate-400">
+                  <div
+                    className="flex w-full items-center justify-center rounded-lg bg-slate-100 text-sm font-semibold text-slate-400"
+                    style={
+                      dimensions?.width && dimensions?.height
+                        ? { aspectRatio: `${dimensions.width} / ${dimensions.height}` }
+                        : undefined
+                    }
+                  >
                     No {device} creative uploaded
                   </div>
                 )}

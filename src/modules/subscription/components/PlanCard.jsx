@@ -71,7 +71,7 @@ export default function PlanCard({ plan, isCurrent, actionLabel, onSelect }) {
 
         {plan.homepageBanner !== null && plan.homepageBanner !== undefined && (
           <li className={isPremium ? "text-slate-300" : "text-slate-600"}>
-            • {plan.homepageBanner} Homepage Banner{Number(plan.homepageBanner) === 1 ? "" : "s"}
+            • {plan.homepageBanner} Main Banner{Number(plan.homepageBanner) === 1 ? "" : "s"}
           </li>
         )}
 

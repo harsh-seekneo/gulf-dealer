@@ -22,6 +22,18 @@ function initials(name = "") {
     .toUpperCase();
 }
 
+function formatDateTime(value) {
+  if (!value) return "-";
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 function StatusBadge({ status }) {
   return (
     <span
@@ -33,6 +45,30 @@ function StatusBadge({ status }) {
     >
       {status || "new"}
     </span>
+  );
+}
+
+function LeadSourceBadges({ lead }) {
+  return (
+    <>
+      {lead.inquiryType === "seller_profile" ? (
+        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-black uppercase text-blue-600">
+          Seller Profile
+        </span>
+      ) : null}
+      {lead.inquiryType === "advertisement" ? (
+        <>
+          <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-black uppercase text-amber-600">
+            Advertisement
+          </span>
+          {lead.contactMethod ? (
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-black uppercase text-slate-600">
+              {lead.contactMethod === "WHATSAPP" ? "WhatsApp" : "Call"}
+            </span>
+          ) : null}
+        </>
+      ) : null}
+    </>
   );
 }
 
@@ -154,11 +190,12 @@ export default function LeadsPage() {
           <table className="w-full table-fixed text-left text-xs xl:text-sm">
             <thead className="bg-slate-50/90 text-slate-500">
               <tr>
-                <th className="w-[20%] px-4 py-4 font-bold">Customer</th>
+                <th className="w-[18%] px-4 py-4 font-bold">Customer</th>
                 <th className="w-[20%] px-4 py-4 font-bold">Enquiry</th>
-                <th className="w-[22%] px-4 py-4 font-bold">Message</th>
-                <th className="w-[18%] px-4 py-4 font-bold">Contact</th>
-                <th className="w-[20%] px-4 py-4 font-bold">Actions</th>
+                <th className="w-[20%] px-4 py-4 font-bold">Message</th>
+                <th className="w-[16%] px-4 py-4 font-bold">Contact</th>
+                <th className="w-[14%] px-4 py-4 font-bold">Actions</th>
+                <th className="w-[12%] px-4 py-4 font-bold">Date & Time</th>
               </tr>
             </thead>
 
@@ -183,13 +220,14 @@ export default function LeadsPage() {
                     </td>
                     <td className="break-words px-4 py-4 align-top font-medium text-slate-600">
                       <p>{lead.vehicleTitle || "-"}</p>
+                      {lead.businessName ? (
+                        <p className="mt-1 text-xs font-semibold text-slate-400">
+                          {lead.businessName}
+                        </p>
+                      ) : null}
                       <div className="mt-2 flex flex-wrap gap-2">
                         <StatusBadge status={lead.status} />
-                        {lead.inquiryType === "seller_profile" ? (
-                          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-black uppercase text-blue-600">
-                            Seller Profile
-                          </span>
-                        ) : null}
+                        <LeadSourceBadges lead={lead} />
                       </div>
                     </td>
                     <td className="break-words px-4 py-4 align-top font-medium text-slate-400">
@@ -205,6 +243,9 @@ export default function LeadsPage() {
                     </td>
                     <td className="px-4 py-4 align-top">
                       <LeadResponseActions lead={lead} />
+                    </td>
+                    <td className="break-words px-4 py-4 align-top font-medium text-slate-500">
+                      {formatDateTime(lead.createdAt)}
                     </td>
                   </tr>
                 ))}

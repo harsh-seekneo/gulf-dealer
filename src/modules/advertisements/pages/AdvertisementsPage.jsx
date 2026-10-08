@@ -33,7 +33,7 @@ import { advertisementsApi } from "../api/advertisementsApi";
 import { USER_APP_URL } from "../../../config/env";
 
 const categories = {
-  HOME_PAGE_BANNER: "Homepage Banner",
+  HOME_PAGE_BANNER: "Main Banner",
   LISTING_BANNER: "Listing Page Banner",
   SMALL_ADVERTISEMENT_SPACE: "Small Ad Space",
 };
@@ -210,16 +210,16 @@ const wizardSteps = [
 const placementMeta = [
   {
     category: "HOME_PAGE_BANNER",
-    title: "Homepage Banner",
+    title: "Main Banner",
     label: "Highest Visibility",
     labelClass: "bg-blue-50 text-blue-600",
     description:
-      "Prime visibility at the very top of the GulfInCart homepage. Seen by every visitor the moment they land on the site.",
-    dimensions: "1440 x 200 px",
+      "Prime visibility in the main banner area of the GulfInCart homepage. Seen by every visitor the moment they land on the site.",
+    dimensions: "1440 x 300 px",
     deviceDimensions: {
-      desktop: { width: 1440, height: 200 },
-      tablet: { width: 1024, height: 142 },
-      mobile: { width: 640, height: 89 },
+      desktop: { width: 1440, height: 300 },
+      tablet: { width: 1024, height: 213 },
+      mobile: { width: 816, height: 300 },
     },
     previewImageUrl:
       "https://gulfincart-dev.s3.ap-south-1.amazonaws.com/ui/ads-form/homepage-banner-preview.png",
@@ -231,11 +231,11 @@ const placementMeta = [
     labelClass: "bg-emerald-50 text-emerald-600",
     description:
       "Displayed inside active vehicle listing pages. Reaches buyers who are already browsing and ready to purchase.",
-    dimensions: "728 x 90 px",
+    dimensions: "1440 x 250 px",
     deviceDimensions: {
-      desktop: { width: 728, height: 90 },
-      tablet: { width: 640, height: 79 },
-      mobile: { width: 320, height: 40 },
+      desktop: { width: 1440, height: 250 },
+      tablet: { width: 1024, height: 180 },
+      mobile: { width: 408, height: 130 },
     },
     previewImageUrl:
       "https://gulfincart-dev.s3.ap-south-1.amazonaws.com/ui/ads-form/listingpage-banner-preview.png",
@@ -269,6 +269,18 @@ const getDeviceDimensionLabel = (placement, device) => {
   if (!dimensions) return placement?.dimensions || "-";
 
   return `${dimensions.width} x ${dimensions.height} px`;
+};
+
+const getAspectRatioStyle = (dimensions) =>
+  dimensions?.width && dimensions?.height
+    ? { aspectRatio: `${dimensions.width} / ${dimensions.height}` }
+    : undefined;
+
+const getAspectRatioStyleFromLabel = (label) => {
+  const [, width, height] =
+    String(label || "").match(/(\d+)\s*x\s*(\d+)/i) || [];
+
+  return width && height ? { aspectRatio: `${width} / ${height}` } : undefined;
 };
 
 const formatDate = (value) => {
@@ -618,17 +630,132 @@ const WizardProgress = ({ step }) => (
   </div>
 );
 
-const PlacementSketch = ({ placement }) => (
-  <div className="overflow-hidden rounded-xl bg-slate-50 p-2">
-    <div className="h-[180px] overflow-hidden rounded-lg bg-white ring-1 ring-slate-100">
-      <img
-        src={placement.previewImageUrl}
-        alt={`${placement.title} preview`}
-        className="h-full w-full object-cover"
-      />
+const BrowserChrome = ({ children, className = "" }) => (
+  <div
+    className={`overflow-hidden rounded-xl border border-slate-200 bg-white ${className}`}
+  >
+    <div className="flex h-8 items-center gap-1.5 bg-slate-800 px-3">
+      <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+      <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+      <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+      <span className="ml-3 h-4 flex-1 rounded-md bg-slate-600" />
     </div>
+    <div className="h-8 bg-slate-950 px-3 py-2 text-[10px] font-bold text-white">
+      GulfInCart
+    </div>
+    {children}
   </div>
 );
+
+const ImageSlot = ({ alt, className = "", dimensions, imageUrl }) => (
+  <div
+    className={`relative overflow-hidden rounded-md border border-blue-500 bg-blue-50 ${className}`}
+    style={getAspectRatioStyle(dimensions)}
+  >
+    {imageUrl ? (
+      <img src={imageUrl} alt={alt} className="h-full w-full object-contain" />
+    ) : (
+      <div className="flex h-full w-full items-center justify-center text-[10px] font-bold text-blue-500">
+        Ad Preview
+      </div>
+    )}
+  </div>
+);
+
+const ListingRows = () => (
+  <div className="flex-1 space-y-2">
+    {[0, 1, 2].map((item) => (
+      <div
+        key={item}
+        className="flex h-10 gap-2 rounded-md border border-slate-200 bg-white p-1.5"
+      >
+        <span className="h-full w-12 rounded bg-slate-200" />
+        <div className="flex-1 space-y-1.5 py-0.5">
+          <span className="block h-2 rounded bg-slate-200" />
+          <span className="block h-2 w-2/3 rounded bg-slate-200" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const getPlacementPreviewType = (placement) => {
+  if (placement?.category === "LISTING_BANNER") return "listing";
+  if (placement?.category === "SMALL_ADVERTISEMENT_SPACE") return "small";
+
+  return "homepage";
+};
+
+const PlacementCreativePreview = ({ device, imageUrl, placement }) => {
+  const previewType = getPlacementPreviewType(placement);
+  const dimensions = getDeviceDimensions(placement, device);
+  const deviceWidth =
+    device === "desktop"
+      ? "max-w-[760px]"
+      : device === "tablet"
+        ? "max-w-[520px]"
+        : "max-w-[330px]";
+
+  return (
+    <div className="flex justify-center">
+      <BrowserChrome className={`w-full ${deviceWidth}`}>
+        <div className="bg-slate-50 p-3">
+          {previewType === "homepage" ? (
+            <>
+              <ImageSlot
+                imageUrl={imageUrl}
+                alt={`${placement?.title || "Homepage"} advertisement`}
+                className="w-full"
+                dimensions={dimensions}
+              />
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <span className="h-14 rounded-md bg-slate-200" />
+                <span className="h-14 rounded-md bg-slate-200" />
+                <span className="h-14 rounded-md bg-slate-200" />
+              </div>
+            </>
+          ) : null}
+
+          {previewType === "listing" ? (
+            <>
+              <h4 className="mb-2 text-xs font-black text-slate-900">
+                Cars - 4,280 results
+              </h4>
+              <ImageSlot
+                imageUrl={imageUrl}
+                alt={`${placement?.title || "Listing"} advertisement`}
+                className="mb-2 w-full"
+                dimensions={dimensions}
+              />
+              <ListingRows />
+            </>
+          ) : null}
+
+          {previewType === "small" ? (
+            <>
+              <h4 className="mb-2 text-xs font-black text-slate-900">
+                Vehicle Details
+              </h4>
+              <div className="flex gap-2">
+                <div className="flex-1 space-y-2">
+                  <span className="block h-20 rounded-md bg-slate-200" />
+                  <span className="block h-7 rounded-md bg-slate-200" />
+                  <span className="block h-7 rounded-md bg-slate-200" />
+                </div>
+                <ImageSlot
+                  imageUrl={imageUrl}
+                  alt={`${placement?.title || "Small"} advertisement`}
+                  className="w-16 shrink-0"
+                  dimensions={dimensions}
+                />
+              </div>
+            </>
+          ) : null}
+        </div>
+      </BrowserChrome>
+    </div>
+  );
+};
 
 const CountryFlagMark = ({ countryIso }) => (
   <span
@@ -705,11 +832,16 @@ const FileUpload = ({
   return (
     <label className="flex min-h-[132px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-center hover:border-blue-300 hover:bg-blue-50/40">
       {previewUrl ? (
-        <img
-          src={previewUrl}
-          alt={`${label} preview`}
-          className="mb-3 h-16 w-28 rounded-xl object-cover ring-1 ring-slate-200"
-        />
+        <span
+          className="mb-3 flex w-full max-w-[220px] items-center justify-center overflow-hidden rounded-xl bg-white p-1 ring-1 ring-slate-200"
+          style={getAspectRatioStyleFromLabel(dimensionLabel)}
+        >
+          <img
+            src={previewUrl}
+            alt={`${label} preview`}
+            className="h-full w-full object-contain"
+          />
+        </span>
       ) : (
         <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-200 text-slate-500">
           <ImageIcon size={21} />
@@ -908,6 +1040,7 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
       ),
     ),
   );
+  const [previewDevice, setPreviewDevice] = useState("desktop");
 
   useEffect(() => {
     let active = true;
@@ -2037,12 +2170,12 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {[
               [
-                "Use high-resolution vehicle photos",
+                "Use high-resolution images",
                 "Minimum 150 DPI for crisp display",
               ],
               [
-                "Include the asking price clearly",
-                "Buyers decide faster when price is visible",
+                "Highlight your offer",
+                "Tell customers what you offer and why they should choose you",
               ],
               [
                 "Add a clear call-to-action",
@@ -2357,6 +2490,16 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
     }
 
     if (step === 4) {
+      const reviewSlot = isBundlePackage ? activeBundleSlot : null;
+      const reviewPlacement = reviewSlot
+        ? getPlacementMeta(reviewSlot.category)
+        : selectedPlacement;
+      const reviewImageUrl = reviewSlot
+        ? getObjectUrl(reviewSlot.creatives?.[previewDevice]) ||
+          reviewSlot.existingCreatives?.[previewDevice]?.url
+        : getObjectUrl(form.creatives[previewDevice]) ||
+          draft?.creatives?.[previewDevice]?.url;
+
       return (
         <div>
           <h2 className="text-xl font-black text-slate-950">
@@ -2476,17 +2619,46 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
             </div>
           ) : null}
           <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <h3 className="text-base font-black text-slate-950">
-              Live Placement Preview
-            </h3>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-base font-black text-slate-950">
+                Live Placement Preview
+              </h3>
+              <div className="rounded-xl bg-white p-1 text-xs font-bold text-slate-500 shadow-sm ring-1 ring-slate-200">
+                {devices.map((device) => {
+                  const Icon = device.icon;
+
+                  return (
+                    <button
+                      key={device.key}
+                      type="button"
+                      onClick={() => setPreviewDevice(device.key)}
+                      className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 ${
+                        previewDevice === device.key
+                          ? "bg-slate-950 text-white"
+                          : "text-slate-500"
+                      }`}
+                    >
+                      <Icon size={13} />
+                      {device.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <div className="mt-4">
-              <PlacementSketch placement={selectedPlacement} />
+              <PlacementCreativePreview
+                device={previewDevice}
+                imageUrl={reviewImageUrl}
+                placement={reviewPlacement}
+              />
             </div>
             <p className="mt-2 text-center text-xs font-medium text-slate-400">
               Showing{" "}
-              {isBundlePackage ? selectedBundle?.name : selectedPlacement.title}{" "}
-              preview
-              {isBundlePackage ? "" : ` - ${selectedPlacement.dimensions}`}
+              {isBundlePackage
+                ? reviewSlot?.categoryLabel || selectedBundle?.name
+                : selectedPlacement.title}{" "}
+              preview - {devices.find((device) => device.key === previewDevice)?.label}{" "}
+              {getDeviceDimensionLabel(reviewPlacement, previewDevice)}
             </p>
           </div>
         </div>
