@@ -65,6 +65,8 @@ export const dashboardApi = {
           daysTotal: dashboard?.subscription?.daysTotal ?? null,
           daysUsed: dashboard?.subscription?.daysUsed ?? null,
           offerReason: dashboard?.subscription?.offerReason ?? "",
+          cycleChangeNotification:
+            dashboard?.subscription?.cycleChangeNotification ?? null,
           limits: dashboard?.subscription?.limits || {},
         },
         featuredDealer: {

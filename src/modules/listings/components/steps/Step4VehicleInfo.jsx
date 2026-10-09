@@ -20,6 +20,9 @@ import { normalizePhoneContact, validatePhoneContact } from "../../utils/phoneNu
 import { useListingAttributeConfig } from "../../hooks/useListingAttributeConfig";
 
 const ELECTRIC_DEPENDENT_FIELDS = new Set(["engineCapacity", "numberOfCylinders"]);
+const OTHER_OPTION_VALUE = "__OTHER__";
+const otherInputClass =
+  "mt-3 h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:h-10";
 
 const isElectricFuel = (value) =>
   String(value || "").trim().toLowerCase() === "electric";
@@ -80,9 +83,20 @@ const Step4VehicleInfo = ({ useWizardHook = useBulkVehicleWizard }) => {
     const initial = {};
     visibleVehicleInfoFields.forEach((field) => {
       if (field.type === "brandSelect") {
-        initial[field.name] = existingInfo.brand?._id || existingInfo.brand || "";
+        initial[field.name] = existingInfo.brandOther
+          ? OTHER_OPTION_VALUE
+          : existingInfo.brand?._id || existingInfo.brand || "";
+        initial.brandOther = existingInfo.brandOther || "";
       } else if (field.type === "modelSelect") {
-        initial[field.name] = existingInfo.catalogModel?._id || existingInfo.catalogModel || "";
+        initial[field.name] = existingInfo.catalogModelOther
+          ? OTHER_OPTION_VALUE
+          : existingInfo.catalogModel?._id || existingInfo.catalogModel || "";
+        initial.catalogModelOther = existingInfo.catalogModelOther || "";
+      } else if (field.type === "variantSelect") {
+        initial[field.name] = existingInfo.variantIsOther
+          ? OTHER_OPTION_VALUE
+          : existingInfo[field.name] ?? "";
+        initial.variantOther = existingInfo.variantIsOther ? existingInfo[field.name] || "" : "";
       } else if (field.type === "toggleSwitch") {
         initial[field.name] = existingInfo[field.name] ?? false;
       } else if (field.name === "sellerName") {
@@ -138,8 +152,16 @@ const Step4VehicleInfo = ({ useWizardHook = useBulkVehicleWizard }) => {
       if (fieldName === "brand") {
         next.catalogModel = "";
         next.variantTrim = "";
+        next.catalogModelOther = "";
+        next.variantOther = "";
+        if (value !== OTHER_OPTION_VALUE) next.brandOther = "";
       }
-      if (fieldName === "catalogModel") next.variantTrim = "";
+      if (fieldName === "catalogModel") {
+        next.variantTrim = "";
+        next.variantOther = "";
+        if (value !== OTHER_OPTION_VALUE) next.catalogModelOther = "";
+      }
+      if (fieldName === "variantTrim" && value !== OTHER_OPTION_VALUE) next.variantOther = "";
       if (fieldName === "mobileNumber" && previous.whatsappAvailable) next.whatsappNumber = value;
       if (fieldName === "whatsappAvailable" && value) next.whatsappNumber = previous.mobileNumber || "";
       if (fieldName === "bodyType" && String(value).toLowerCase() !== "other") next.caravanTypeOther = "";
@@ -149,6 +171,9 @@ const Step4VehicleInfo = ({ useWizardHook = useBulkVehicleWizard }) => {
     setErrors((previous) => ({
       ...previous,
       [fieldName]: "",
+      ...(fieldName === "brand" ? { brandOther: "", catalogModel: "", catalogModelOther: "", variantTrim: "", variantOther: "" } : {}),
+      ...(fieldName === "catalogModel" ? { catalogModelOther: "", variantTrim: "", variantOther: "" } : {}),
+      ...(fieldName === "variantTrim" ? { variantOther: "" } : {}),
       ...(fieldName === "mobileNumber" || fieldName === "whatsappAvailable" ? { whatsappNumber: "" } : {}),
       ...(fieldName === "bodyType" ? { caravanTypeOther: "" } : {}),
       ...(fieldName === "mileageNotApplicable" ? { mileage: "" } : {}),
@@ -177,12 +202,26 @@ const Step4VehicleInfo = ({ useWizardHook = useBulkVehicleWizard }) => {
     if (form.vinNumber && String(form.vinNumber).trim().length !== 17) {
       nextErrors.vinNumber = "VIN number must be exactly 17 characters";
     }
+    if (form.brand === OTHER_OPTION_VALUE && !String(form.brandOther || "").trim()) {
+      nextErrors.brandOther = "Brand name is required";
+    }
+    if (form.catalogModel === OTHER_OPTION_VALUE && !String(form.catalogModelOther || "").trim()) {
+      nextErrors.catalogModelOther = "Model name is required";
+    }
+    if (form.variantTrim === OTHER_OPTION_VALUE && !String(form.variantOther || "").trim()) {
+      nextErrors.variantOther = "Variant name is required";
+    }
 
     setErrors(nextErrors);
 
     scrollFirstWizardError(
       fieldRefs,
-      activeVehicleInfoFields.map((field) => field.name),
+      [
+        ...activeVehicleInfoFields.map((field) => field.name),
+        "brandOther",
+        "catalogModelOther",
+        "variantOther",
+      ],
       nextErrors
     );
 
@@ -205,6 +244,26 @@ const Step4VehicleInfo = ({ useWizardHook = useBulkVehicleWizard }) => {
     });
 
     if (payload.mileageNotApplicable) payload.mileage = null;
+    if (payload.brand === OTHER_OPTION_VALUE) {
+      payload.brand = null;
+      payload.brandOther = String(payload.brandOther || "").trim();
+    } else {
+      payload.brandOther = "";
+    }
+    if (payload.catalogModel === OTHER_OPTION_VALUE) {
+      payload.catalogModel = null;
+      payload.catalogModelOther = String(payload.catalogModelOther || "").trim();
+    } else {
+      payload.catalogModelOther = "";
+    }
+    if (payload.variantTrim === OTHER_OPTION_VALUE) {
+      payload.variantTrim = String(payload.variantOther || "").trim();
+      payload.variantIsOther = true;
+    } else {
+      payload.variantOther = "";
+      payload.variantIsOther = false;
+    }
+    delete payload.variantOther;
     if (payload.manufacturingYear) payload.manufacturingYear = Number(payload.manufacturingYear);
     if (payload.mileage !== undefined && payload.mileage !== "" && payload.mileage !== null) payload.mileage = Number(payload.mileage);
     if (payload.vinNumber) payload.vinNumber = String(payload.vinNumber).trim().toUpperCase();
@@ -250,16 +309,51 @@ const Step4VehicleInfo = ({ useWizardHook = useBulkVehicleWizard }) => {
                   ) : null}
                 </>
               ) : (
-                <FormField label={field.label} required={isRequiredField(field)} error={errors[field.name]}>
-                  <DynamicField
-                    field={renderField}
-                    value={form[field.name]}
-                    onChange={(value) => handleChange(field.name, value)}
-                    error={errors[field.name]}
-                    form={form}
-                    categoryId={categoryId}
-                  />
-                </FormField>
+                <>
+                  <FormField label={field.label} required={isRequiredField(field)} error={errors[field.name]}>
+                    <DynamicField
+                      field={renderField}
+                      value={form[field.name]}
+                      onChange={(value) => handleChange(field.name, value)}
+                      error={errors[field.name]}
+                      form={form}
+                      categoryId={categoryId}
+                    />
+                  </FormField>
+                  {field.name === "brand" && form.brand === OTHER_OPTION_VALUE ? (
+                    <div ref={(node) => { fieldRefs.current.brandOther = node; }}>
+                      <input
+                        value={form.brandOther || ""}
+                        onChange={(event) => handleChange("brandOther", event.target.value)}
+                        placeholder="Enter brand name"
+                        className={`${otherInputClass} ${errors.brandOther ? "border-red-400 ring-2 ring-red-400 ring-offset-1" : ""}`}
+                      />
+                      {errors.brandOther ? <p className="mt-1 text-xs font-medium text-red-600">{errors.brandOther}</p> : null}
+                    </div>
+                  ) : null}
+                  {field.name === "catalogModel" && form.catalogModel === OTHER_OPTION_VALUE ? (
+                    <div ref={(node) => { fieldRefs.current.catalogModelOther = node; }}>
+                      <input
+                        value={form.catalogModelOther || ""}
+                        onChange={(event) => handleChange("catalogModelOther", event.target.value)}
+                        placeholder="Enter model name"
+                        className={`${otherInputClass} ${errors.catalogModelOther ? "border-red-400 ring-2 ring-red-400 ring-offset-1" : ""}`}
+                      />
+                      {errors.catalogModelOther ? <p className="mt-1 text-xs font-medium text-red-600">{errors.catalogModelOther}</p> : null}
+                    </div>
+                  ) : null}
+                  {field.name === "variantTrim" && form.variantTrim === OTHER_OPTION_VALUE ? (
+                    <div ref={(node) => { fieldRefs.current.variantOther = node; }}>
+                      <input
+                        value={form.variantOther || ""}
+                        onChange={(event) => handleChange("variantOther", event.target.value)}
+                        placeholder="Enter variant name"
+                        className={`${otherInputClass} ${errors.variantOther ? "border-red-400 ring-2 ring-red-400 ring-offset-1" : ""}`}
+                      />
+                      {errors.variantOther ? <p className="mt-1 text-xs font-medium text-red-600">{errors.variantOther}</p> : null}
+                    </div>
+                  ) : null}
+                </>
               )}
             </div>
           );

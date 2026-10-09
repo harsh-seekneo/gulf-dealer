@@ -17,6 +17,7 @@ const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: currentYear - 1979 }, (_, i) => currentYear - i);
 const baseInputClass =
   "h-11 w-full min-w-0 rounded-lg border bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:h-10";
+const OTHER_OPTION_VALUE = "__OTHER__";
 const dynamicFacetFields = new Set([
   "bodyType",
   "equipmentType",
@@ -57,7 +58,14 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
   }, [field.type, categoryId]);
 
   useEffect(() => {
-    if (field.type !== "modelSelect" || !categoryId || !form?.brand) return;
+    if (
+      field.type !== "modelSelect" ||
+      !categoryId ||
+      !form?.brand ||
+      form?.brand === OTHER_OPTION_VALUE
+    ) {
+      return;
+    }
 
     let isMounted = true;
 
@@ -79,7 +87,16 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
   }, [field.type, categoryId, form?.brand]);
 
   useEffect(() => {
-    if (field.type !== "variantSelect" || !categoryId || !form?.brand || !form?.catalogModel) return;
+    if (
+      field.type !== "variantSelect" ||
+      !categoryId ||
+      !form?.brand ||
+      !form?.catalogModel ||
+      form?.brand === OTHER_OPTION_VALUE ||
+      form?.catalogModel === OTHER_OPTION_VALUE
+    ) {
+      return;
+    }
 
     let isMounted = true;
 
@@ -330,6 +347,7 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
               {brand.name}
             </option>
           ))}
+          <option value={OTHER_OPTION_VALUE}>Other</option>
         </select>
       );
 
@@ -347,6 +365,7 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
               {model.name}
             </option>
           ))}
+          <option value={OTHER_OPTION_VALUE}>Other</option>
         </select>
       );
 
@@ -408,6 +427,7 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
               {variant.name}
             </option>
           ))}
+          <option value={OTHER_OPTION_VALUE}>Other</option>
         </select>
       );
 

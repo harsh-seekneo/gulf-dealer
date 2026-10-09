@@ -20,6 +20,7 @@ import {
   MegaphoneIcon,
   RefreshCcw,
   ChevronDown,
+  AlertCircle,
 } from "lucide-react";
 
 import StatCard from "../../../components/ui/StatCard";
@@ -87,6 +88,13 @@ const getStatusClasses = (active) =>
   active
     ? "border-emerald-200 bg-emerald-50 text-emerald-700"
     : "border-slate-200 bg-slate-50 text-slate-500";
+
+const isCycleChangeNoticeActive = (notice, nowValue = Date.now()) => {
+  if (!notice?.visible || !notice?.expiresAt) return false;
+
+  const expiresAt = new Date(notice.expiresAt).getTime();
+  return Number.isFinite(expiresAt) && expiresAt > nowValue;
+};
 
 const UsageLimit = ({ label, used = 0, limit }) => {
   const numericUsed = Number(used || 0);
@@ -462,6 +470,8 @@ export default function DashboardPage() {
 
   const subscriptionExpiryLabel = formatExpiryLabel(subscription?.endDate, now);
   const featuredDealerExpiryLabel = formatExpiryLabel(featuredDealer?.endDate, now);
+  const cycleChangeNotice = subscription?.cycleChangeNotification;
+  const showCycleChangeNotice = isCycleChangeNoticeActive(cycleChangeNotice, now);
 
   return (
     <div className="flex flex-col gap-4">
@@ -543,14 +553,33 @@ export default function DashboardPage() {
               ) : null}
             </div>
 
-            <button
-              type="button"
-              onClick={handleRenewPlan}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
-            >
-              <RotateCcw size={16} />
-              Renew Plan
-            </button>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <button
+                type="button"
+                onClick={handleRenewPlan}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
+              >
+                <RotateCcw size={16} />
+                Renew Plan
+              </button>
+              {showCycleChangeNotice ? (
+                <div
+                  role="status"
+                  className="flex max-w-sm items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                >
+                  <AlertCircle className="mt-0.5 shrink-0 text-amber-600" size={16} />
+                  <div>
+                    <p className="font-extrabold">
+                      {cycleChangeNotice?.title || "Monthly cycle changed"}
+                    </p>
+                    <p className="mt-0.5 leading-5">
+                      {cycleChangeNotice?.message ||
+                        "Please renew your listings and advertisements."}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <UsageLimit

@@ -17,7 +17,7 @@ import { advertisementsApi } from "../api/advertisementsApi";
 
 const categoryConfig = {
   HOME_PAGE_BANNER: {
-    title: "Main Banner",
+    title: "Home PageBanner",
     subtitle: "Main placement with maximum homepage visibility",
     dimensions: "1440 x 300 px",
     deviceDimensions: {

@@ -33,7 +33,7 @@ import { advertisementsApi } from "../api/advertisementsApi";
 import { USER_APP_URL } from "../../../config/env";
 
 const categories = {
-  HOME_PAGE_BANNER: "Main Banner",
+  HOME_PAGE_BANNER: "Home PageBanner",
   LISTING_BANNER: "Listing Page Banner",
   SMALL_ADVERTISEMENT_SPACE: "Small Ad Space",
 };
@@ -210,7 +210,7 @@ const wizardSteps = [
 const placementMeta = [
   {
     category: "HOME_PAGE_BANNER",
-    title: "Main Banner",
+    title: "Home PageBanner",
     label: "Highest Visibility",
     labelClass: "bg-blue-50 text-blue-600",
     description:
@@ -2248,9 +2248,7 @@ function CreateAdModal({ draft, onClose, onCreated, planAdBenefits = {} }) {
                       }
                     >
                       {slot.categoryLabel} -{" "}
-                      {missing.length
-                        ? `${missing.length} missing`
-                        : "Complete"}
+                      {missing.length ? "Pending" : "Complete"}
                     </span>
                   </button>
                 );
