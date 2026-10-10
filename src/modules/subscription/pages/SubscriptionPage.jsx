@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import CurrentPlanBanner from "../components/CurrentPlanBanner";
-import PlanCard from "../components/PlanCard";
+import BusinessShowcasePlans from "../components/BusinessShowcasePlans";
 import ComparePlansTable from "../components/ComparePlansTable";
 import { subscriptionApi } from "../api/subscriptionApi";
 import { getDealerStatusApi } from "../../dealer/api/dealerApi";
@@ -997,8 +997,14 @@ export default function SubscriptionPage() {
     );
   }
 
+  const currentPlanId =
+    currentPlan?.plan?._id ||
+    currentPlan?.planId ||
+    currentPlan?.plan ||
+    "";
+
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-2 pb-10">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-3 pb-10 sm:px-4 lg:gap-10">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-4xl font-bold text-slate-900">
@@ -1020,29 +1026,20 @@ export default function SubscriptionPage() {
 
       <CurrentPlanBanner plan={currentPlan} />
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        {plans.map((plan) => {
-          const currentPlanId =
-            currentPlan?.plan?._id ||
-            currentPlan?.planId ||
-            currentPlan?.plan ||
-            "";
-
-          const isCurrent = currentPlanId === plan._id;
-
-          const actionLabel = getPlanActionLabel({ plan, currentPlan });
-
-          return (
-            <PlanCard
-              key={plan._id}
-              plan={plan}
-              isCurrent={isCurrent}
-              actionLabel={actionLabel}
-              onSelect={handleSelectPlan}
-            />
-          );
-        })}
-      </div>
+      <BusinessShowcasePlans
+        plans={plans}
+        activePlanIds={currentPlanId ? [currentPlanId] : []}
+        selectedPlanId={currentPlanId}
+        onSelectPlan={handleSelectPlan}
+        selectedLabel={
+          currentPlanId
+            ? getPlanActionLabel({
+                plan: plans.find((plan) => String(plan._id) === String(currentPlanId)),
+                currentPlan,
+              })
+            : "Selected"
+        }
+      />
 
       {isLoadingRenewalReview && (
         <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm font-semibold text-slate-600">
