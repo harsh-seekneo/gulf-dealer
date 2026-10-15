@@ -14,6 +14,7 @@ import { getDealerStatusApi } from "../../dealer/api/dealerApi";
 import { isDealerUser } from "../utils/dealerAccess";
 import { removeAccessToken } from "../../../utils/tokenStorage";
 import { AuthContext } from "./authContextCore";
+import { USER_APP_URL } from "../../../config/env";
 
 const SESSION_CHECK_INTERVAL_MS = 15000;
 
@@ -59,7 +60,12 @@ export function AuthProvider({ children }) {
     try {
       await logoutUserApi();
     } finally {
+      // Keep the route guard from sending logout back through the login page.
+      setIsLoading(true);
       clearSession();
+      const logoutUrl = new URL(USER_APP_URL);
+      logoutUrl.searchParams.set("dealerLogout", "1");
+      window.location.replace(logoutUrl.toString());
     }
   }, [clearSession]);
 

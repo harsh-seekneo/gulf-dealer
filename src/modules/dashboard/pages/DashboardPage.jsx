@@ -638,36 +638,41 @@ export default function DashboardPage() {
       
 
       {/* Statistics */}
-      <div className="grid grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
+      <div className="grid grid-cols-5 divide-x divide-slate-100 rounded-xl bg-white py-3 shadow-sm sm:py-4 lg:py-5">
   <StatCard
     icon={Car}
     value={stats.activeListings}
     label="Active Listings"
-    iconBg="bg-blue-100 text-blue-600"
+    shortLabel="Active"
+    iconColor="text-blue-600"
   />
   <StatCard
     icon={ClipboardList}
     value={stats.draftListings}
     label="Draft Listings"
-    iconBg="bg-amber-100 text-amber-600"
+    shortLabel="Draft"
+    iconColor="text-amber-500"
   />
   <StatCard
     icon={BadgeCheck}
     value={stats.pendingApprovalListings}
     label="Pending Approval"
-    iconBg="bg-purple-100 text-purple-600"
+    shortLabel="Pending"
+    iconColor="text-purple-600"
   />
   <StatCard
     icon={Eye}
     value={(stats.totalViews ?? 0).toLocaleString()}
     label="Total Views"
-    iconBg="bg-blue-100 text-blue-600"
+    shortLabel="Views"
+    iconColor="text-blue-600"
   />
   <StatCard
     icon={MessageSquare}
     value={stats.leadsReceived}
     label="Leads Received"
-    iconBg="bg-blue-100 text-blue-600"
+    shortLabel="Leads"
+    iconColor="text-blue-600"
   />
 </div>
 
