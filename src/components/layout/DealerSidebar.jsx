@@ -217,9 +217,13 @@ export default function DealerSidebar({ isOpen, onClose }) {
             className="flex items-center gap-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             aria-label="Go to GulfInCart home"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 font-bold">
-              G
-            </div>
+            <img
+              src="/logo-for-favicon.png"
+              alt="GulfInCart Logo"
+              width={36}
+              height={36}
+              className="h-9 w-9 shrink-0 rounded-lg object-contain"
+            />
 
             <div>
               <p className="text-sm font-semibold">GulfInCart</p>
