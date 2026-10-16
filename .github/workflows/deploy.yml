@@ -1,0 +1,195 @@
+
+name: Deploy Dealer
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gulf-dealer-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      APP: gulf-dealer
+      SERVICE: dealer
+      APP_DIR: /opt/gulf-dealer
+      IMAGE_TAG: ${{ github.sha }}
+
+      # Build-time environment variables
+      VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+      VITE_USER_APP_URL: ${{ secrets.VITE_USER_APP_URL }}
+      VITE_ASSET_URL: ${{ secrets.VITE_ASSET_URL }}
+
+      # Add additional dealer VITE_* values here.
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build React application
+        run: npm run build
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            -t "$APP:$IMAGE_TAG" .
+
+      - name: Export Docker image
+        run: |
+          docker save "$APP:$IMAGE_TAG" | gzip > image.tar.gz
+          ls -lh image.tar.gz
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          SSH_HOST: ${{ secrets.EC2_HOST }}
+          SSH_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          ssh -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            deploy@"$SSH_HOST" "echo SSH_OK"
+
+      - name: Upload release
+        env:
+          SSH_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          ssh -o StrictHostKeyChecking=yes \
+            deploy@"$SSH_HOST" \
+            "mkdir -p '$APP_DIR/releases/$IMAGE_TAG'"
+
+          scp -o StrictHostKeyChecking=yes \
+            image.tar.gz \
+            deploy@"$SSH_HOST":"$APP_DIR/releases/$IMAGE_TAG/image.tar.gz"
+
+          scp -o StrictHostKeyChecking=yes \
+            docker-compose.yml \
+            deploy@"$SSH_HOST":"$APP_DIR/releases/$IMAGE_TAG/docker-compose.yml"
+
+      - name: Deploy and verify
+        env:
+          SSH_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          ssh -o StrictHostKeyChecking=yes \
+            deploy@"$SSH_HOST" \
+            "APP='$APP' SERVICE='$SERVICE' APP_DIR='$APP_DIR' IMAGE_TAG='$IMAGE_TAG' bash -se" <<'REMOTE'
+          set -Eeuo pipefail
+
+          cd "$APP_DIR"
+
+          RELEASE="$APP_DIR/releases/$IMAGE_TAG"
+          PREVIOUS=""
+
+          if [ -f .current-tag ]; then
+            PREVIOUS="$(cat .current-tag)"
+          fi
+
+          echo "Loading image..."
+          gunzip -c "$RELEASE/image.tar.gz" | docker load
+
+          cp "$RELEASE/docker-compose.yml" docker-compose.yml
+
+          rollback() {
+            echo "Deployment failed. Attempting rollback..."
+
+            if [ -n "$PREVIOUS" ] &&
+               docker image inspect "$APP:$PREVIOUS" >/dev/null 2>&1; then
+              IMAGE_TAG="$PREVIOUS" \
+                docker compose -f docker-compose.yml up \
+                -d --no-deps --force-recreate "$SERVICE"
+
+              echo "Rollback attempted: $PREVIOUS"
+            else
+              echo "No previous image available for rollback."
+            fi
+          }
+
+          trap rollback ERR
+
+          echo "Deploying $APP:$IMAGE_TAG"
+
+          IMAGE_TAG="$IMAGE_TAG" \
+            docker compose -f docker-compose.yml up \
+            -d --no-deps --force-recreate "$SERVICE"
+
+          CID="$(docker compose -f docker-compose.yml ps -q "$SERVICE")"
+
+          echo "Waiting for health check..."
+
+          HEALTHY=false
+
+          for i in $(seq 1 30); do
+            STATUS="$(docker inspect \
+              --format '{{.State.Health.Status}}' "$CID" 2>/dev/null || true)"
+
+            if [ "$STATUS" = "healthy" ]; then
+              HEALTHY=true
+              break
+            fi
+
+            if [ "$STATUS" = "unhealthy" ]; then
+              break
+            fi
+
+            sleep 2
+          done
+
+          if [ "$HEALTHY" != "true" ]; then
+            docker logs --tail 80 "$CID" || true
+            echo "Health check failed"
+            false
+          fi
+
+          printf '%s\n' "$IMAGE_TAG" > .current-tag
+          trap - ERR
+
+          echo "Deployment successful: $IMAGE_TAG"
+
+          # Cleanup only dealer releases and images.
+          ls -1dt "$APP_DIR"/releases/*/ 2>/dev/null |
+            tail -n +4 |
+            while IFS= read -r old; do
+              old_tag="$(basename "$old")"
+
+              if [ "$old_tag" != "$IMAGE_TAG" ] &&
+                 [ "$old_tag" != "$PREVIOUS" ]; then
+                docker image rm "$APP:$old_tag" 2>/dev/null || true
+                rm -rf -- "$old"
+              fi
+            done
+
+          rm -f "$RELEASE/image.tar.gz"
+
+          docker compose -f docker-compose.yml ps
+          REMOTE
+
+      - name: Cleanup runner
+        if: always()
+        run: rm -f image.tar.gz

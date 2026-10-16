@@ -1,0 +1,23 @@
+name: gulf-dealer
+
+services:
+  dealer:
+    image: gulf-dealer:${IMAGE_TAG:-initial}
+    container_name: gulf-dealer
+    restart: unless-stopped
+
+    ports:
+      - "127.0.0.1:8082:80"
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
