@@ -1,3 +1,5 @@
+import { downloadInvoicePdf } from "../../../utils/downloadInvoice";
+
 import { ArrowLeft, Download, Printer } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -17,76 +19,26 @@ const formatDate = (value) =>
 const formatMoney = (value, currency = "BHD") =>
   `${currency} ${Number(value || 0).toFixed(3)}`;
 
-const escapeHtml = (value = "") =>
-  String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-
-const buildInvoiceHtml = (invoice) => `
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>${escapeHtml(invoice.invoiceNumber)}</title>
-    <style>
-      body { font-family: Arial, sans-serif; color: #0f172a; margin: 32px; }
-      .top { display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 20px; }
-      h1 { margin: 6px 0 0; font-size: 28px; }
-      .muted { color: #64748b; font-size: 13px; }
-      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 24px 0; }
-      .box { border: 1px solid #e2e8f0; padding: 16px; border-radius: 8px; }
-      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-      th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
-      th { background: #f8fafc; font-size: 12px; text-transform: uppercase; color: #64748b; }
-      .right { text-align: right; }
-      .total { margin-left: auto; width: 280px; margin-top: 20px; font-size: 15px; }
-      .total div { display: flex; justify-content: space-between; padding: 8px 0; }
-      .strong { font-weight: 800; }
-    </style>
-  </head>
-  <body>
-    <div class="top">
-      <div><div class="muted">GulfInCart</div><h1>${escapeHtml(invoice.title)}</h1><div class="muted">${escapeHtml(invoice.invoiceNumber)}</div></div>
-      <div class="right"><div class="strong">${escapeHtml(invoice.status)}</div><div class="muted">Paid on ${escapeHtml(formatDate(invoice.paidAt))}</div></div>
-    </div>
-    <div class="grid">
-      <div class="box"><div class="muted">Billed To</div><div class="strong">${escapeHtml(invoice.billedTo?.name || "-")}</div><div>${escapeHtml(invoice.billedTo?.email || "")}</div></div>
-      <div class="box"><div class="muted">Payment ID</div><div class="strong">${escapeHtml(invoice.paymentId || "-")}</div><div>${escapeHtml(invoice.paymentMethod || "")}</div></div>
-    </div>
-    <table>
-      <thead><tr><th>Description</th><th>Reference</th><th class="right">Amount</th></tr></thead>
-      <tbody>${(invoice.lineItems || [])
-        .map(
-          (item) =>
-            `<tr><td>${escapeHtml(item.description)}</td><td>${escapeHtml(item.reference || "-")}</td><td class="right">${escapeHtml(formatMoney(item.amount, invoice.currency))}</td></tr>`,
-        )
-        .join("")}</tbody>
-    </table>
-    <div class="total">
-      <div><span>Wallet</span><span>${escapeHtml(formatMoney(invoice.walletAmount, invoice.currency))}</span></div>
-      <div><span>Online Paid</span><span>${escapeHtml(formatMoney(invoice.onlineAmount, invoice.currency))}</span></div>
-      <div class="strong"><span>Total</span><span>${escapeHtml(formatMoney(invoice.total, invoice.currency))}</span></div>
-    </div>
-  </body>
-</html>`;
-
-const downloadInvoice = (invoice) => {
-  const blob = new Blob([buildInvoiceHtml(invoice)], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${invoice.invoiceNumber || "invoice"}.html`;
-  link.click();
-  URL.revokeObjectURL(url);
-};
-
 export default function InvoicePage() {
   const { paymentId } = useParams();
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
+  const handleDownload = async (preview = false) => {
+    if (isDownloading) return;
+    setIsDownloading(true);
+    setDownloadError("");
+    try {
+      await downloadInvoicePdf(`/payments/${paymentId}/invoice/download`, invoice.invoiceNumber, preview);
+    } catch (error) {
+      setDownloadError(error.message);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -119,17 +71,18 @@ export default function InvoicePage() {
           Back
         </Link>
         <div className="flex gap-2">
-          <button type="button" onClick={() => downloadInvoice(invoice)} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">
+          <button type="button" disabled={isDownloading} onClick={() => handleDownload()} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">
             <Download size={16} />
             Download Invoice
           </button>
-          <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600">
+          <button type="button" disabled={isDownloading} onClick={() => handleDownload(true)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600">
             <Printer size={16} />
             Print / Save PDF
           </button>
         </div>
       </div>
 
+      {downloadError && <p role="alert" className="no-print mb-4 text-sm text-red-600">{downloadError}</p>}
       <section className="invoice-document rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-5 border-b border-slate-200 pb-6">
           <div>
@@ -177,6 +130,8 @@ export default function InvoicePage() {
         <div className="ml-auto w-full max-w-sm space-y-2 text-sm">
           <div className="flex justify-between text-slate-500"><span>Wallet</span><span>{formatMoney(invoice.walletAmount, invoice.currency)}</span></div>
           <div className="flex justify-between text-slate-500"><span>Online Paid</span><span>{formatMoney(invoice.onlineAmount, invoice.currency)}</span></div>
+          {invoice.discount > 0 && <div className="flex justify-between text-slate-500"><span>Discount</span><span>- {formatMoney(invoice.discount, invoice.currency)}</span></div>}
+          {invoice.vatAmount > 0 && <div className="flex justify-between text-slate-500"><span>{invoice.vatRate == null ? "VAT" : `VAT (${invoice.vatRate}%)`}</span><span>{formatMoney(invoice.vatAmount, invoice.currency)}</span></div>}
           <div className="flex justify-between border-t border-slate-200 pt-3 text-lg font-black text-slate-950"><span>Total</span><span>{formatMoney(invoice.total, invoice.currency)}</span></div>
         </div>
       </section>

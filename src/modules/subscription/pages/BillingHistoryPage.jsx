@@ -1,3 +1,4 @@
+import { downloadInvoicePdf } from "../../../utils/downloadInvoice";
 import { Download, FileText, Printer } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -27,14 +28,13 @@ const statusClass = (status = "") => {
   return "bg-slate-100 text-slate-700";
 };
 
-const printInvoice = () => {
-  window.print();
-};
 
 export default function BillingHistoryPage() {
   const [searchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [downloadError, setDownloadError] = useState("");
+  const [isDownloading, setIsDownloading] = useState(false);
   const selectedId = searchParams.get("invoice");
 
   useEffect(() => {
@@ -59,6 +59,19 @@ export default function BillingHistoryPage() {
     return items.find((item) => String(item._id) === String(selectedId)) || items[0];
   }, [items, selectedId]);
 
+  const handleDownload = async (preview = false) => {
+    if (!selectedInvoice || isDownloading) return;
+    setIsDownloading(true);
+    setDownloadError("");
+    try {
+      await downloadInvoicePdf(`/payments/dealer-subscriptions/${selectedInvoice._id}/invoice/download`, selectedInvoice.invoiceNumber, preview);
+    } catch (error) {
+      setDownloadError(error.message);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   if (loading) {
     return <PageLoader />;
   }
@@ -81,6 +94,7 @@ export default function BillingHistoryPage() {
         </Link>
       </div>
 
+      {downloadError && <p role="alert" className="no-print text-sm text-red-600">{downloadError}</p>}
       {!items.length ? (
         <div className="rounded-xl border border-slate-200 bg-white p-8 text-sm text-slate-500">
           No billing records found.
@@ -141,7 +155,7 @@ export default function BillingHistoryPage() {
               <div className="no-print mb-4 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={printInvoice}
+                  disabled={isDownloading} onClick={() => handleDownload()}
                   className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800"
                 >
                   <Download size={16} />
@@ -149,7 +163,7 @@ export default function BillingHistoryPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={printInvoice}
+                  disabled={isDownloading} onClick={() => handleDownload(true)}
                   className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"
                 >
                   <Printer size={16} />
