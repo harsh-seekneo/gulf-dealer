@@ -112,6 +112,8 @@ export default function InvoicePage() {
               <tr>
                 <th className="px-4 py-3 font-black">Description</th>
                 <th className="px-4 py-3 font-black">Reference</th>
+                {invoice.meta?.bundleQuantity > 0 && <th className="px-4 py-3 text-right font-black">Qty</th>}
+                {invoice.meta?.bundleQuantity > 0 && <th className="px-4 py-3 text-right font-black">Unit Price</th>}
                 <th className="px-4 py-3 text-right font-black">Amount</th>
               </tr>
             </thead>
@@ -120,6 +122,8 @@ export default function InvoicePage() {
                 <tr key={`${item.description}-${index}`} className="border-b border-slate-100">
                   <td className="px-4 py-4 font-bold text-slate-950">{item.description}</td>
                   <td className="px-4 py-4 text-slate-500">{item.reference || "-"}</td>
+                  {invoice.meta?.bundleQuantity > 0 && <td className="px-4 py-4 text-right text-slate-500">{item.quantity}</td>}
+                  {invoice.meta?.bundleQuantity > 0 && <td className="px-4 py-4 text-right text-slate-500">{formatMoney(item.amount / item.quantity, invoice.currency)}</td>}
                   <td className="px-4 py-4 text-right font-black text-slate-950">{formatMoney(item.amount, invoice.currency)}</td>
                 </tr>
               ))}
@@ -128,6 +132,7 @@ export default function InvoicePage() {
         </div>
 
         <div className="ml-auto w-full max-w-sm space-y-2 text-sm">
+          {invoice.meta?.bundleQuantity > 0 && <div className="flex justify-between text-slate-500"><span>Subtotal</span><span>{formatMoney(invoice.subtotal, invoice.currency)}</span></div>}
           <div className="flex justify-between text-slate-500"><span>Wallet</span><span>{formatMoney(invoice.walletAmount, invoice.currency)}</span></div>
           <div className="flex justify-between text-slate-500"><span>Online Paid</span><span>{formatMoney(invoice.onlineAmount, invoice.currency)}</span></div>
           {invoice.discount > 0 && <div className="flex justify-between text-slate-500"><span>Discount</span><span>- {formatMoney(invoice.discount, invoice.currency)}</span></div>}
