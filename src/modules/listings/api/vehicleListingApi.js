@@ -2,6 +2,11 @@ import apiClient from "../../../services/apiClient";
 import axios from "axios";
 
 const BASE_URL = "/vehicle-listings";
+
+export const updateListingPriceApi = async (listingId, payload) => {
+  const response = await apiClient.patch(`${BASE_URL}/${listingId}/price`, payload);
+  return response.data.data;
+};
 const VIDEO_PART_CONCURRENCY = 3;
 const VIDEO_PART_RETRY_LIMIT = 3;
 const DEFAULT_VIDEO_PART_SIZE = 8 * 1024 * 1024;

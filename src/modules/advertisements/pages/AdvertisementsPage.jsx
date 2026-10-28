@@ -31,6 +31,7 @@ import {
 import { profileApi } from "../../profile/api/profileApi";
 import { advertisementsApi } from "../api/advertisementsApi";
 import { USER_APP_URL } from "../../../config/env";
+import { getUiAssetUrl } from "../../../utils/uiAssets";
 
 const categories = {
   HOME_PAGE_BANNER: "Home PageBanner",
@@ -222,7 +223,7 @@ const placementMeta = [
       mobile: { width: 816, height: 300 },
     },
     previewImageUrl:
-      "https://gulfincart-dev.s3.ap-south-1.amazonaws.com/ui/ads-form/homepage-banner-preview.png",
+      getUiAssetUrl("ui/ads-form/homepage-banner-preview.webp"),
   },
   {
     category: "LISTING_BANNER",
@@ -238,7 +239,7 @@ const placementMeta = [
       mobile: { width: 408, height: 130 },
     },
     previewImageUrl:
-      "https://gulfincart-dev.s3.ap-south-1.amazonaws.com/ui/ads-form/listingpage-banner-preview.png",
+      getUiAssetUrl("ui/ads-form/listingpage-banner-preview.webp"),
   },
   {
     category: "SMALL_ADVERTISEMENT_SPACE",
@@ -254,7 +255,7 @@ const placementMeta = [
       mobile: { width: 160, height: 227 },
     },
     previewImageUrl:
-      "https://gulfincart-dev.s3.ap-south-1.amazonaws.com/ui/ads-form/small-ad-sapace-preview.png",
+      getUiAssetUrl("ui/ads-form/small-ad-space-preview.webp"),
   },
 ];
 

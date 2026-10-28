@@ -19,10 +19,10 @@ import {
   Store,
   Tag,
   Target,
-  Trophy,
   Video,
   X,
 } from "lucide-react";
+import { GoTrophy } from "react-icons/go";
 import { getDealerPlanFeatures } from "../../dealer/utils/dealerPlanFeatures";
 import PlanPriceText from "./PlanPriceText";
 import {
@@ -49,7 +49,7 @@ const PLAN_THEMES = [
     color: "#0d5ef8",
     light: "#eff5ff",
     soft: "#dce9ff",
-    headerIcon: Trophy,
+    headerIcon: GoTrophy,
     title: "PRESTIGE PAGE",
     tagline: "Grow your brand and attract more customers.",
     insight: "More visibility. More exposure. More enquiries for your business.",

@@ -13,8 +13,9 @@ import {
 } from "../../api/catalogApi";
 import { GULF_COUNTRY_NAMES } from "../../config/gulfLocations.config";
 
-const currentYear = new Date().getFullYear();
-const yearOptions = Array.from({ length: currentYear - 1979 }, (_, i) => currentYear - i);
+// Model years include next year's vehicles, matching server validation.
+const maxModelYear = new Date().getFullYear() + 1;
+const yearOptions = Array.from({ length: maxModelYear - 1979 }, (_, i) => maxModelYear - i);
 const baseInputClass =
   "h-11 w-full min-w-0 rounded-lg border bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:h-10";
 const OTHER_OPTION_VALUE = "__OTHER__";

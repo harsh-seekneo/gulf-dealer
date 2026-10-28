@@ -1,6 +1,7 @@
 //[DEALER] /Users/personal/Desktop/gulf--dealer/gulf-dealer/src/modules/listings/components/ListingsTable.jsx
 
 import { SquarePen, Trash2 } from "lucide-react";
+import ListingPriceEditor from "./ListingPriceEditor";
 import { formatListingPrice } from "../listings.constants";
 import { getServiceCountryCurrencyByName } from "../config/gulfLocations.config";
 
@@ -57,6 +58,7 @@ export default function ListingsTable({
   onToggleFeatured,
   onToggleSold,
   onRowClick,
+  onPriceUpdated,
 }) {
   const visibleVehicles =
     tab === "active"
@@ -168,6 +170,11 @@ export default function ListingsTable({
                     {formatListingPrice(
                       v,
                       v.pricing?.currency || getServiceCountryCurrencyByName(v.location?.country)
+                    )}
+                    {v.status === "PUBLISHED" && (
+                      <div className="mt-2" onClick={(event) => event.stopPropagation()}>
+                        <ListingPriceEditor listing={v} onSaved={onPriceUpdated} />
+                      </div>
                     )}
                   </td>
                 )}

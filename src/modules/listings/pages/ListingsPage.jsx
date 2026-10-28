@@ -400,6 +400,7 @@ export default function ListingsPage() {
             tab={activeTab}
             vehicles={vehicles}
             onEdit={handleEdit}
+            onPriceUpdated={loadVehicles}
             onDelete={handleDelete}
             onToggleFeatured={handleToggleFeatured}
             onToggleSold={setSoldVehicle}
