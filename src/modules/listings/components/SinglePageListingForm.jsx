@@ -33,7 +33,9 @@ const useFormWizard = () => {
 const Section = ({ step, register, children }) => {
   const value = useMemo(() => ({ register: (callback) => register(step, callback) }), [register, step]);
   return <ListingSectionContext.Provider value={value}>
-    <section id={`listing-section-${step}`} className="scroll-mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">{children}</section>
+    <section id={`listing-section-${step}`} className="scroll-mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+      <SelectionFlowProvider>{children}</SelectionFlowProvider>
+    </section>
   </ListingSectionContext.Provider>;
 };
 
@@ -140,7 +142,6 @@ const SinglePageListingForm = () => {
     initialInputs: String(wizard.listing.savedDraftInputs?.categoryId) === String(categoryId) ? wizard.listing.savedDraftInputs.fields : {},
   };
   return <SinglePageListingContext.Provider value={page}>
-    <SelectionFlowProvider>
       <div className="dealer-listing-compact w-full min-w-0 max-w-none space-y-4 pb-6" data-wizard-scroll-area>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><Link to="/vehicles" className="mb-3 inline-flex items-center gap-2 text-sm text-slate-600"><ArrowLeft size={16} />My Listings</Link><h1 className="text-2xl font-bold text-slate-950">{wizard.listing.status === "DRAFT" ? "Add Vehicle" : "Edit Vehicle"}</h1><p className="mt-1 text-sm text-slate-500">All details on one page. Select an option to move to the next field.</p></div>
@@ -163,7 +164,6 @@ const SinglePageListingForm = () => {
           <div className="flex items-center justify-between gap-3"><p className="hidden text-xs text-slate-500 sm:block">Save your progress or publish when you’re ready.</p><div className="ml-auto flex gap-3"><button type="button" onClick={() => save(false)} disabled={busy || wizard.isSaving || !categoryId} className="rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold disabled:opacity-50">Save Draft</button><button type="button" onClick={() => save(true)} disabled={busy || wizard.isSaving || !categoryId} className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{busy && <Loader2 size={16} className="animate-spin" />}{busy ? "Saving…" : wizard.listing.status === "DRAFT" ? "Publish Listing" : "Save Changes"}</button></div></div>
         </div>
       </div>
-    </SelectionFlowProvider>
   </SinglePageListingContext.Provider>;
 };
 
