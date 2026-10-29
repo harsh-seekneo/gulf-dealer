@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 
+import { useListingFormState } from "../../hooks/useListingFormState";
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
 import { getServiceCountryCurrencyByName, RENTAL_PERIODS } from "../../config/gulfLocations.config";
 import FormField from "../FormField";
@@ -22,12 +23,12 @@ const Step9Pricing = ({ useWizardHook = useBulkVehicleWizard }) => {
   const isSpecialNumber = listing?.category?.vehicleFormType === "SPECIAL_NUMBER";
   const accuracyLabel = isSpecialNumber ? "plate information" : "vehicle information";
 
-  const [price, setPrice] = useState(
+  const [price, setPrice] = useListingFormState("Step9Pricing.jsx:price",
     existingPricing.price !== null && existingPricing.price !== undefined
       ? String(existingPricing.price)
       : ""
   );
-  const [selectedRentalPeriods, setSelectedRentalPeriods] = useState(() =>
+  const [selectedRentalPeriods, setSelectedRentalPeriods] = useListingFormState("Step9Pricing.jsx:selectedRentalPeriods", () =>
     RENTAL_PERIODS.filter(
       ({ key }) => Number(existingPricing.rentalPrices?.[key]) > 0
     ).map(({ key }) => key).concat(
@@ -38,7 +39,7 @@ const Step9Pricing = ({ useWizardHook = useBulkVehicleWizard }) => {
         : []
     )
   );
-  const [rentalPrices, setRentalPrices] = useState(() =>
+  const [rentalPrices, setRentalPrices] = useListingFormState("Step9Pricing.jsx:rentalPrices", () =>
     RENTAL_PERIODS.reduce((result, { key }) => {
       result[key] =
         existingPricing.rentalPrices?.[key] !== null &&
@@ -50,7 +51,7 @@ const Step9Pricing = ({ useWizardHook = useBulkVehicleWizard }) => {
       return result;
     }, {})
   );
-  const [isNegotiable, setIsNegotiable] = useState(existingPricing.isNegotiable ?? false);
+  const [isNegotiable, setIsNegotiable] = useListingFormState("Step9Pricing.jsx:isNegotiable", existingPricing.isNegotiable ?? false);
   const [error, setError] = useState("");
   const [isAccepted, setIsAccepted] = useState(false);
   const [acceptanceError, setAcceptanceError] = useState("");

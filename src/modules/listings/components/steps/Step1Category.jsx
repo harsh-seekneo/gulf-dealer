@@ -122,6 +122,8 @@ const Step1Category = ({ useWizardHook = useBulkVehicleWizard }) => {
     saveStep,
     goPrevious,
     saveDraft,
+    singlePage,
+    saveCategory,
   } = useWizardHook();
 
   const [categories, setCategories] = useState([]);
@@ -192,9 +194,12 @@ const Step1Category = ({ useWizardHook = useBulkVehicleWizard }) => {
     };
   }, []);
 
-  const handleSelect = (categoryId) => {
+  const handleSelect = async (categoryId) => {
     setSelectedCategoryId(categoryId);
     setShowValidation(false);
+    if (singlePage) {
+      try { await saveCategory(categories.find((category) => category._id === categoryId)); } catch { setSelectedCategoryId(listing?.category?._id || listing?.category || ""); }
+    }
   };
 
   const handleNext = async () => {

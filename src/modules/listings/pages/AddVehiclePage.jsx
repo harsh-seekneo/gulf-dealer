@@ -1,13 +1,10 @@
 import { BulkVehicleWizardProvider } from "../context/BulkVehicleWizardContext";
-import BulkWizardShell from "../components/BulkWizardShell";
-import BulkVehicleWizard from "../components/BulkVehicleWizard";
+import SinglePageListingForm from "../components/SinglePageListingForm";
 
 const AddVehiclePage = () => {
   return (
     <BulkVehicleWizardProvider>
-      <BulkWizardShell>
-        <BulkVehicleWizard />
-      </BulkWizardShell>
+      <SinglePageListingForm />
     </BulkVehicleWizardProvider>
   );
 };

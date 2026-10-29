@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Tag, RefreshCw } from "lucide-react";
 
+import { useListingFormState } from "../../hooks/useListingFormState";
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
 import WizardFooterNav from "../WizardFooterNav";
 import { scrollElementIntoWizardView } from "../../utils/wizardScroll";
@@ -56,7 +57,7 @@ const conditionOptionsByFormType = {
 };
 
 const Step2ListingType = ({ useWizardHook = useBulkVehicleWizard }) => {
-  const { listing, isSaving, saveStep, goPrevious, saveDraft } =
+  const { listing, isSaving, saveStep, goPrevious, saveDraft, singlePage, updateListingPreview } =
     useWizardHook();
 
   const formType = listing?.category?.vehicleFormType || "CAR";
@@ -71,10 +72,10 @@ const Step2ListingType = ({ useWizardHook = useBulkVehicleWizard }) => {
       ]
     : listingTypeOptions;
 
-  const [listingType, setListingType] = useState(
+  const [listingType, setListingType] = useListingFormState("Step2ListingType.jsx:listingType",
     isSpecialNumber ? "SALE" : listing?.listingType || "",
   );
-  const [condition, setCondition] = useState(listing?.condition || "");
+  const [condition, setCondition] = useListingFormState("Step2ListingType.jsx:condition", listing?.condition || "");
   const [showValidation, setShowValidation] = useState({
     listingType: false,
     condition: false,
@@ -82,13 +83,21 @@ const Step2ListingType = ({ useWizardHook = useBulkVehicleWizard }) => {
   const listingTypeRef = useRef(null);
   const conditionRef = useRef(null);
 
+  useEffect(() => {
+    if (singlePage) updateListingPreview({ listingType, condition });
+    // Local input is authoritative while filling this page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [singlePage, listingType, condition]);
+
   const handleSelectListingType = (value) => {
     setListingType(value);
+    if (singlePage) updateListingPreview({ listingType: value });
     setShowValidation((previous) => ({ ...previous, listingType: false }));
   };
 
   const handleSelectCondition = (value) => {
     setCondition(value);
+    if (singlePage) updateListingPreview({ condition: value });
     setShowValidation((previous) => ({ ...previous, condition: false }));
   };
 

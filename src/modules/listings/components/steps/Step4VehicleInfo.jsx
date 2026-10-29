@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { useListingFormState } from "../../hooks/useListingFormState";
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
 import useAuth from "../../../auth/hooks/useAuth";
 import { carFormConfig } from "../../config/categoryForms/carForm.config";
@@ -50,7 +51,7 @@ const getInfoTitle = (formType, config) => {
 };
 
 const Step4VehicleInfo = ({ useWizardHook = useBulkVehicleWizard }) => {
-  const { listing, isSaving, saveStep, goPrevious, saveDraft } =
+  const { listing, isSaving, saveStep, goPrevious, saveDraft, singlePage, updateListingPreview } =
     useWizardHook();
   const { user } = useAuth();
 
@@ -114,7 +115,7 @@ const Step4VehicleInfo = ({ useWizardHook = useBulkVehicleWizard }) => {
     return initial;
   };
 
-  const [form, setForm] = useState(buildInitialForm);
+  const [form, setForm] = useListingFormState("Step4VehicleInfo.jsx:form", buildInitialForm);
   const [errors, setErrors] = useState({});
   const fieldRefs = useRef({});
   const hasFuelType = String(form?.fuelType || "").trim() !== "";
@@ -144,9 +145,15 @@ const Step4VehicleInfo = ({ useWizardHook = useBulkVehicleWizard }) => {
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, [accountEmail, accountPhone, accountSellerName, accountWhatsapp]);
+  }, [accountEmail, accountPhone, accountSellerName, accountWhatsapp, setForm]);
+
+  useEffect(() => {
+    if (singlePage) updateListingPreview({ vehicleInfo: { ...listing.vehicleInfo, fuelType: form.fuelType } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [singlePage, form.fuelType]);
 
   const handleChange = (fieldName, value) => {
+    if (singlePage && fieldName === "fuelType") updateListingPreview({ vehicleInfo: { ...listing.vehicleInfo, fuelType: value } });
     setForm((previous) => {
       const next = { ...previous, [fieldName]: value };
       if (fieldName === "brand") {

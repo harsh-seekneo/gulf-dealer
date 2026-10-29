@@ -15,7 +15,8 @@ import {
   saveListingStepApi,
   saveListingMediaApi,
 } from "../api/vehicleListingApi";
-import { createBulkDraftListingApi } from "../api/bulkListingApi";
+import { clearListingFormState } from "../hooks/useListingFormState";
+import { createBulkDraftListingApi, getBulkListingFormApi } from "../api/bulkListingApi";
 import {
   getListingWizardFormType,
   getStepPosition,
@@ -44,10 +45,14 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
   const draftCreationPromiseRef = useRef(null);
+  const listingLoadRef = useRef(null);
+  const persistedListingRef = useRef(null);
+  const formLoadRef = useRef(null);
+  const requestKeyRef = useRef(null);
 
   const subscriptionId = providedSubscriptionId || searchParams.get("subscriptionId") || "";
   const listingId = searchParams.get("listingId") || "";
-  const draftRequestKey = searchParams.get("draftRequestKey") || "";
+  if (!requestKeyRef.current) requestKeyRef.current = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const requestedStep = Number(searchParams.get("step")) || 1;
 
   const [listing, setListing] = useState(null);
@@ -68,6 +73,7 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
 
   useEffect(() => {
     let isMounted = true;
+    clearListingFormState();
 
     const initialize = async () => {
       try {
@@ -75,28 +81,33 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
         setInitError("");
 
         if (listingId) {
-          const existingListing = await getListingByIdApi(listingId);
-          if (isMounted) setListing(existingListing);
+          // Creating the draft already returned its data. Updating the URL must
+          // not refetch it and remount every field on the single-page form.
+          if (String(persistedListingRef.current?._id) === listingId) return;
+          if (listingLoadRef.current?.id !== listingId) {
+            const pending = { id: listingId, promise: getListingByIdApi(listingId) };
+            listingLoadRef.current = pending;
+            pending.promise.catch(() => { if (listingLoadRef.current === pending) listingLoadRef.current = null; });
+          }
+          const existingListing = await listingLoadRef.current.promise;
+          if (isMounted) {
+            persistedListingRef.current = existingListing;
+            setListing(existingListing);
+          }
         } else {
           if (!subscriptionId) {
             throw new Error("No business plan found for this dealer account");
           }
 
-          // Guards against React Strict Mode's double effect
-          // invocation in development, which would otherwise
-          // create two separate draft listings.
-          if (!draftCreationPromiseRef.current) {
-            draftCreationPromiseRef.current = createBulkDraftListingApi(
-              subscriptionId,
-              draftRequestKey
-            );
+          if (formLoadRef.current?.id !== subscriptionId) {
+            const pending = { id: subscriptionId, promise: getBulkListingFormApi(subscriptionId) };
+            formLoadRef.current = pending;
+            pending.promise.catch(() => { if (formLoadRef.current === pending) formLoadRef.current = null; });
           }
-
-          const newDraft = await draftCreationPromiseRef.current;
-
+          const emptyForm = await formLoadRef.current.promise;
           if (isMounted) {
-            setListing(newDraft);
-            updateUrl(newDraft._id, 1);
+            persistedListingRef.current = null;
+            setListing(emptyForm);
           }
         }
       } catch (error) {
@@ -118,7 +129,27 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
       isMounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subscriptionId, listingId, draftRequestKey]);
+  }, [subscriptionId, listingId]);
+
+  // Called only from an explicit Save Draft or Publish action, never on mount,
+  // category selection, field changes, navigation, or unload.
+  const ensureListing = useCallback(async () => {
+    if (persistedListingRef.current?._id) return persistedListingRef.current;
+    if (!draftCreationPromiseRef.current) {
+      const pending = createBulkDraftListingApi(subscriptionId, requestKeyRef.current);
+      draftCreationPromiseRef.current = pending;
+      pending.catch(() => { if (draftCreationPromiseRef.current === pending) draftCreationPromiseRef.current = null; });
+    }
+    const created = await draftCreationPromiseRef.current;
+    persistedListingRef.current = created;
+    setListing((previous) => ({ ...created, ...previous, _id: created._id, listingId: created.listingId, planLimitsSnapshot: created.planLimitsSnapshot }));
+    return created;
+  }, [subscriptionId]);
+
+  const markDraftSaved = useCallback(() => {
+    const id = persistedListingRef.current?._id;
+    if (id) setSearchParams({ subscriptionId, listingId: id }, { replace: true });
+  }, [setSearchParams, subscriptionId]);
 
   const listingFormType = getListingWizardFormType(listing);
   const activeStepSequence = getWizardStepSequence(listingFormType);
@@ -179,12 +210,12 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
 
   const saveStep = useCallback(
     async (step, payload, { advance = true } = {}) => {
-      if (!listing?._id) throw new Error("Listing not initialized yet");
+      const persisted = await ensureListing();
 
       setIsSaving(true);
 
       try {
-        const updatedListing = await saveListingStepApi(listing._id, step, payload);
+        const updatedListing = await saveListingStepApi(persisted._id, step, payload);
         setListing(updatedListing);
 
         if (advance) goNext();
@@ -201,17 +232,17 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
         setIsSaving(false);
       }
     },
-    [listing, goNext, showToast]
+    [ensureListing, goNext, showToast]
   );
 
   const saveMedia = useCallback(
     async (formData, { advance = true } = {}) => {
-      if (!listing?._id) throw new Error("Listing not initialized yet");
+      const persisted = await ensureListing();
 
       setIsSaving(true);
 
       try {
-        const updatedListing = await saveListingMediaApi(listing._id, formData);
+        const updatedListing = await saveListingMediaApi(persisted._id, formData);
         setListing(updatedListing);
 
         if (advance) goNext();
@@ -228,7 +259,7 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
         setIsSaving(false);
       }
     },
-    [listing, goNext, showToast]
+    [ensureListing, goNext, showToast]
   );
 
   const saveDraft = useCallback(() => {
@@ -237,6 +268,9 @@ export const BulkVehicleWizardProvider = ({ children, subscriptionId: providedSu
 
   const value = {
     listing,
+    ensureListing,
+    markDraftSaved,
+    selectCategory: (category) => setListing((previous) => ({ ...previous, category })),
     currentStep,
     totalSteps,
     currentStepPosition,

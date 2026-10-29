@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ModalSelect } from "./SelectionFlowProvider";
 import ColorSwatchField from "./ColorSwatchField";
 import PhoneNumberField from "./PhoneNumberField";
 import ToggleGroupField from "./ToggleGroupField";
@@ -44,8 +45,8 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
       form?.[field.disabledWhen.field] === field.disabledWhen.value);
 
   const [brandOptions, setBrandOptions] = useState([]);
-  const [modelOptions, setModelOptions] = useState([]);
-  const [variantOptions, setVariantOptions] = useState([]);
+  const [modelOptions, setModelOptions] = useState({ key: "", items: [] });
+  const [variantOptions, setVariantOptions] = useState({ key: "", items: [] });
   const [facetOptions, setFacetOptions] = useState([]);
 
   const shouldLoadFacetOptions =
@@ -76,10 +77,10 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
       status: "ACTIVE",
     })
       .then((data) => {
-        if (isMounted) setModelOptions(data || []);
+        if (isMounted) setModelOptions({ key: `${categoryId}:${form.brand}`, items: data || [] });
       })
       .catch(() => {
-        if (isMounted) setModelOptions([]);
+        if (isMounted) setModelOptions({ key: `${categoryId}:${form.brand}`, items: [] });
       });
 
     return () => {
@@ -108,10 +109,10 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
       status: "ACTIVE",
     })
       .then((data) => {
-        if (isMounted) setVariantOptions(data || []);
+        if (isMounted) setVariantOptions({ key: `${categoryId}:${form.brand}:${form.catalogModel}`, items: data || [] });
       })
       .catch(() => {
-        if (isMounted) setVariantOptions([]);
+        if (isMounted) setVariantOptions({ key: `${categoryId}:${form.brand}:${form.catalogModel}`, items: [] });
       });
 
     return () => {
@@ -146,10 +147,10 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
   }, [shouldLoadFacetOptions, categoryId]);
 
   const visibleModelOptions =
-    field.type === "modelSelect" && categoryId && form?.brand ? modelOptions : [];
+    field.type === "modelSelect" && modelOptions.key === `${categoryId}:${form?.brand}` ? modelOptions.items : [];
   const visibleVariantOptions =
-    field.type === "variantSelect" && categoryId && form?.brand && form?.catalogModel
-      ? variantOptions
+    field.type === "variantSelect" && variantOptions.key === `${categoryId}:${form?.brand}:${form?.catalogModel}`
+      ? variantOptions.items
       : [];
 
   switch (field.type) {
@@ -276,7 +277,8 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
         });
 
         return (
-          <select
+          <ModalSelect
+            label={field.label}
             value={value ?? ""}
             onChange={(e) => onChange(e.target.value)}
             className={`${baseInputClass} ${errorClass}`}
@@ -298,13 +300,14 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
                 </option>
               );
             })}
-          </select>
+          </ModalSelect>
         );
       }
 
     case "yearSelect":
       return (
-        <select
+        <ModalSelect
+            label={field.label}
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
           className={`${baseInputClass} ${errorClass}`}
@@ -315,12 +318,13 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
               {year}
             </option>
           ))}
-        </select>
+        </ModalSelect>
       );
 
     case "countrySelect":
       return (
-        <select
+        <ModalSelect
+            label={field.label}
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
           className={`${baseInputClass} ${errorClass}`}
@@ -331,12 +335,13 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
               {country}
             </option>
           ))}
-        </select>
+        </ModalSelect>
       );
 
     case "brandSelect":
       return (
-        <select
+        <ModalSelect
+            label={field.label}
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
           disabled={!categoryId}
@@ -344,17 +349,19 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
         >
           <option value="">Select brand</option>
           {brandOptions.map((brand) => (
-            <option key={brand._id} value={brand._id}>
+            <option key={brand._id} value={brand._id} data-logo={brand.brandLogo?.url || ""}>
               {brand.name}
             </option>
           ))}
           <option value={OTHER_OPTION_VALUE}>Other</option>
-        </select>
+        </ModalSelect>
       );
 
     case "modelSelect":
       return (
-        <select
+        <ModalSelect
+            label={field.label}
+          loading={Boolean(categoryId && form?.brand && form.brand !== OTHER_OPTION_VALUE && modelOptions.key !== `${categoryId}:${form.brand}`)}
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
           disabled={!form?.brand}
@@ -367,12 +374,13 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
             </option>
           ))}
           <option value={OTHER_OPTION_VALUE}>Other</option>
-        </select>
+        </ModalSelect>
       );
 
     case "yesNoSelect":
       return (
-        <select
+        <ModalSelect
+            label={field.label}
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
           className={`${baseInputClass} ${errorClass}`}
@@ -380,29 +388,21 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
           <option value="">Select</option>
           <option value="true">Yes</option>
           <option value="false">No</option>
-        </select>
+        </ModalSelect>
       );
 
     case "toggle2":
     case "toggle3":
       return (
-        <ToggleGroupField
-          value={value}
-          onChange={onChange}
-          options={field.options}
-          error={error}
-        />
+        <ModalSelect label={field.label} value={value ?? ""} onChange={(event) => onChange(event.target.value)} className={`${baseInputClass} ${errorClass}`}
+          fallback={<ToggleGroupField value={value} onChange={onChange} options={field.options} error={error} />}>
+          <option value="">Select</option>
+          {(field.options || []).map((option) => <option key={option.value ?? option} value={option.value ?? option}>{option.label ?? option}</option>)}
+        </ModalSelect>
       );
 
     case "colorSwatch":
-      return (
-        <ColorSwatchField
-          value={value}
-          onChange={onChange}
-          swatches={field.swatches}
-          error={error}
-        />
-      );
+      return <ColorSwatchField value={value} onChange={onChange} swatches={field.swatches} error={error} />;
 
     case "toggleSwitch":
   return (
@@ -416,7 +416,9 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
 
     case "variantSelect":
       return (
-        <select
+        <ModalSelect
+            label={field.label}
+          loading={Boolean(categoryId && form?.brand && form?.catalogModel && form.brand !== OTHER_OPTION_VALUE && form.catalogModel !== OTHER_OPTION_VALUE && variantOptions.key !== `${categoryId}:${form.brand}:${form.catalogModel}`)}
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
           disabled={!form?.catalogModel}
@@ -429,7 +431,7 @@ const DynamicField = ({ field, value, onChange, error, form, categoryId }) => {
             </option>
           ))}
           <option value={OTHER_OPTION_VALUE}>Other</option>
-        </select>
+        </ModalSelect>
       );
 
     default:

@@ -1,0 +1,37 @@
+/* Balanced spacing, scoped to the dealer single-page form. */
+.dealer-listing-compact [id^="listing-section-"] { padding: 18px; }
+.dealer-listing-compact [id^="listing-section-"] h2 { font-size: 18px; line-height: 26px; }
+.dealer-listing-compact [id^="listing-section-"] > div > :is(.mt-5, .mt-6) { margin-top: 18px; }
+.dealer-listing-compact :is(#listing-section-4, #listing-section-5, #listing-section-8) > div > .grid { grid-template-columns: minmax(0, 1fr); gap: 18px 20px; }
+.dealer-listing-compact :is(#listing-section-4, #listing-section-5, #listing-section-8) > div > .grid > div { min-width: 0; }
+.dealer-listing-compact :is(#listing-section-4, #listing-section-5, #listing-section-8, #listing-section-9) label { margin-bottom: 6px; font-size: 14px; }
+.dealer-listing-compact #listing-section-1 > div { padding: 0; }
+.dealer-listing-compact #listing-section-1 > div > .mt-auto { display: none; }
+.dealer-listing-compact #listing-section-1 .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.dealer-listing-compact #listing-section-1 .grid > button { min-height: 88px; padding: 12px; border-radius: 12px; }
+.dealer-listing-compact #listing-section-1 .grid > button > div { height: 32px; width: 42px; }
+.dealer-listing-compact #listing-section-1 .grid > button > p { margin-top: 8px; white-space: normal; font-size: 12px; line-height: 17px; }
+.dealer-listing-compact #listing-section-2 > div > .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.dealer-listing-compact #listing-section-2 .grid > button { display: flex; align-items: center; gap: 12px; padding: 14px; }
+.dealer-listing-compact #listing-section-2 .grid > button > span { height: 36px; width: 36px; flex-shrink: 0; }
+.dealer-listing-compact #listing-section-2 .grid > button > p { margin: 0; }
+.dealer-listing-compact #listing-section-2 .grid > button > p:last-child { display: none; }
+.dealer-listing-compact #listing-section-7 :is(.h-40, .h-28) { height: 128px; }
+@media (min-width: 640px) {
+  .dealer-listing-compact [id^="listing-section-"] { padding: 24px; }
+  .dealer-listing-compact :is(#listing-section-4, #listing-section-5, #listing-section-8) > div > .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dealer-listing-compact #listing-section-1 .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* Keep the picker usable on short landscape screens as well as tall phones. */
+@media (max-height: 500px) {
+  .dealer-selection-dialog > header,
+  .dealer-selection-dialog > footer { padding-top: 8px; padding-bottom: 8px; }
+  .dealer-selection-dialog .dealer-selection-search { padding-top: 12px; }
+  .dealer-selection-dialog .dealer-selection-search input { height: 44px; }
+  .dealer-selection-dialog .dealer-selection-search p { display: none; }
+  .dealer-selection-dialog aside > button { padding-top: 8px; padding-bottom: 8px; }
+}
+@media (max-height: 500px) and (max-width: 767px) {
+  .dealer-selection-dialog nav { max-height: 90px; }
+}

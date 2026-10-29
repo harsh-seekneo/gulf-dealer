@@ -121,7 +121,7 @@ const uploadListingImageDirectApi = async ({ listingId, file }) => {
   };
 };
 
-export const uploadListingImagesDirectApi = async ({ listingId, files = [] }) => {
+export const uploadListingImagesDirectApi = async ({ listingId, files = [], uploadCache }) => {
   const results = new Array(files.length);
   let nextIndex = 0;
 
@@ -131,10 +131,14 @@ export const uploadListingImagesDirectApi = async ({ listingId, files = [] }) =>
       while (nextIndex < files.length) {
         const currentIndex = nextIndex;
         nextIndex += 1;
-        results[currentIndex] = await uploadListingImageDirectApi({
-          listingId,
-          file: files[currentIndex],
-        });
+        const file = files[currentIndex];
+        let request = uploadCache?.get(file);
+        if (!request) {
+          request = uploadListingImageDirectApi({ listingId, file });
+          uploadCache?.set(file, request);
+          request.catch(() => uploadCache?.delete(file));
+        }
+        results[currentIndex] = await request;
       }
     }
   );

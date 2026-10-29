@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { useListingFormState } from "../../hooks/useListingFormState";
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
 import { carFormConfig } from "../../config/categoryForms/carForm.config";
 import { commercialFormConfig } from "../../config/categoryForms/commercialForm.config";
@@ -33,7 +34,7 @@ const isElectricFuel = (value) =>
   String(value || "").trim().toLowerCase() === ELECTRIC_OPTION;
 
 const Step5Specs = ({ useWizardHook = useBulkVehicleWizard }) => {
-  const { listing, isSaving, saveStep, goPrevious, saveDraft } =
+  const { listing, isSaving, saveStep, goPrevious, saveDraft, singlePage } =
     useWizardHook();
 
   const categoryId = listing?.category?._id || listing?.category;
@@ -58,7 +59,7 @@ const Step5Specs = ({ useWizardHook = useBulkVehicleWizard }) => {
     return initial;
   };
 
-  const [form, setForm] = useState(buildInitialForm);
+  const [form, setForm] = useListingFormState("Step5Specs.jsx:form", buildInitialForm);
   const [errors, setErrors] = useState({});
   const fieldRefs = useRef({});
   const selectedFuelType = form?.fuelType || listing?.vehicleInfo?.fuelType;
@@ -82,7 +83,7 @@ const Step5Specs = ({ useWizardHook = useBulkVehicleWizard }) => {
    * previously entered values instead of a blank form.
    */
   useEffect(() => {
-    if (!listing?.specs) return;
+    if (singlePage || !listing?.specs) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm(buildInitialForm());
     // eslint-disable-next-line react-hooks/exhaustive-deps

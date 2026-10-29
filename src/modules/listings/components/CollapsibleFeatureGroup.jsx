@@ -22,7 +22,7 @@ const CollapsibleFeatureGroup = ({ title, options, selectedValues, onToggle, def
         <span className="text-sm font-semibold text-slate-900">
           {title}
           {selected.length > 0 && (
-            <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
+            <span className="ml-2 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-700">
               {selected.length}
             </span>
           )}
@@ -43,7 +43,7 @@ const CollapsibleFeatureGroup = ({ title, options, selectedValues, onToggle, def
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search features..."
-                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3 text-sm outline-none transition focus:border-teal-400 focus:bg-white"
               />
             </div>
 
@@ -59,8 +59,8 @@ const CollapsibleFeatureGroup = ({ title, options, selectedValues, onToggle, def
                     onClick={() => onToggle(optionValue)}
                     className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 active:scale-95 ${
                       isSelected
-                        ? "border-blue-600 bg-blue-600 text-white"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50"
+                        ? "border-teal-600 bg-teal-600 text-white"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-teal-300 hover:bg-teal-50"
                     }`}
                   >
                     {optionLabel}

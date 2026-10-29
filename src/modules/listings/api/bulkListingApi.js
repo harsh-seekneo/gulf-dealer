@@ -2,6 +2,16 @@ import apiClient from "../../../services/apiClient";
 
 const BASE_URL = "/vehicle-listings";
 
+export const getBulkListingFormApi = async (subscriptionId) => {
+  const { data } = await apiClient.get(`${BASE_URL}/bulk/${subscriptionId}/form`);
+  return data.data;
+};
+
+export const saveDealerDraftInputsApi = async (listingId, inputs) => {
+  const { data } = await apiClient.patch(`${BASE_URL}/${listingId}/draft-inputs`, inputs);
+  return data.data;
+};
+
 export const createBulkDraftListingApi = async (subscriptionId, draftRequestKey = "") => {
   const { data } = await apiClient.post(`${BASE_URL}/bulk`, {
     subscriptionId,

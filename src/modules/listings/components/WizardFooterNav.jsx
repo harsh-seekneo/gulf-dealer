@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, FileText, Loader2 } from "lucide-react";
+import { useRegisterListingSection } from "../context/SinglePageListingContext";
 
 const WizardFooterNav = ({
   onPrevious,
@@ -11,6 +12,8 @@ const WizardFooterNav = ({
   nextLabel = "Next",
   nextDisabled = false,
 }) => {
+  const singlePage = useRegisterListingSection(onNext);
+  if (singlePage) return null;
   return (
     <>
     <div aria-hidden="true" className="h-72 shrink-0 sm:hidden" />

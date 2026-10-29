@@ -34,7 +34,7 @@ const BROCHURE_MAX_SIZE_BYTES = 20 * 1024 * 1024;
 const CARAVAN_GALLERY_IMAGE_LIMIT = 10;
 
 const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
-  const { listing, isSaving, saveMedia, goPrevious, saveDraft } =
+  const { listing, isSaving, saveMedia, goPrevious, saveDraft, singlePage, ensureListing } =
     useWizardHook();
 
   const maxPhotos = listing?.planLimitsSnapshot?.maxPhotosSnapshot ?? null;
@@ -63,7 +63,7 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
   const secondaryGalleryLabel =
     config.secondaryGalleryLabel || "Additional Images";
 
-  const [existingSecondaryImages] = useState(
+  const [existingSecondaryImages, setExistingSecondaryImages] = useState(
     listing?.media?.secondaryImages || [],
   );
   const [newSecondaryImageFiles, setNewSecondaryImageFiles] = useState([]);
@@ -116,6 +116,17 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
   const videoInputRef = useRef(null);
   const brochureInputRef = useRef(null);
   const secondaryImagesInputRef = useRef(null);
+  const completedUpload = useRef(null);
+  const fileUploads = useRef(new WeakMap());
+  const uploadOnce = (file, upload) => {
+    if (!fileUploads.current.has(file)) {
+      const request = Promise.resolve().then(upload);
+      fileUploads.current.set(file, request);
+      request.catch(() => fileUploads.current.delete(file));
+    }
+    return fileUploads.current.get(file);
+  };
+  const uploadImageFilesOnce = (files, listingId) => uploadListingImagesDirectApi({ listingId, files, uploadCache: fileUploads.current });
 
   const totalCurrentPhotos = existingImages.length + newImagePreviews.length;
 
@@ -296,8 +307,8 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
     setExistingBrochure(null);
   };
 
-  const handleNext = async () => {
-    if (!featuredFile && !existingFeaturedImage) {
+  const handleNext = async ({ validateOnly = false, draft = false } = {}) => {
+    if (!draft && !featuredFile && !existingFeaturedImage) {
       setErrorMessage("Featured image is required");
       setMediaErrors((previous) => ({
         ...previous,
@@ -307,6 +318,11 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
       return;
     }
 
+    if (validateOnly) return true;
+    if (singlePage && !featuredFile && !videoFile && !brochureFile && !newImageFiles.length && !newSecondaryImageFiles.length && !removedImageKeys.length) return true;
+
+    const persisted = singlePage ? await ensureListing() : listing;
+    const uploadListingId = persisted._id;
     const formData = new FormData();
     formData.append("removedImageKeys", JSON.stringify(removedImageKeys));
 
@@ -314,11 +330,11 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
       try {
         setIsVideoUploading(true);
         setVideoUploadProgress(0);
-        await uploadListingVideoMultipartApi({
-          listingId: listing._id,
+        await uploadOnce(videoFile, () => uploadListingVideoMultipartApi({
+          listingId: uploadListingId,
           file: videoFile,
           onProgress: setVideoUploadProgress,
-        });
+        }));
       } catch (error) {
         const message =
           error.response?.data?.message ||
@@ -345,26 +361,31 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
         uploadedBrochure,
       ] = await Promise.all([
         featuredFile
-          ? uploadListingImagesDirectApi({ listingId: listing._id, files: [featuredFile] })
+          ? uploadImageFilesOnce([featuredFile], uploadListingId)
           : Promise.resolve([]),
         newImageFiles.length
-          ? uploadListingImagesDirectApi({ listingId: listing._id, files: newImageFiles })
+          ? uploadImageFilesOnce(newImageFiles, uploadListingId)
           : Promise.resolve([]),
         newSecondaryImageFiles.length
-          ? uploadListingImagesDirectApi({ listingId: listing._id, files: newSecondaryImageFiles })
+          ? uploadImageFilesOnce(newSecondaryImageFiles, uploadListingId)
           : Promise.resolve([]),
         allowBrochure && brochureFile
-          ? uploadListingBrochureDirectApi({ listingId: listing._id, file: brochureFile })
+          ? uploadOnce(brochureFile, () => uploadListingBrochureDirectApi({ listingId: uploadListingId, file: brochureFile }))
           : Promise.resolve(null),
       ]);
 
-      await completeListingImageDirectUploadApi(listing._id, {
+      const completion = {
         featuredImage: uploadedFeaturedImages[0] || null,
         images: uploadedImages,
         secondaryImages: uploadedSecondaryImages,
         brochure: uploadedBrochure,
         removedImageKeys,
-      });
+      };
+      const signature = JSON.stringify(completion);
+      if (completedUpload.current !== signature) {
+        await completeListingImageDirectUploadApi(uploadListingId, completion);
+        completedUpload.current = signature;
+      }
     } catch (error) {
       const message =
         error.response?.data?.message ||
@@ -374,7 +395,24 @@ const Step7Media = ({ useWizardHook = useBulkVehicleWizard }) => {
       return;
     }
 
-    await saveMedia(formData);
+    const saved = await saveMedia(formData);
+    // Reflect successful uploads locally so retrying publication never reuploads
+    // files or appends the same gallery images twice.
+    setExistingFeaturedImage(saved.media?.featuredImage || null);
+    setExistingImages(saved.media?.images || []);
+    setExistingSecondaryImages(saved.media?.secondaryImages || []);
+    setExistingVideo(saved.media?.video || null);
+    setExistingBrochure(saved.media?.brochure || null);
+    setFeaturedFile(null);
+    setNewImageFiles([]);
+    setNewImagePreviews([]);
+    setNewSecondaryImageFiles([]);
+    setNewSecondaryImagePreviews([]);
+    setRemovedImageKeys([]);
+    setVideoFile(null);
+    setBrochureFile(null);
+    completedUpload.current = null;
+    return true;
   };
 
   return (

@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 
+import { useListingFormState } from "../../hooks/useListingFormState";
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
 import {
   GULF_COUNTRIES,
@@ -9,6 +10,7 @@ import {
   getNormalizedLocationCountry,
   getNormalizedLocationState,
 } from "../../config/gulfLocations.config";
+import { ModalSelect } from "../formFields/SelectionFlowProvider";
 import FormField from "../FormField";
 import ToggleSwitch from "../ToggleSwitch";
 import WizardFooterNav from "../WizardFooterNav";
@@ -63,17 +65,17 @@ const Step8Location = ({ useWizardHook = useBulkVehicleWizard }) => {
   const accountCountry =
     GULF_COUNTRIES.find((item) => item.iso2 === user?.countryIso)?.name || "";
 
-  const [country, setCountry] = useState(accountCountry || normalizedCountry);
-  const [governorate, setGovernorate] = useState(normalizedState);
-  const [city, setCity] = useState(normalizedCity);
-  const [area, setArea] = useState(existingLocation.area || "");
-  const [showPhoneNumber, setShowPhoneNumber] = useState(
+  const [country, setCountry] = useListingFormState("Step8Location.jsx:country", accountCountry || normalizedCountry);
+  const [governorate, setGovernorate] = useListingFormState("Step8Location.jsx:governorate", normalizedState);
+  const [city, setCity] = useListingFormState("Step8Location.jsx:city", normalizedCity);
+  const [area, setArea] = useListingFormState("Step8Location.jsx:area", existingLocation.area || "");
+  const [showPhoneNumber, setShowPhoneNumber] = useListingFormState("Step8Location.jsx:showPhoneNumber",
     existingLocation.showPhoneNumber ?? true
   );
-  const [showWhatsappNumber, setShowWhatsappNumber] = useState(
+  const [showWhatsappNumber, setShowWhatsappNumber] = useListingFormState("Step8Location.jsx:showWhatsappNumber",
     existingLocation.showWhatsappNumber ?? true
   );
-  const [mapsLink, setMapsLink] = useState(existingLocation.mapsLink || existingLocation.googleMapsUrl || "");
+  const [mapsLink, setMapsLink] = useListingFormState("Step8Location.jsx:mapsLink", existingLocation.mapsLink || existingLocation.googleMapsUrl || "");
 
   const [errors, setErrors] = useState({});
   const fieldRefs = useRef({});
@@ -153,7 +155,8 @@ const Step8Location = ({ useWizardHook = useBulkVehicleWizard }) => {
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <div ref={(node) => { fieldRefs.current.country = node; }}>
         <FormField label="Country" required error={errors.country}>
-          <select
+          <ModalSelect
+            label="Country"
             value={selectedCountry}
             onChange={(e) => handleCountryChange(e.target.value)}
             disabled={Boolean(accountCountry)}
@@ -165,13 +168,14 @@ const Step8Location = ({ useWizardHook = useBulkVehicleWizard }) => {
                 {item.name}
               </option>
             ))}
-          </select>
+          </ModalSelect>
         </FormField>
         </div>
 
         <div ref={(node) => { fieldRefs.current.governorate = node; }}>
         <FormField label="State / Governorate" required error={errors.governorate}>
-          <select
+          <ModalSelect
+            label="State / Governorate"
             value={selectedGovernorate}
             onChange={(e) => handleGovernorateChange(e.target.value)}
             disabled={!selectedCountry}
@@ -183,13 +187,14 @@ const Step8Location = ({ useWizardHook = useBulkVehicleWizard }) => {
                 {item.name}
               </option>
             ))}
-          </select>
+          </ModalSelect>
         </FormField>
         </div>
 
         <div className={hasAreaField ? "" : "sm:col-span-2"} ref={(node) => { fieldRefs.current.city = node; }}>
         <FormField label="City" required error={errors.city}>
-          <select
+          <ModalSelect
+            label="City"
             value={selectedCity}
             onChange={(e) => handleCityChange(e.target.value)}
             disabled={!selectedGovernorate}
@@ -201,7 +206,7 @@ const Step8Location = ({ useWizardHook = useBulkVehicleWizard }) => {
                 {item}
               </option>
             ))}
-          </select>
+          </ModalSelect>
         </FormField>
         </div>
 

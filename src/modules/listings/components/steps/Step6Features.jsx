@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { useListingFormState } from "../../hooks/useListingFormState";
 import { useBulkVehicleWizard } from "../../context/BulkVehicleWizardContext";
 import { carFormConfig } from "../../config/categoryForms/carForm.config";
 import { commercialFormConfig } from "../../config/categoryForms/commercialForm.config";
@@ -53,7 +54,7 @@ const Step6Features = ({ useWizardHook = useBulkVehicleWizard }) => {
     return initial;
   };
 
-  const [selected, setSelected] = useState(buildInitialSelected);
+  const [selected, setSelected] = useListingFormState("Step6Features.jsx:selected", buildInitialSelected);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {

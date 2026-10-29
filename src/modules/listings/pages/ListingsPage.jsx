@@ -47,14 +47,6 @@ function getDeleteListingMessage(listing) {
   return `Delete "${title}"? This action cannot be undone.`;
 }
 
-function createDraftRequestKey() {
-  if (window.crypto?.randomUUID) {
-    return window.crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
 function isPastDate(value) {
   if (!value) return false;
 
@@ -311,7 +303,6 @@ export default function ListingsPage() {
 
       const params = new URLSearchParams({
         subscriptionId,
-        draftRequestKey: createDraftRequestKey(),
       });
 
       navigate(`/listings/add-vehicle?${params.toString()}`);
