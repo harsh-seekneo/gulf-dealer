@@ -15,12 +15,10 @@ export const motorbikeFormConfig = {
   engineSectionDescription: "Add technical details specific to the motorcycle.",
 
   vehicleInfoFields: [
-    { name: "title", label: "Listing Title", type: "text", required: true, span: 2, placeholder: "e.g. 2023 Ducati Panigale V4S" },
     { name: "brand", label: "Brand", type: "brandSelect", required: true },
     { name: "catalogModel", label: "Model", type: "modelSelect", required: true },
     { name: "variantTrim", label: "Variant / Trim", type: "variantSelect" },
     { name: "manufacturingYear", label: "Model Year", type: "yearSelect", required: true },
-    { name: "sellerName", label: "Seller Name", type: "text", required: true, placeholder: "e.g. Ahmed Al Rashid" },
     {
       name: "bikeCategory",
       label: "Motorcycle Type",
@@ -32,10 +30,12 @@ export const motorbikeFormConfig = {
     //   label: "Motorcycle Type",
     //   type: "select",
     // },
-    { name: "mileage", label: "Mileage (Km)", type: "number", required: true, placeholder: "e.g. 4500" },
     { name: "exteriorColor", label: "Exterior Color", type: "colorSwatch", required: true, swatches: MOTORBIKE_COLOR_OPTIONS, span: 2 },
+    { name: "mileage", label: "Mileage (Km)", type: "number", required: true, placeholder: "e.g. 4500" },
+    { name: "title", label: "Listing Title", type: "text", required: true, span: 2, placeholder: "e.g. 2023 Ducati Panigale V4S" },
     { name: "vinNumber", label: "VIN / Chassis Number", type: "vin", required: true, span: 2 },
     { name: "registrationExpiry", label: "Registration Expiry", type: "date" },
+    { name: "sellerName", label: "Seller Name", type: "text", required: true, placeholder: "e.g. Ahmed Al Rashid" },
     { name: "companyName", label: "Company Name", type: "text", placeholder: "e.g. Al Rashid Motors", dealerOnly: true },
     { name: "mobileNumber", label: "Mobile Number", type: "phone", required: true, placeholder: "7767754397" },
     { name: "whatsappNumber", label: "WhatsApp Number", type: "phone", required: true, placeholder: "7767754397" },
@@ -46,26 +46,19 @@ export const motorbikeFormConfig = {
   ],
 
   specsFields: [
-    { name: "engineCapacity", label: "Engine Capacity (cc)", type: "number", required: true, placeholder: "e.g. 998" },
     { name: "engineType", label: "Engine Type", type: "select", placeholder: "Select engine type", options: ["Single Cylinder", "Twin Cylinder", "Triple Cylinder", "Inline-4", "V-Twin", "Boxer", "Electric"] },
-    { name: "horsepower", label: "Horsepower (HP)", type: "number", required: true, placeholder: "e.g. 214" },
-    { name: "torque", label: "Torque (Nm)", type: "number", placeholder: "e.g. 124" },
-    { name: "topSpeed", label: "Top Speed (km/h)", type: "number", placeholder: "e.g. 300" },
     { name: "fuelType", label: "Fuel Type", type: "select", required: true, placeholder: "Select fuel type", options: ["Petrol", "Electric"] },
-    { name: "coolingSystem", label: "Cooling System", type: "select", placeholder: "Select cooling system", options: [
+    { name: "transmission", label: "Transmission", type: "select", required: true, placeholder: "Select transmission", options: ["Manual", "Automatic", "Semi-Automatic", "CVT"] },
+{ name: "coolingSystem", label: "Cooling System", type: "select", placeholder: "Select cooling system", options: [
       { label: "Air Cooled", value: "air_cooled" },
       { label: "Liquid Cooled", value: "liquid_cooled" },
       { label: "Oil Cooled", value: "oil_cooled" },
     ] },
-    { name: "transmission", label: "Transmission", type: "select", required: true, placeholder: "Select transmission", options: ["Manual", "Automatic", "Semi-Automatic", "CVT"] },
     { name: "driveType", label: "Drive Type", type: "select",required:true, placeholder: "Select drive type", options: [
       { label: "Chain", value: "chain" },
       { label: "Belt", value: "belt" },
       { label: "Shaft", value: "shaft" },
     ] },
-    { name: "seatHeight", label: "Seat Height (mm)", type: "number", placeholder: "e.g. 830" },
-    { name: "fuelTankCapacity", label: "Fuel Tank Capacity (L)", type: "text", placeholder: "e.g. 17 L" },
-    { name: "weight", label: "Weight (kg)", type: "number", placeholder: "e.g. 198" },
     { name: "registrationCountry", label: "Registration Country", type: "countrySelect", required: true, placeholder: "Select country" },
     {
       name: "previousOwners",
@@ -74,8 +67,7 @@ export const motorbikeFormConfig = {
       placeholder: "Select number of owners",
       options: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"],
     },
-    { name: "registrationNumber", label: "Registration Number", type: "text", placeholder: "e.g. 12345" },
-    {
+     {
       name: "serviceHistory",
       label: "Service History",
       type: "select",
@@ -86,6 +78,11 @@ export const motorbikeFormConfig = {
         { label: "No Service History", value: "None" },
       ],
     },
+    { name: "numberOfKeys", label: "Number of Keys", type: "select", placeholder: "Select number of keys", options: [
+      { label: "1", value: "1" },
+      { label: "2", value: "2" },
+      { label: "3+", value: "3+" },
+    ] },
     {
       name: "accidentHistory",
       label: "Accident History",
@@ -97,17 +94,26 @@ export const motorbikeFormConfig = {
         { label: "Major Damage", value: "Major" },
       ],
     },
-    { name: "numberOfKeys", label: "Number of Keys", type: "select", placeholder: "Select number of keys", options: [
-      { label: "1", value: "1" },
-      { label: "2", value: "2" },
-      { label: "3+", value: "3+" },
-    ] },
+    { name: "engineCapacity", label: "Engine Capacity (cc)", type: "number", required: true, placeholder: "e.g. 998" },
+    { name: "horsepower", label: "Horsepower (HP)", type: "number", required: true, placeholder: "e.g. 214" },
+    { name: "torque", label: "Torque (Nm)", type: "number", placeholder: "e.g. 124" },
+    { name: "topSpeed", label: "Top Speed (km/h)", type: "number", placeholder: "e.g. 300" },
+    
+    
+    { name: "seatHeight", label: "Seat Height (mm)", type: "number", placeholder: "e.g. 830" },
+    { name: "fuelTankCapacity", label: "Fuel Tank Capacity (L)", type: "text", placeholder: "e.g. 17 L" },
+    { name: "weight", label: "Weight (kg)", type: "number", placeholder: "e.g. 198" },
+    
+    { name: "registrationNumber", label: "Registration Number", type: "text", placeholder: "e.g. 12345" },
+   
+    
+    
     { name: "hasWarrantyAvailable", label: "Warranty Available", type: "toggleSwitch", fullWidth: true },
-    { name: "insuranceValid", label: "Insurance Covered", type: "toggleSwitch", fullWidth: true },
+    { name: "insuranceValid", label: "Insurance Covered", type: "toggleSwitch", fullWidth: true,  },
     
     { name: "gccSpecs", label: "GCC Specifications", description: "Vehicle manufactured to GCC specifications", type: "toggleSwitch" },
     { name: "importedVehicle", label: "Imported Vehicle", description: "Vehicle imported from outside the GCC", type: "toggleSwitch" },
-    { name: "originalPaint", label: "Original Paint", description: "No respray or paint correction", type: "toggleSwitch" },
+    { name: "originalPaint", label: "Original Paint", description: "No respray or paint correction",  span: 1, type: "toggleSwitch" },
   ],
 
   featureGroups: [

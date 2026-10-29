@@ -32,21 +32,21 @@ export const commercialFormConfig = {
   label: "Commercial Vehicles",
 
   vehicleInfoFields: [
-    { name: "title", label: "Vehicle Title", type: "text", required: true, span: 2, placeholder: "e.g. 2023 Mercedes-Benz Arocs 5460 Tipper Truck" },
     { name: "brand", label: "Brand", type: "brandSelect", required: true },
     { name: "catalogModel", label: "Model", type: "modelSelect", required: true },
     { name: "variantTrim", label: "Variant / Trim", type: "variantSelect" },
     { name: "vehicleType", label: "Vehicle Type", type: "select", required: true, options: COMMERCIAL_VEHICLE_TYPE_OPTIONS },
     { name: "manufacturingYear", label: "Model Year", type: "yearSelect", required: true },
-    { name: "sellerName", label: "Seller Name", type: "text", required: true, placeholder: "e.g. Fleet Motors Bahrain" },
     { name: "bodyType", label: "Body Type", type: "select", required: true },
-    { name: "mileage", label: "Mileage (Km)", type: "number", required: true, placeholder: "e.g. 42500" },
     { name: "fuelType", label: "Fuel Type", type: "select", required: true, options: ["Diesel", "Petrol", "Electric", "Hybrid", "CNG", "LNG"] },
     { name: "transmission", label: "Transmission", type: "select", required: true, options: ["Manual", "Automatic", "Automated Manual (AMT)", "Semi-Automatic"] },
-    { name: "exteriorColor", label: "Exterior Color", type: "colorSwatch", swatches: COMMERCIAL_COLOR_SWATCHES, span: 2 },
+    { name: "exteriorColor", label: "Exterior Color", type: "colorSwatch", swatches: COMMERCIAL_COLOR_SWATCHES, span: 1 },
+    { name: "mileage", label: "Mileage (Km)", type: "number", required: true, placeholder: "e.g. 42500" },
+    { name: "title", label: "Vehicle Title", type: "text", required: true, span: 2, placeholder: "e.g. 2023 Mercedes-Benz Arocs 5460 Tipper Truck" },
     { name: "vinNumber", label: "VIN Number", type: "vin", span: 2 },
     { name: "registrationExpiry", label: "Registration Expiry", type: "date" },
     { name: "registrationCountry", label: "Registration Country", type: "countrySelect", required: true },
+    { name: "sellerName", label: "Seller Name", type: "text", required: true, placeholder: "e.g. Fleet Motors Bahrain" },
     { name: "companyName", label: "Company Name", type: "text", placeholder: "e.g. Fleet Motors Bahrain", dealerOnly: true },
     { name: "mobileNumber", label: "Mobile Number", type: "phone", required: true, placeholder: "7767754397" },
     { name: "whatsappNumber", label: "WhatsApp Number", type: "phone", required: true, placeholder: "7767754397" },
@@ -58,9 +58,15 @@ export const commercialFormConfig = {
 
   specsFields: [
     { name: "driveConfiguration", label: "Drive Type", required:true, type: "select", options: ["4x2", "4x4", "6x2", "6x4", "6x6", "8x4", "8x6", "8x8"] },
+    { name: "emissionStandard", label: "Emission Standard", type: "select", options: ["Euro 3", "Euro 4", "Euro 5", "Euro 6"] },
+{ name: "previousOwners", label: "Number of Owners", type: "select", options: ["single", "multiple"] },
+    { name: "warranty", label: "Warranty", type: "select", options: ["Manufacturer", "Dealer", "Extended", "None"] },
+    { name: "serviceHistory", label: "Service History", type: "select", options: ["Full", "Partial", "None"] },
+    { name: "accidentHistory", label: "Accident History", type: "select", options: ["No Accident", "Minor", "Major"] },
+    { name: "numberOfKeys", label: "Number of Keys", type: "select", options: ["1", "2", "3+"] },
+
     { name: "enginePower", label: "Engine Power (HP)", required: true, type: "text", placeholder: "e.g. 510 HP" },
     { name: "torque", label: "Torque (Nm)", type: "text", placeholder: "e.g. 1800 Nm" },
-    { name: "emissionStandard", label: "Emission Standard", type: "select", options: ["Euro 3", "Euro 4", "Euro 5", "Euro 6"] },
     { name: "payloadCapacity", label: "Payload Capacity (kg)", type: "text", placeholder: "e.g. 18,500 kg" },
     { name: "grossVehicleWeight", label: "Gross Vehicle Weight (kg)", required: true, type: "text", placeholder: "e.g. 26,000 kg" },
     { name: "fuelTankCapacity", label: "Fuel Tank Capacity (L)", type: "text", placeholder: "e.g. 300 L" },
@@ -71,12 +77,8 @@ export const commercialFormConfig = {
     { name: "overallLength", label: "Overall Length (mm)", type: "number", placeholder: "e.g. 7200" },
     { name: "overallWidth", label: "Overall Width (mm)", type: "number", placeholder: "e.g. 2400" },
     { name: "overallHeight", label: "Overall Height (mm)", type: "number", placeholder: "e.g. 3100" },
-    { name: "previousOwners", label: "Number of Owners", type: "select", options: ["single", "multiple"] },
-    { name: "warranty", label: "Warranty", type: "select", options: ["Manufacturer", "Dealer", "Extended", "None"] },
-    { name: "serviceHistory", label: "Service History", type: "select", options: ["Full", "Partial", "None"] },
-    { name: "accidentHistory", label: "Accident History", type: "select", options: ["No Accident", "Minor", "Major"] },
+    
     { name: "insuranceValid", label: "Insurance Covered", type: "toggleSwitch", fullWidth: true },
-    { name: "numberOfKeys", label: "Number of Keys", type: "select", options: ["1", "2", "3+"] },
   ],
 
   featureGroups: [
