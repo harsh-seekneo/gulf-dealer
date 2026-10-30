@@ -1,5 +1,6 @@
 //[DEALER] /Users/personal/Desktop/gulf--dealer/gulf-dealer/src/modules/listings/components/ListingsTable.jsx
 
+import { useRef } from "react";
 import { SquarePen, Trash2 } from "lucide-react";
 import ListingPriceEditor from "./ListingPriceEditor";
 import { formatListingPrice } from "../listings.constants";
@@ -37,6 +38,9 @@ const SOURCE_LABELS = {
   ADMIN: "Admin",
 };
 
+const ROW_CONTROL_SELECTOR =
+  "button, input, select, textarea, a, label, form, [role='button'], [contenteditable='true']";
+
 function getListingSourceLabel(listing) {
   const rawSource =
     listing?.sourceName ||
@@ -60,6 +64,7 @@ export default function ListingsTable({
   onRowClick,
   onPriceUpdated,
 }) {
+  const pointerStartedInControl = useRef(false);
   const visibleVehicles =
     tab === "active"
       ? vehicles.filter((v) => !isEnded(v.daysLabel))
@@ -85,7 +90,12 @@ export default function ListingsTable({
   const showSoldBadge = tab === "sold";
 
   return (
-    <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+    <div
+      className="overflow-x-auto rounded-xl bg-white shadow-sm"
+      onPointerDownCapture={(event) => {
+        pointerStartedInControl.current = Boolean(event.target.closest(ROW_CONTROL_SELECTOR));
+      }}
+    >
       <table className="w-full min-w-[800px] text-sm">
         <thead className="bg-slate-50 text-left text-slate-500">
           <tr>
@@ -126,7 +136,14 @@ export default function ListingsTable({
             return (
               <tr
                 key={v._id}
-                onClick={() => onRowClick(v)}
+                onClick={(event) => {
+                  // A selection drag can end outside the input and target the row itself.
+                  if (
+                    (event.detail > 0 && pointerStartedInControl.current) ||
+                    event.target.closest(ROW_CONTROL_SELECTOR)
+                  ) return;
+                  onRowClick(v);
+                }}
                 className="cursor-pointer transition-colors duration-150 hover:bg-slate-50"
               >
                 {/* <td className="px-4 py-4" onClick={(event) => event.stopPropagation()}>
