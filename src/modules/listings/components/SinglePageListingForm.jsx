@@ -132,10 +132,10 @@ const SinglePageListingForm = () => {
   if (wizard.isInitializing) return <div className="flex min-h-64 items-center justify-center gap-3"><Loader2 className="animate-spin" />Loading vehicle…</div>;
   if (wizard.initError) return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-6"><p>{wizard.initError}</p><Link className="mt-4 inline-block underline" to="/vehicles">Back to Listings</Link></div>;
   if (completed) return <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center">
-    <CheckCircle2 className="mx-auto h-12 w-12 text-teal-600" />
+    <CheckCircle2 className="mx-auto h-12 w-12 text-blue-600" />
     <h1 className="mt-4 text-2xl font-bold">{completed.status === "PUBLISHED" ? "Your listing is live!" : "Listing submitted"}</h1>
     <p className="mt-2 text-slate-600">{completed.status === "PUBLISHED" ? "Your vehicle has been published successfully." : "Your listing has been submitted for admin review."}</p>
-    <div className="mt-6 flex flex-wrap justify-center gap-3"><Link className="rounded-lg bg-teal-600 px-4 py-3 font-semibold text-white" to={`/vehicles/${completed._id}`}>View Listing</Link><Link className="rounded-lg border px-4 py-3" to="/vehicles">My Listings</Link></div>
+    <div className="mt-6 flex flex-wrap justify-center gap-3"><Link className="rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white" to={`/vehicles/${completed._id}`}>View Listing</Link><Link className="rounded-lg border px-4 py-3" to="/vehicles">My Listings</Link></div>
   </div>;
 
   const page = { busy, collectStep, saveMedia, formInputs,
@@ -145,7 +145,7 @@ const SinglePageListingForm = () => {
       <div className="dealer-listing-compact w-full min-w-0 max-w-none space-y-4 pb-6" data-wizard-scroll-area>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><Link to="/vehicles" className="mb-3 inline-flex items-center gap-2 text-sm text-slate-600"><ArrowLeft size={16} />My Listings</Link><h1 className="text-2xl font-bold text-slate-950">{wizard.listing.status === "DRAFT" ? "Add Vehicle" : "Edit Vehicle"}</h1><p className="mt-1 text-sm text-slate-500">All details on one page. Select an option to move to the next field.</p></div>
-          <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">{wizard.listing._id ? wizard.listing.status.replaceAll("_", " ") : "Not saved"}</span>
+          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{wizard.listing._id ? wizard.listing.status.replaceAll("_", " ") : "Not saved"}</span>
         </div>
         <fieldset disabled={busy || wizard.isSaving} className="min-w-0 space-y-4 disabled:opacity-75">
           <Section step={1} register={register}><Step1Category useWizardHook={useFormWizard} /></Section>
@@ -161,7 +161,7 @@ const SinglePageListingForm = () => {
         </fieldset>
         <div className="sticky bottom-0 z-20 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur">
           {message && <p role="status" className="mb-3 text-sm text-slate-700">{message}</p>}
-          <div className="flex items-center justify-between gap-3"><p className="hidden text-xs text-slate-500 sm:block">Save your progress or publish when you’re ready.</p><div className="ml-auto flex gap-3"><button type="button" onClick={() => save(false)} disabled={busy || wizard.isSaving || !categoryId} className="rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold disabled:opacity-50">Save Draft</button><button type="button" onClick={() => save(true)} disabled={busy || wizard.isSaving || !categoryId} className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{busy && <Loader2 size={16} className="animate-spin" />}{busy ? "Saving…" : wizard.listing.status === "DRAFT" ? "Publish Listing" : "Save Changes"}</button></div></div>
+          <div className="flex items-center justify-between gap-3"><p className="hidden text-xs text-slate-500 sm:block">Save your progress or publish when you’re ready.</p><div className="ml-auto flex gap-3"><button type="button" onClick={() => save(false)} disabled={busy || wizard.isSaving || !categoryId} className="rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold disabled:opacity-50">Save Draft</button><button type="button" onClick={() => save(true)} disabled={busy || wizard.isSaving || !categoryId} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{busy && <Loader2 size={16} className="animate-spin" />}{busy ? "Saving…" : wizard.listing.status === "DRAFT" ? "Publish Listing" : "Save Changes"}</button></div></div>
         </div>
       </div>
   </SinglePageListingContext.Provider>;

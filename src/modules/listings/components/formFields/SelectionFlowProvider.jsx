@@ -107,39 +107,39 @@ const SelectionFlowProvider = ({ children }) => {
         <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="listing-picker-title" className="dealer-selection-dialog flex h-[100dvh] w-full max-w-4xl flex-col overflow-hidden bg-white shadow-2xl sm:h-[90dvh] sm:max-h-[760px] sm:rounded-2xl">
           <header className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-100 px-4 py-4 sm:px-6">
             <button type="button" aria-label="Previous field" onClick={() => move(-1)} className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"><ArrowLeft size={20} /></button>
-            <div className="min-w-0 flex-1"><p className="text-xs font-medium text-teal-700">Vehicle details</p><h2 id="listing-picker-title" className="truncate text-xl font-semibold text-slate-950">{entry.label}</h2></div>
+            <div className="min-w-0 flex-1"><p className="text-xs font-medium text-blue-700">Vehicle details</p><h2 id="listing-picker-title" className="truncate text-xl font-semibold text-slate-950">{entry.label}</h2></div>
             <button type="button" aria-label="Close selection" onClick={close} className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100"><X size={20} /></button>
           </header>
           <div className="flex min-h-0 flex-1 flex-col md:flex-row">
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
               <div className="dealer-selection-search shrink-0 px-4 pt-5 sm:px-6">
-                <div className="relative"><Search size={18} className="absolute left-3.5 top-3.5 text-slate-400" /><input key={active} autoFocus aria-label={`Search ${entry.label}`} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${entry.label.toLowerCase()}…`} className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 outline-none focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-50" /></div>
+                <div className="relative"><Search size={18} className="absolute left-3.5 top-3.5 text-slate-400" /><input key={active} autoFocus aria-label={`Search ${entry.label}`} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${entry.label.toLowerCase()}…`} className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-50" /></div>
                 <p className="mt-3 text-xs text-slate-500">Choose an option to continue automatically.</p>
               </div>
               <div className={`grid min-h-0 flex-1 ${entry.showLogos ? "grid-cols-1 min-[360px]:grid-cols-2" : "grid-cols-2"} content-start gap-3 overflow-y-auto p-4 sm:p-6`}>
                 {entry.loading && <p role="status" className="col-span-2 flex items-center justify-center gap-2 py-6 text-sm text-slate-500"><Loader2 size={16} className="animate-spin" />Loading options…</p>}
                 {!entry.loading && entry.options.filter((option) => String(option.label).toLowerCase().includes(query.toLowerCase())).map((option) => (
-                  <button type="button" key={option.value} disabled={option.disabled} onClick={() => { entry.onChange({ target: { value: option.value } }); setRecentField(active); setDetailsOpen(false); pendingNext.current = option.value; setRevision((current) => current + 1); }} aria-pressed={entry.value === option.value} className={`flex min-h-14 items-center justify-between gap-2 rounded-xl border p-3.5 text-left text-sm font-medium transition disabled:opacity-40 ${entry.value === option.value ? "border-teal-500 bg-teal-50 text-teal-900 ring-1 ring-teal-500" : "border-slate-200 hover:border-teal-300 hover:bg-teal-50/50"}`}>
+                  <button type="button" key={option.value} disabled={option.disabled} onClick={() => { entry.onChange({ target: { value: option.value } }); setRecentField(active); setDetailsOpen(false); pendingNext.current = option.value; setRevision((current) => current + 1); }} aria-pressed={entry.value === option.value} className={`flex min-h-14 items-center justify-between gap-2 rounded-xl border p-3.5 text-left text-sm font-medium transition disabled:opacity-40 ${entry.value === option.value ? "border-blue-500 bg-blue-50 text-blue-900 ring-1 ring-blue-500" : "border-slate-200 hover:border-blue-300 hover:bg-blue-50/50"}`}>
                     <span className="flex min-w-0 items-center gap-3">{entry.showLogos && <OptionLogo src={option.logo} label={option.label} />}<span className="min-w-0 break-words">{option.label}</span></span>
-                    {entry.value === option.value && <Check size={17} className="shrink-0 text-teal-600" />}
+                    {entry.value === option.value && <Check size={17} className="shrink-0 text-blue-600" />}
                   </button>
                 ))}
                 {!entry.loading && !entry.options.some((option) => String(option.label).toLowerCase().includes(query.toLowerCase())) && <p className="col-span-2 py-8 text-center text-sm text-slate-500">No matching options available.</p>}
               </div>
             </div>
             {selections.length > 0 && <aside className="flex shrink-0 flex-col border-t border-slate-200 bg-slate-50 md:w-64 md:border-l md:border-t-0">
-              <div className="hidden shrink-0 px-5 pb-3 pt-5 md:block"><div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-teal-100 text-teal-700"><ListChecks size={18} /></div><h3 className="font-semibold text-slate-900">Your vehicle so far</h3><p className="mt-1 text-xs leading-5 text-slate-500">{selections.length} details selected. Click any detail to edit.</p></div>
+              <div className="hidden shrink-0 px-5 pb-3 pt-5 md:block"><div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-700"><ListChecks size={18} /></div><h3 className="font-semibold text-slate-900">Your vehicle so far</h3><p className="mt-1 text-xs leading-5 text-slate-500">{selections.length} details selected. Click any detail to edit.</p></div>
               <button type="button" aria-expanded={detailsOpen} aria-controls="listing-selection-summary" onClick={() => setDetailsOpen((open) => !open)} className="flex w-full items-center gap-3 px-4 py-3 text-left md:hidden">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-700"><ListChecks size={19} /></span>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700"><ListChecks size={19} /></span>
                 <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-900">Your selections <span className="ml-1 text-xs font-normal text-slate-500">({selections.length})</span></span><span className="block truncate text-xs text-slate-500">{(() => { const recent = selections.find((item) => item.id === recentField) || selections[0]; return recent ? `${recent.field.label}: ${recent.selected.label}` : "Tap to review and edit"; })()}</span></span>
                 <ChevronDown size={18} className={`shrink-0 text-slate-500 transition ${detailsOpen ? "rotate-180" : ""}`} />
               </button>
               <nav id="listing-selection-summary" ref={summary} aria-label="Selected vehicle details" className={`${detailsOpen ? "grid" : "hidden"} max-h-48 grid-cols-2 gap-2 overflow-y-auto px-4 pb-4 md:flex md:max-h-none md:min-h-0 md:flex-1 md:flex-col md:gap-1 md:px-3 md:pb-5`}>
                 {selections.map(({ id, field, selected }) => (
-                  <button key={id} type="button" data-field-id={id} aria-label={`Edit ${field.label}: ${selected.label}`} aria-current={id === active ? "step" : undefined} onClick={() => { setQuery(""); setActive(id); setDetailsOpen(false); }} className={`flex min-h-14 w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${id === active ? "border-teal-200 bg-white shadow-sm" : "border-transparent bg-white/60 hover:border-slate-200 hover:bg-white"}`}>
+                  <button key={id} type="button" data-field-id={id} aria-label={`Edit ${field.label}: ${selected.label}`} aria-current={id === active ? "step" : undefined} onClick={() => { setQuery(""); setActive(id); setDetailsOpen(false); }} className={`flex min-h-14 w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${id === active ? "border-blue-200 bg-white shadow-sm" : "border-transparent bg-white/60 hover:border-slate-200 hover:bg-white"}`}>
                     {selected.logo && <OptionLogo src={selected.logo} label={selected.label} small />}
                     <span className="min-w-0 flex-1"><span className="block text-[11px] text-slate-500">{field.label}</span><span className="block break-words text-sm font-medium text-slate-800">{selected.label}</span></span>
-                    <Check size={14} className="hidden shrink-0 text-teal-500 md:block" />
+                    <Check size={14} className="hidden shrink-0 text-blue-500 md:block" />
                   </button>
                 ))}
               </nav>
@@ -147,7 +147,7 @@ const SelectionFlowProvider = ({ children }) => {
           </div>
           <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-100 bg-white px-4 py-4 sm:px-6">
             <button type="button" onClick={close} className="rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Back to form</button>
-            <button type="button" onClick={() => move(1)} className="rounded-xl bg-teal-600 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-700">Next field</button>
+            <button type="button" onClick={() => move(1)} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700">Next field</button>
           </footer>
         </div>
       </div>, document.body)}

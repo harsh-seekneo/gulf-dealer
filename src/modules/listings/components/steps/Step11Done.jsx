@@ -10,8 +10,8 @@ const Step11Done = () => {
 
   return (
     <div className="flex flex-col items-center py-6 text-center">
-      <div className="flex h-16 w-16 animate-[popIn_0.4s_ease-out] items-center justify-center rounded-full bg-emerald-100">
-        <CheckCircle2 size={32} className="text-emerald-600" />
+      <div className="flex h-16 w-16 animate-[popIn_0.4s_ease-out] items-center justify-center rounded-full bg-blue-100">
+        <CheckCircle2 size={32} className="text-blue-600" />
       </div>
 
       <h2 className="mt-4 text-xl font-bold text-slate-950">Listing Submitted!</h2>
