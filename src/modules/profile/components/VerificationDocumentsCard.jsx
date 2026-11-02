@@ -84,8 +84,8 @@ export default function VerificationDocumentsCard({
           </span>
         </a>
       ) : (
-        <p className="rounded-lg border border-dashed border-red-200 bg-red-50 px-4 py-4 text-center text-sm font-semibold text-red-600">
-          Trade License Certificate is required.
+        <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-center text-sm font-semibold text-slate-500">
+          Trade License Certificate is optional.
         </p>
       )}
 
