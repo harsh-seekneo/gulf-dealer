@@ -5,7 +5,7 @@ export const GULF_COUNTRIES = [
     governorates: [
       { name: "Capital Governorate", cities: ["Manama", "Juffair", "Adliya", "Hoora", "Gudaibiya", "Seef", "Sanabis", "Khamis", "Salmaniya", "Zinj", "Bilad Al Qadeem", "Sitra", "Nabih Saleh"] },
       { name: "Muharraq Governorate", cities: ["Muharraq", "Hidd", "Arad", "Busaiteen", "Galali", "Amwaj Islands", "Diyar Al Muharraq", "Dilmunia"] },
-      { name: "Northern Governorate", cities: ["Hamad Town", "Budaiya", "Saar", "Janabiya", "Barbar", "Diraz", "Bani Jamra", "Jannusan", "Karbabad", "Shakhura", "Abu Saiba", "Maqaba", "Dumistan", "Karzakan", "Malkiya"] },
+      { name: "Northern Governorate", cities: ["Hamad Town", "Budaiya", "Saar", "Janabiya", "Barbar", "Diraz", "Bani Jamra", "Jannusan", "Karbabad", "Shakhura", "Abu Saiba", "Maqaba", "Dumistan", "Karzakan", "Malkiya", "Jeblat Hibshi"] },
       { name: "Southern Governorate", cities: ["Riffa", "Isa Town", "A'ali", "Zallaq", "Awali", "Askar", "Jaw", "Safra"] },
     ],
   },
