@@ -1,173 +1,84 @@
-import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import { useEffect, useState } from "react";
 import { AlertCircle, Loader2, MapPin } from "lucide-react";
+import { previewListingMapApi } from "../api/vehicleListingApi";
+function getListingMapEmbedUrl(location) {
+  const { latitude, longitude } = location || {};
+  if (!Number.isFinite(latitude) || Math.abs(latitude) > 90 ||
+      !Number.isFinite(longitude) || Math.abs(longitude) > 180) return "";
 
-function extractCoordsFromUrl(url) {
-  let match = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-  if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
-
-  match = url.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
-  if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
-
-  match = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
-  if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
-
-  return null;
+  const delta = 0.01;
+  const bounds = [
+    Math.max(-180, longitude - delta),
+    Math.max(-90, latitude - delta),
+    Math.min(180, longitude + delta),
+    Math.min(90, latitude + delta),
+  ];
+  const params = new URLSearchParams({
+    bbox: bounds.join(","),
+    layer: "mapnik",
+    marker: `${latitude},${longitude}`,
+  });
+  return `https://www.openstreetmap.org/export/embed.html?${params}`;
 }
 
-function extractPlaceName(url) {
-  const match = url.match(/\/maps\/place\/([^/@]+)/);
-  if (!match) return null;
-
-  try {
-    return decodeURIComponent(match[1].replace(/\+/g, " "));
-  } catch {
-    return null;
-  }
-}
-
-function parseGoogleMapsUrl(url) {
-  if (!url || typeof url !== "string") return null;
-
-  const trimmed = url.trim();
-  if (/goo\.gl\/maps|maps\.app\.goo\.gl/i.test(trimmed)) {
-    return { error: "short-link" };
-  }
-
-  const coords = extractCoordsFromUrl(trimmed);
-  if (coords) return coords;
-
-  const placeName = extractPlaceName(trimmed);
-  if (placeName) return { needsGeocode: true, placeName };
-
-  return { error: "unparseable" };
-}
-
-function useDebouncedValue(value, delayMs) {
-  const [debounced, setDebounced] = useState(value);
+const MapLinkPreview = ({ value, country, savedLocation, hideError }) => {
+  const link = value.trim();
+  const [result, setResult] = useState(null);
+  const savedEmbed = (savedLocation?.mapsLink || savedLocation?.googleMapsUrl) === link
+    ? getListingMapEmbedUrl(savedLocation)
+    : "";
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setDebounced(value), delayMs);
-    return () => window.clearTimeout(timer);
-  }, [value, delayMs]);
+    if (!link || savedEmbed) return;
 
-  return debounced;
-}
-
-const MapLinkPreview = ({ value }) => {
-  const debouncedUrl = useDebouncedValue(value, 500);
-  const parsed = useMemo(() => parseGoogleMapsUrl(debouncedUrl), [debouncedUrl]);
-  const directCoords = parsed && !parsed.error && !parsed.needsGeocode ? parsed : null;
-
-  const [geocodedCoords, setGeocodedCoords] = useState(null);
-  const [geocoding, setGeocoding] = useState(false);
-  const [geocodeError, setGeocodeError] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!parsed?.needsGeocode) {
-      const timer = window.setTimeout(() => {
-        if (!cancelled) {
-          setGeocodedCoords(null);
-          setGeocodeError(false);
-          setGeocoding(false);
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const coordinates = await previewListingMapApi(link, country, controller.signal);
+        if (!controller.signal.aborted) setResult({ link, country, coordinates });
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          const response = error.response?.data;
+          const message = response?.details?.field === "mapsLink"
+            ? response.message
+            : "Couldn't check the Google Maps link right now. Please try again.";
+          setResult({ link, country, message });
         }
-      }, 0);
-      return () => {
-        cancelled = true;
-        window.clearTimeout(timer);
-      };
-    }
-
-    const timer = window.setTimeout(() => {
-      if (!cancelled) {
-        setGeocoding(true);
-        setGeocodeError(false);
       }
-    }, 0);
-
-    axios
-      .get("https://nominatim.openstreetmap.org/search", {
-        params: { format: "json", limit: 1, q: parsed.placeName },
-      })
-      .then((response) => {
-        if (cancelled) return;
-        const result = response.data?.[0];
-        if (result) {
-          setGeocodedCoords({ lat: parseFloat(result.lat), lng: parseFloat(result.lon) });
-        } else {
-          setGeocodedCoords(null);
-          setGeocodeError(true);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setGeocodedCoords(null);
-          setGeocodeError(true);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setGeocoding(false);
-      });
+    }, 500);
 
     return () => {
-      cancelled = true;
       window.clearTimeout(timer);
+      controller.abort();
     };
-  }, [parsed?.needsGeocode, parsed?.placeName]);
+  }, [link, country, savedEmbed]);
 
-  const coords = directCoords || geocodedCoords;
-  const embedSrc = useMemo(() => {
-    if (!coords) return "";
-    const { lat, lng } = coords;
-    const delta = 0.01;
-    const bbox = [lng - delta, lat - delta, lng + delta, lat + delta].join("%2C");
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
-  }, [coords]);
-
-  if (!value) {
+  if (!link) {
     return (
       <div className="relative mt-3 flex h-44 items-center justify-center overflow-hidden rounded-xl bg-emerald-50">
         <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(#b8d0bd_1px,transparent_1px),linear-gradient(90deg,#b8d0bd_1px,transparent_1px)] [background-size:80px_50px]" />
         <MapPin className="relative z-10 text-blue-600" size={32} />
         <span className="absolute bottom-3 rounded-lg bg-white px-3 py-1.5 text-xs text-slate-500 shadow">
-          Enter Google Maps link to pin the listing location
+          Enter Maps link to pin the listing location
         </span>
       </div>
     );
   }
 
+  const currentResult = result?.link === link && result.country === country ? result : null;
+  const embed = savedEmbed || getListingMapEmbedUrl(currentResult?.coordinates);
+
   return (
     <div className="mt-3">
-      {parsed?.error === "short-link" && (
-        <p className="mb-2 flex items-center gap-1 text-xs text-amber-600">
-          <AlertCircle size={13} />
-          Shortened links cannot be read directly. Open the link and paste the full Google Maps URL.
-        </p>
-      )}
-      {parsed?.error === "unparseable" && (
-        <p className="mb-2 flex items-center gap-1 text-xs text-amber-600">
-          <AlertCircle size={13} />
-          Could not recognize this as a Google Maps link.
-        </p>
-      )}
-      {geocoding && (
-        <p className="mb-2 flex items-center gap-1 text-xs text-slate-400">
-          <Loader2 size={13} className="animate-spin" />
-          Looking up location...
-        </p>
-      )}
-      {geocodeError && (
-        <p className="mb-2 flex items-center gap-1 text-xs text-amber-600">
-          <AlertCircle size={13} />
-          Could not find that place. Try dropping a pin and copying the full link.
-        </p>
-      )}
-      {coords && (
+      {embed ? (
         <div className="overflow-hidden rounded-xl border border-slate-200">
-          <iframe title="Listing location map" className="h-52 w-full" src={embedSrc} loading="lazy" />
+          <iframe title="Listing location map" className="h-52 w-full" src={embed} loading="lazy" />
         </div>
+      ) : !hideError && (
+        <p role="status" className={`flex items-center gap-1 text-xs ${currentResult ? "text-red-600" : "text-slate-500"}`}>
+          {currentResult ? <AlertCircle size={13} /> : <Loader2 size={13} className="animate-spin" />}
+          {currentResult?.message || "Checking Google Maps link..."}
+        </p>
       )}
     </div>
   );

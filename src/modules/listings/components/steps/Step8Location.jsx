@@ -15,6 +15,8 @@ import FormField from "../FormField";
 import ToggleSwitch from "../ToggleSwitch";
 import WizardFooterNav from "../WizardFooterNav";
 import MapLinkPreview from "../MapLinkPreview";
+import { Info } from "lucide-react";
+import { previewListingMapApi } from "../../api/vehicleListingApi";
 import { carFormConfig } from "../../config/categoryForms/carForm.config";
 import { commercialFormConfig } from "../../config/categoryForms/commercialForm.config";
 import { heavyEquipmentFormConfig } from "../../config/categoryForms/heavyEquipmentForm.config";
@@ -40,7 +42,7 @@ const inputClass =
   "h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100";
 
 const Step8Location = ({ useWizardHook = useBulkVehicleWizard }) => {
-  const { listing, isSaving, saveStep, goPrevious, saveDraft } =
+  const { listing, isSaving, saveStep, goPrevious, saveDraft, singlePage } =
     useWizardHook();
   const { user } = useAuth();
 
@@ -111,14 +113,14 @@ const Step8Location = ({ useWizardHook = useBulkVehicleWizard }) => {
     setErrors((previous) => ({ ...previous, city: "" }));
   };
 
-  const handleNext = async () => {
+  const handleNext = async ({ draft = false } = {}) => {
     const nextErrors = {};
 
     if (!selectedCountry) nextErrors.country = "Country is required";
     if (!selectedGovernorate) nextErrors.governorate = "State / Governorate is required";
     if (!selectedCity) nextErrors.city = "City is required";
     if (hasAreaField && !area) nextErrors.area = "Area is required";
-    if (mapsLink && !/^https?:\/\/.+/i.test(mapsLink.trim())) {
+    if (mapsLink.trim() && !/^https?:\/\/.+/i.test(mapsLink.trim())) {
       nextErrors.mapsLink = "Enter a valid Maps link";
     }
 
@@ -128,15 +130,37 @@ const Step8Location = ({ useWizardHook = useBulkVehicleWizard }) => {
       return;
     }
 
-    await saveStep(8, {
-      country: selectedCountry,
-      governorate: selectedGovernorate,
-      city: selectedCity,
-      area: hasAreaField ? area : undefined,
-      mapsLink: mapsLink.trim() || undefined,
-      showPhoneNumber,
-      showWhatsappNumber,
-    });
+    const link = mapsLink.trim();
+    const savedLink = existingLocation.mapsLink || existingLocation.googleMapsUrl;
+    const hasSavedPin = Number.isFinite(existingLocation.latitude) &&
+      Number.isFinite(existingLocation.longitude);
+    try {
+      if (singlePage && link && !(link === savedLink && hasSavedPin)) {
+        await previewListingMapApi(link, selectedCountry);
+      }
+      return await saveStep(8, {
+        country: selectedCountry,
+        governorate: selectedGovernorate,
+        city: selectedCity,
+        area: hasAreaField ? area : undefined,
+        mapsLink: link || undefined,
+        ...(!link && !savedLink && hasSavedPin ? {
+          latitude: existingLocation.latitude,
+          longitude: existingLocation.longitude,
+        } : {}),
+        showPhoneNumber,
+        showWhatsappNumber,
+      });
+    } catch (error) {
+      const response = error.response?.data;
+      if (response?.details?.field === "mapsLink") {
+        const mapErrors = { mapsLink: response.message };
+        setErrors(mapErrors);
+        scrollFirstWizardError(fieldRefs, ["mapsLink"], mapErrors);
+        if (draft || !singlePage) return;
+      }
+      throw error;
+    }
   };
 
   return (
@@ -230,19 +254,39 @@ const Step8Location = ({ useWizardHook = useBulkVehicleWizard }) => {
       </div>
 
       <div ref={(node) => { fieldRefs.current.mapsLink = node; }} className="mt-4">
-        <FormField label="Maps Link" error={errors.mapsLink}>
-          <input
-            type="url"
-            value={mapsLink}
-            onChange={(e) => {
-              setMapsLink(e.target.value);
-              setErrors((previous) => ({ ...previous, mapsLink: "" }));
-            }}
-            placeholder="https://maps.google.com/..."
-            className={inputClass}
-          />
-        </FormField>
-        <MapLinkPreview value={mapsLink} />
+        <div className="relative">
+          <FormField label="Maps Link" error={errors.mapsLink}>
+            <input
+              type="url"
+              aria-label="Maps Link"
+              aria-invalid={Boolean(errors.mapsLink)}
+              disabled={isSaving}
+              maxLength={2048}
+              value={mapsLink}
+              onChange={(e) => {
+                setMapsLink(e.target.value);
+                setErrors((previous) => ({ ...previous, mapsLink: "" }));
+              }}
+              placeholder="https://maps.google.com/..."
+              className={inputClass}
+            />
+          </FormField>
+          <details lang="en" className="mt-2 text-xs text-slate-600">
+            <summary
+              aria-label="How to copy a Google Maps link"
+              className="absolute -top-1 end-0 flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-blue-500 [&::-webkit-details-marker]:hidden"
+            >
+              <Info size={16} aria-hidden="true" />
+            </summary>
+            <p>In Google Maps, select a place or drop a pin. Tap Share, then Copy link, and paste it here.</p>
+          </details>
+        </div>
+        <MapLinkPreview
+          value={mapsLink}
+          country={selectedCountry}
+          savedLocation={existingLocation}
+          hideError={Boolean(errors.mapsLink)}
+        />
       </div>
 
       <div className="mt-5 divide-y divide-slate-100 rounded-xl border border-slate-200 px-4">

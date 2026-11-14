@@ -3,6 +3,17 @@ import axios from "axios";
 
 const BASE_URL = "/vehicle-listings";
 
+export const previewListingMapApi = async (mapsLink, country, signal) => {
+  const response = await apiClient.post(
+    `${BASE_URL}/map-preview`,
+    { mapsLink, country },
+    { signal }
+  );
+  return response.data.data;
+};
+
+
+
 export const updateListingPriceApi = async (listingId, payload) => {
   const response = await apiClient.patch(`${BASE_URL}/${listingId}/price`, payload);
   return response.data.data;
